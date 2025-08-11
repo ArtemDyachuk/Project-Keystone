@@ -1,24 +1,13 @@
-# Railway Config as Code for monorepo
+# Railway Config as Code for a shared Nx monorepo
 
-# Backend service (NestJS)
-[[services]]
-name = "cms-api"
+[services."cms-api"]
 root = "."
 buildCommand = "npx nx run @keystone/cms-api:build:production"
 startCommand = "node apps/back-ends/cms-api/dist/main.js"
 
-# Frontend service (Next.js)
-[[services]]
-name = "cms"
+[services."cms"]
 root = "."
 buildCommand = "npx nx run @keystone/cms:build"
 startCommand = "npx nx run @keystone/cms:start -- -p $PORT"
-
-# Optional alias if your Railway service is named "cms-api nest"
-[[services]]
-name = "cms-api nest"
-root = "."
-buildCommand = "npx nx run @keystone/cms-api:build:production"
-startCommand = "node apps/back-ends/cms-api/dist/main.js"
 
 
