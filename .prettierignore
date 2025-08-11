@@ -1,5 +1,7 @@
-# Add files here to ignore them from prettier formatting
-/dist
-/coverage
-/.nx/cache
-/.nx/workspace-data
+# TOML files - Prettier doesn't support TOML formatting
+*.toml
+
+# Other files to ignore
+dist/
+.next/
+node_modules/
