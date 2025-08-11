@@ -14,7 +14,8 @@ Complete deployment guide for Project Keystone NX monorepo with MongoDB Atlas.
 ### **2. Connect GitHub Repo**
 
 - Connect **same GitHub repo** to both services
-- Railway auto-detects service types using NX
+- **Frontend**: Auto-detected and configured by `railway.toml`
+- **Backend**: Auto-detected but requires manual configuration
 
 ### **3. Configure Environment Variables**
 
@@ -25,6 +26,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=tru
 ```
 
 **Frontend Service Variables:**
+
 ```bash
 # Required for direct database connection
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority&appName=keystone
@@ -34,6 +36,7 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 ```
 
 **Note:** The frontend automatically detects the Railway backend using Railway's built-in environment variables:
+
 1. `RAILWAY_SERVICE_URL` (automatic service discovery)
 2. `RAILWAY_STATIC_URL` (fallback pattern matching)
 3. Falls back to `NEXT_PUBLIC_API_URL` if manually set
@@ -44,33 +47,70 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 2. Add `MONGODB_URI` with your MongoDB Atlas connection string
 3. Railway automatically sets `NODE_ENV=production`
 
-### **4. Deploy**
+### **4. Configure Backend Service Manually**
+
+**IMPORTANT**: The backend service requires manual configuration in Railway dashboard:
+
+1. **Go to Railway Dashboard → cms-api service**
+2. **Click "Settings" tab**
+3. **Find "Build & Deploy" section**
+4. **Set these values manually:**
+
+```bash
+# Build Command
+npx nx build @keystone/cms-api
+
+# Start Command  
+node apps/back-ends/cms-api/dist/main.js
+
+# Install Command
+npm install
+```
+
+### **5. Deploy**
 
 - Push to main branch
-- Both services deploy automatically ✅
+- **Frontend**: Deploys automatically using `railway.toml` ✅
+- **Backend**: Deploys using manual configuration ✅
 
 ## 📁 **What's in the Repo**
 
-- `railway.toml` - Frontend service configuration
-- `apps/back-ends/cms-api/` - Backend auto-detected by Railway
-- `apps/front-ends/cms/` - Frontend configured by railway.toml
+- `railway.toml` - **Frontend service configuration only**
+- `apps/back-ends/cms-api/` - **Backend requires manual Railway configuration**
+- `apps/front-ends/cms/` - **Frontend auto-configured by railway.toml**
 - **Environment variables loaded via `dotenv`** ✅
 
 ## 🔗 **Architecture: Two Database Connection Types**
 
 ### **1. Direct Database Connection (Frontend → MongoDB)**
+
 - **Purpose**: Simple database operations, health checks
 - **Package**: Uses shared `@keystone/database` package
 - **Environment Variable**: `MONGODB_URI`
 - **Example**: Checking if database is reachable
 
 ### **2. Backend API Connection (Frontend → Backend → Database)**
+
 - **Purpose**: Business logic, CRUD operations, authentication
 - **Package**: HTTP calls to NestJS backend
 - **Environment Variable**: Auto-detected from Railway
 - **Example**: Creating tenants, user management
 
 **Why Both?** Direct connection for simple checks, backend API for complex operations.
+
+## ⚠️ **Important: Backend Service Configuration**
+
+### **Why Manual Configuration is Required**
+
+Railway's auto-detection for NX monorepos can be unreliable because:
+- **Multiple `package.json` files** confuse the auto-detection
+- **Both services in same repo** can cause conflicts
+- **Railway.toml limitations** - only configures one service per file
+
+### **Solution: Hybrid Approach**
+- **Frontend**: Configured automatically via `railway.toml` ✅
+- **Backend**: Configured manually in Railway dashboard ✅
+- **Result**: Both services work correctly with proper configuration
 
 ## ✅ **Production Ready Features**
 
@@ -101,6 +141,7 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 - Check Railway variables are set for both services
 
 ### Frontend Can't Connect to Backend (ECONNREFUSED ::1:3001)
+
 - **Root Cause**: Frontend is trying to connect to localhost instead of Railway backend
 - **Solution**: Set `NEXT_PUBLIC_API_URL` in Railway frontend service variables
 - **Alternative**: Frontend auto-detects backend using `RAILWAY_STATIC_URL` (Railway sets this automatically)
@@ -108,6 +149,7 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 - **Verify**: Ensure backend service is deployed and running on Railway
 
 ### Backend Service Fails to Start (SIGTERM Error)
+
 - **Root Cause**: Backend service crashes during startup or build
 - **Common Causes**:
   - Missing environment variables (`MONGODB_URI`)

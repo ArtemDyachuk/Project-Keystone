@@ -1,9 +1,9 @@
 # Railway Config as Code
 # Project Keystone NX Monorepo Configuration
 # 
-# This configuration handles BOTH services in the monorepo
+# This configuration is for the FRONTEND service (@keystone/cms)
+# The BACKEND service (@keystone/cms-api) has its own railway.toml in apps/back-ends/cms-api/
 
-# Frontend Service Configuration
 [build]
 builder = "nixpacks"
 buildCommand = "npx nx build @keystone/cms"
@@ -14,14 +14,6 @@ restartPolicyType = "on_failure"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 
-# Backend Service Configuration (when Railway detects it)
-[[services]]
-name = "cms-api"
-buildCommand = "npx nx build @keystone/cms-api"
-startCommand = "node apps/back-ends/cms-api/dist/main.js"
-installCommand = "npm install"
-
 # Environment Variables Required for Production:
 # MONGODB_URI - MongoDB Atlas connection string (set in Railway dashboard)
 # NODE_ENV - "production" (auto-set by Railway)
-# PORT - "8080" (auto-set by Railway)
