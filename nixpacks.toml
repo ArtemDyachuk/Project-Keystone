@@ -8,4 +8,4 @@ cmd = 'npm ci'
 cmd = 'npx nx build @keystone/cms'
 
 [phases.start]
-cmd = 'cd apps/front-ends/cms && npx next start -p $PORT'
+cmd = 'npx nx start @keystone/cms'
