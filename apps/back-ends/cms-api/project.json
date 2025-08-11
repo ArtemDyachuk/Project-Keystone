@@ -1,0 +1,34 @@
+{
+  "name": "cms-api",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/back-ends/cms-api/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/back-ends/cms-api",
+        "main": "apps/back-ends/cms-api/src/main.ts",
+        "tsConfig": "apps/back-ends/cms-api/tsconfig.build.json"
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "cms-api:build"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/back-ends/cms-api",
+        "command": "npm run start:dev"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  },
+  "tags": []
+} 

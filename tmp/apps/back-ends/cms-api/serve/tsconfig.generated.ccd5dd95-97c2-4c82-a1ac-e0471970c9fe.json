@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "paths": {}
+  },
+  "extends": "../../../../../apps/back-ends/cms-api/tsconfig.build.json"
+}

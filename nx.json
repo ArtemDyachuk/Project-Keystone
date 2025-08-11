@@ -1,0 +1,23 @@
+{
+  "installation": {
+    "version": "21.3.11",
+    "plugins": {
+      "@nx/eslint": "21.3.11",
+      "@nx/next": "21.3.11"
+    }
+  },
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "nxCloudId": "689946679bb02d66a8069963",
+  "targetDefaults": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
+    "start": {
+      "dependsOn": [
+        "^start"
+      ]
+    }
+  }
+}

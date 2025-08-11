@@ -1,4 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    "outDir": "../../../dist/apps/back-ends/cms-api",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["test/**/*", "**/*.spec.ts", "**/*.e2e-spec.ts"]
 }
+
