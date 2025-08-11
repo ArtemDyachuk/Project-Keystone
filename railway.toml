@@ -1,6 +1,6 @@
 # Railway Config as Code
-# This configuration is for the FRONTEND service (cms)
-# Create a separate railway.toml for the backend service
+# Frontend service configuration for Next.js app in NX monorepo
+# Service: @keystone/cms
 
 [build]
 builder = "nixpacks"
@@ -8,5 +8,8 @@ buildCommand = "npx nx build @keystone/cms"
 
 [deploy]
 startCommand = "cd apps/front-ends/cms && npx next start -p $PORT"
+restartPolicyType = "on_failure"
+healthcheckPath = "/"
+healthcheckTimeout = 300
 
 
