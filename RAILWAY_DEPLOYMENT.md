@@ -24,6 +24,20 @@ Complete deployment guide for Project Keystone NX monorepo with MongoDB Atlas.
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority&appName=keystone
 ```
 
+**Frontend Service Variables:**
+```bash
+# Required for direct database connection
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority&appName=keystone
+
+# Optional: Explicit backend API URL (auto-detected if not set)
+NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
+```
+
+**Note:** The frontend automatically detects the Railway backend using Railway's built-in environment variables:
+1. `RAILWAY_SERVICE_URL` (automatic service discovery)
+2. `RAILWAY_STATIC_URL` (fallback pattern matching)
+3. Falls back to `NEXT_PUBLIC_API_URL` if manually set
+
 **Set in Railway Dashboard:**
 
 1. Go to each service → Variables tab
@@ -41,6 +55,22 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=tru
 - `apps/back-ends/cms-api/` - Backend auto-detected by Railway
 - `apps/front-ends/cms/` - Frontend configured by railway.toml
 - **Environment variables loaded via `dotenv`** ✅
+
+## 🔗 **Architecture: Two Database Connection Types**
+
+### **1. Direct Database Connection (Frontend → MongoDB)**
+- **Purpose**: Simple database operations, health checks
+- **Package**: Uses shared `@keystone/database` package
+- **Environment Variable**: `MONGODB_URI`
+- **Example**: Checking if database is reachable
+
+### **2. Backend API Connection (Frontend → Backend → Database)**
+- **Purpose**: Business logic, CRUD operations, authentication
+- **Package**: HTTP calls to NestJS backend
+- **Environment Variable**: Auto-detected from Railway
+- **Example**: Creating tenants, user management
+
+**Why Both?** Direct connection for simple checks, backend API for complex operations.
 
 ## ✅ **Production Ready Features**
 
@@ -69,6 +99,13 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=tru
 - Ensure `dotenv` package is installed
 - Verify `.env` symlink exists in frontend
 - Check Railway variables are set for both services
+
+### Frontend Can't Connect to Backend (ECONNREFUSED ::1:3001)
+- **Root Cause**: Frontend is trying to connect to localhost instead of Railway backend
+- **Solution**: Set `NEXT_PUBLIC_API_URL` in Railway frontend service variables
+- **Alternative**: Frontend auto-detects backend using `RAILWAY_STATIC_URL` (Railway sets this automatically)
+- **Debug**: Check `/api/config-debug` endpoint to verify configuration
+- **Verify**: Ensure backend service is deployed and running on Railway
 
 ## 📚 **Useful Railway Commands**
 

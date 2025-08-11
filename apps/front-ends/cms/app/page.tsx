@@ -1,8 +1,17 @@
 import styles from './page.module.css';
+import { getHealthCheckUrl, debugConfig } from '../lib/config';
 
 async function getDatabaseStatus() {
   try {
-    const response = await fetch('http://localhost:3001/api/health', {
+    // Debug configuration in development
+    if (process.env.NODE_ENV === 'development') {
+      debugConfig();
+    }
+    
+    const apiUrl = getHealthCheckUrl();
+    console.log('🔍 Fetching database status from:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
       cache: 'no-store'
     });
     if (!response.ok) {
