@@ -3,8 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@keystone/database": "*",
-    "@keystone/ui": "*"
+    "@keystone/database": "*"
   },
   "nx": {
     "targets": {
@@ -30,8 +29,7 @@
         "defaultConfiguration": "development",
         "dependsOn": [
           "build",
-          "@keystone/database:build",
-          "@keystone/ui:build"
+          "@keystone/database:build"
         ],
         "options": {
           "buildTarget": "@keystone/cms-api:build",

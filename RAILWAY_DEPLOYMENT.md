@@ -14,8 +14,7 @@ Complete deployment guide for Project Keystone NX monorepo with MongoDB Atlas.
 ### **2. Connect GitHub Repo**
 
 - Connect **same GitHub repo** to both services
-- **Frontend**: Auto-detected and configured by `apps/front-ends/cms/railway.toml`
-- **Backend**: Auto-detected and configured by `apps/back-ends/cms-api/railway.toml`
+- **Both services**: Auto-detected and configured by root `railway.toml`
 
 ### **3. Configure Environment Variables**
 
@@ -47,26 +46,24 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 2. Add `MONGODB_URI` with your MongoDB Atlas connection string
 3. Railway automatically sets `NODE_ENV=production`
 
-### **4. Service Configuration (Automatic via railway.toml files)**
+### **4. Service Configuration (Automatic via root railway.toml)**
 
-**Both services are now automatically configured via their respective `railway.toml` files:**
+**Both services are automatically configured via the root `railway.toml` file:**
 
-- **Frontend Service**: Uses `apps/front-ends/cms/railway.toml`
-- **Backend Service**: Uses `apps/back-ends/cms-api/railway.toml`
+- **Frontend Service**: Next.js build and start commands
+- **Backend Service**: NestJS build and start commands
 
 **No manual configuration needed in Railway dashboard!** 🎉
 
 ### **5. Deploy**
 
 - Push to main branch
-- **Frontend**: Deploys automatically using `apps/front-ends/cms/railway.toml` ✅
-- **Backend**: Deploys automatically using `apps/back-ends/cms-api/railway.toml` ✅
+- **Both services**: Deploy automatically using root `railway.toml` ✅
 
 ## 📁 **What's in the Repo**
 
-- `apps/front-ends/cms/railway.toml` - **Frontend service configuration**
-- `apps/back-ends/cms-api/railway.toml` - **Backend service configuration**
-- **Both services auto-configured via their respective railway.toml files** ✅
+- `railway.toml` - **Root configuration for both services**
+- **Both services auto-configured via single root railway.toml** ✅
 - **Environment variables loaded via `dotenv`** ✅
 
 ## 🔗 **Architecture: Two Database Connection Types**
@@ -89,19 +86,19 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 
 ## ✅ **Service Configuration Architecture**
 
-### **Service-Specific railway.toml Files**
+### **Single Root railway.toml Configuration**
 
-Each service now has its own configuration file for better organization:
+Both services are configured from a single root configuration file:
 
-- **Frontend**: `apps/front-ends/cms/railway.toml` → Next.js configuration
-- **Backend**: `apps/back-ends/cms-api/railway.toml` → NestJS configuration
+- **Frontend**: Next.js build and start commands
+- **Backend**: NestJS build and start commands
 
 ### **Benefits of This Approach**
-- **Clean separation** of concerns
+- **Single source of truth** for all service configuration
 - **Easy to add new services** in the future
-- **Each service self-contained** with its own configuration
 - **No more auto-detection confusion**
 - **Scalable architecture** for monorepos
+- **Simpler maintenance** and deployment
 
 ## ✅ **Production Ready Features**
 
