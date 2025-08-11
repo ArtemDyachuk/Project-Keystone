@@ -4,7 +4,7 @@ Super simple deployment for the Project Keystone NX monorepo.
 
 ## 🚀 Simple Deployment Process
 
-### For Both Frontend AND Backend:
+### For Both Frontend AND Backend
 
 1. **Create empty Railway project**
 2. **Create two empty services** (one for frontend, one for backend)
@@ -21,6 +21,7 @@ Railway automatically detects and builds each service using NX.
 ## ⚠️ Troubleshooting
 
 **"No start command found" error?**
+
 - Check `railway.toml` is in repo root
 - Ensure file is committed and pushed
 - Look for file icon in Railway deployment details

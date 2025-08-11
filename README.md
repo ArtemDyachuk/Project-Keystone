@@ -1,46 +1,83 @@
-## Keystone
+# Project Keystone
 
-Monorepo managed by Nx. The primary frontend is a Next.js app at `apps/front-ends/cms` with Nx project name `@keystone/cms`.
+NX monorepo with Next.js frontend and NestJS backend.
 
-### Prerequisites
-- Node.js 20+
-- npm 10+
+## Quick Start
 
-### Install
-```sh
+```bash
 npm install
 ```
 
-### Run CMS (development)
-```sh
-npx nx dev @keystone/cms
-# or choose a port
-npx nx dev @keystone/cms -- --port=4201
+**Run in separate terminal tabs:**
+
+```bash
+# Terminal 1 - Frontend
+npx nx dev @keystone/cms --port=4201
+
+# Terminal 2 - Backend  
+npx nx serve @keystone/cms-api
 ```
 
-Direct Next.js alternative:
-```sh
-cd apps/front-ends/cms
-npx next dev
+## Prerequisites
+
+- **Node.js 22 LTS** (use `nvm use` if you have nvm)
+- **npm 10+**
+
+### One-time Setup (macOS/Linux)
+
+```bash
+echo 'export NX_SOCKET_DIR=/tmp/nx-tmp' >> ~/.zshrc
+source ~/.zshrc  # or restart terminal
 ```
 
-### Build and run (production)
-```sh
+This fixes NX socket path issues on systems with long directory paths.
+
+## Applications
+
+### Frontend (`@keystone/cms`)
+
+- **Tech**: Next.js 15 + React 19
+- **Location**: `apps/front-ends/cms/`
+- **Port**: 4201
+- **Dev**: `npx nx dev @keystone/cms --port=4201`
+- **Build**: `npx nx build @keystone/cms`
+
+### Backend (`@keystone/cms-api`)  
+
+- **Tech**: NestJS 11 + Node.js
+- **Location**: `apps/back-ends/cms-api/`
+- **Port**: 3001 (default)
+- **Dev**: `npx nx serve @keystone/cms-api`
+- **Build**: `npx nx build @keystone/cms-api`
+
+## Deployment
+
+**Railway**: Automatic deployment via `railway.toml` configuration.
+
+See [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for details.
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start services
+npx nx dev @keystone/cms --port=4201      # Frontend on http://localhost:4201
+npx nx serve @keystone/cms-api            # Backend on http://localhost:3001
+
+# Build for production
 npx nx build @keystone/cms
-npx nx start @keystone/cms -- --port=4201
-```
+npx nx build @keystone/cms-api
 
-### Useful tasks
-- Lint:
-```sh
+# Run tests
+npx nx test @keystone/cms
+npx nx test @keystone/cms-api
+
+# Lint code
 npx nx lint @keystone/cms
-```
-- Visualize project graph:
-```sh
+npx nx lint @keystone/cms-api
+
+# View project graph
 npx nx graph
 ```
-
-### Notes
-- Next.js config: `apps/front-ends/cms/next.config.js`
-- TypeScript config: `apps/front-ends/cms/tsconfig.json`
-
