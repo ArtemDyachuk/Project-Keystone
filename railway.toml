@@ -1,19 +1,12 @@
 # Railway Config as Code
+# This configuration is for the FRONTEND service (cms)
+# Create a separate railway.toml for the backend service
 
-# Backend (NestJS) - shared monorepo pattern
-[[services]]
-name = "cms-api"
-root = "."
-install = "npm ci"
-build = "npx nx build @keystone/cms-api"
-start = "node apps/back-ends/cms-api/dist/main.js"
+[build]
+builder = "nixpacks"
+buildCommand = "npx nx build @keystone/cms"
 
-# Frontend (Next.js) - shared monorepo pattern  
-[[services]]
-name = "cms"
-root = "."
-install = "npm ci"
-build = "npx nx build @keystone/cms"
-start = "cd apps/front-ends/cms && npx next start -p $PORT"
+[deploy]
+startCommand = "cd apps/front-ends/cms && npx next start -p $PORT"
 
 
