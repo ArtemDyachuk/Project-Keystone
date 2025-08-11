@@ -2,48 +2,26 @@
   "name": "@keystone/cms-api",
   "version": "0.0.1",
   "private": true,
-  "dependencies": {
-    "@keystone/database": "*"
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "lint": "eslint src",
+    "type-check": "tsc --noEmit"
   },
-  "nx": {
-    "targets": {
-      "build": {
-        "executor": "nx:run-commands",
-        "options": {
-          "command": "webpack-cli build",
-          "args": [
-            "--node-env=production"
-          ]
-        },
-        "configurations": {
-          "development": {
-            "args": [
-              "--node-env=development"
-            ]
-          }
-        }
-      },
-      "serve": {
-        "continuous": true,
-        "executor": "@nx/js:node",
-        "defaultConfiguration": "development",
-        "dependsOn": [
-          "build",
-          "@keystone/database:build"
-        ],
-        "options": {
-          "buildTarget": "@keystone/cms-api:build",
-          "runBuildTargetDependencies": false
-        },
-        "configurations": {
-          "development": {
-            "buildTarget": "@keystone/cms-api:build:development"
-          },
-          "production": {
-            "buildTarget": "@keystone/cms-api:build:production"
-          }
-        }
-      }
-    }
+  "dependencies": {
+    "@keystone/database": "*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "dotenv": "^17.2.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.0.0",
+    "@types/node": "^24.2.1",
+    "ts-node": "10.9.1",
+    "typescript": "^5.9.2"
   }
 }

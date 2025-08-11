@@ -1,22 +1,20 @@
-//@ts-check
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { composePlugins, withNx } = require('@nx/next');
-
-/**
- * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
- **/
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use this to set Nx-specific options
-  // See: https://nx.dev/recipes/next/next-config-setup
-  nx: {
-    svgr: false,
+  // Enable transpilation of workspace packages
+  transpilePackages: ['@keystone/database', '@keystone/ui'],
+  
+  // Environment variables
+  env: {
+    // Add any custom environment variables here
   },
+
+  // Experimental features
+  experimental: {
+    // Enable modern features as needed
+  },
+
+  // Output configuration
+  output: 'standalone',
 };
 
-const plugins = [
-  // Add more Next.js plugins to this list if needed.
-  withNx,
-];
-
-module.exports = composePlugins(...plugins)(nextConfig);
+module.exports = nextConfig;

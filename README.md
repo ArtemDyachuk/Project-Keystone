@@ -1,141 +1,178 @@
-# Project Keystone
+# Project Keystone 🏗️
 
-NX monorepo with Next.js frontend and NestJS backend.
+A modern full-stack monorepo built with **Turborepo**, featuring a **Next.js** frontend and **NestJS** backend with **MongoDB** database.
 
-## Quick Start
+## 🏗️ **Architecture**
+
+```
+Frontend (Vercel) → Backend (Render.com) → MongoDB Atlas
+```
+
+- **Frontend**: Next.js CMS hosted on Vercel
+- **Backend**: NestJS API hosted on Render.com  
+- **Database**: MongoDB Atlas (shared)
+- **Monorepo**: Turborepo for build optimization
+
+## 📁 **Project Structure**
+
+```
+Project-Keystone/
+├── apps/
+│   ├── front-ends/
+│   │   └── cms/              # Next.js frontend
+│   └── back-ends/
+│       └── cms-api/          # NestJS backend
+├── packages/
+│   ├── database/             # Shared MongoDB connection
+│   └── ui/                   # Shared React components
+├── turbo.json               # Turborepo configuration
+└── package.json            # Root workspace
+```
+
+## 🚀 **Quick Start**
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- MongoDB Atlas account
+
+### Installation
 
 ```bash
+# Clone repository
+git clone <your-repo-url>
+cd Project-Keystone
+
+# Install dependencies
 npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your MongoDB URI
 ```
 
-**Run in separate terminal tabs:**
+### Development
 
 ```bash
-# Terminal 1 - Frontend
-npx nx dev @keystone/cms --port=4201
+# Start all services
+npm run dev
 
-# Terminal 2 - Backend  
-npx nx serve @keystone/cms-api
+# Start individual services
+npm run dev:cms        # Frontend only
+npm run dev:cms-api    # Backend only
+
+# Build all services
+npm run build
+
+# Build individual services
+npm run build:cms      # Frontend only
+npm run build:cms-api  # Backend only
 ```
 
-## Prerequisites
+## 🌐 **Deployment**
 
-- **Node.js 22 LTS** (use `nvm use` if you have nvm)
-- **npm 10+**
-- **MongoDB** running locally (default: mongodb://localhost:27017)
+### Frontend (Vercel) - FREE
 
-### One-time Setup (macOS/Linux)
+1. Deploy to Vercel using the configuration in `apps/front-ends/cms/`
+2. See: [Vercel Deployment Guide](apps/front-ends/cms/VERCEL_DEPLOYMENT.md)
+
+### Backend (Render.com) - FREE/PAID
+
+1. Deploy to Render.com using the configuration in `apps/back-ends/cms-api/`
+2. See: [Render Deployment Guide](apps/back-ends/cms-api/RENDER_DEPLOYMENT.md)
+
+## 💰 **Cost Breakdown**
+
+| Service | Free Tier | Paid Tier | Usage |
+|---------|-----------|-----------|-------|
+| **Vercel** | 100GB bandwidth | $20/month | Frontend hosting |
+| **Render.com** | Cold starts | $7/month | Backend API |
+| **MongoDB Atlas** | 512MB | $9/month | Database |
+| **Total** | **$0/month** | **$36/month** | Full stack |
+
+## 🔧 **Environment Variables**
+
+### Required for Both Services
 
 ```bash
-echo 'export NX_SOCKET_DIR=/tmp/nx-tmp' >> ~/.zshrc
-source ~/.zshrc  # or restart terminal
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
 ```
 
-This fixes NX socket path issues on systems with long directory paths.
-
-## Applications
-
-### Frontend (`@keystone/cms`)
-
-- **Tech**: Next.js 15 + React 19
-- **Location**: `apps/front-ends/cms/`
-- **Port**: 4201
-- **Dev**: `npx nx dev @keystone/cms --port=4201`
-- **Build**: `npx nx build @keystone/cms`
-
-### Backend (`@keystone/cms-api`)  
-
-- **Tech**: NestJS 11 + Node.js
-- **Location**: `apps/back-ends/cms-api/`
-- **Port**: 3001 (default)
-- **Dev**: `npx nx serve @keystone/cms-api`
-- **Build**: `npx nx build @keystone/cms-api`
-
-## Deployment
-
-**Railway**: Automatic deployment via `railway.toml` configuration.
-
-See [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for details.
-
-## Environment Variables
-
-Create `.env` in the project root:
+### Frontend Additional
 
 ```bash
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/keystone
+NEXT_PUBLIC_API_URL=https://your-backend.onrender.com
 ```
 
-## Development
+## 📦 **Shared Packages**
+
+### `@keystone/database`
+
+MongoDB connection and models used by both frontend and backend.
+
+### `@keystone/ui`  
+
+Shared React components for consistent UI across applications.
+
+## 🎯 **Key Features**
+
+- ✅ **Turborepo**: Fast builds with smart caching
+- ✅ **TypeScript**: Full type safety across the stack
+- ✅ **Shared packages**: Reusable code between apps
+- ✅ **Modern deployment**: Vercel + Render.com
+- ✅ **Free tier friendly**: Start at $0/month
+- ✅ **Scalable**: Easy to add more apps/APIs
+
+## 🛠️ **Development Commands**
 
 ```bash
 # Install dependencies
 npm install
 
-# Start MongoDB (if not running)
-brew services start mongodb-community    # macOS with Homebrew
-# OR
-mongod                                    # Direct start
+# Development
+npm run dev                    # All services
+npm run dev:cms               # Frontend only
+npm run dev:cms-api           # Backend only
 
-# Start services
-npx nx dev @keystone/cms --port=4201      # Frontend on http://localhost:4201
-npx nx serve @keystone/cms-api            # Backend on http://localhost:3001
+# Building
+npm run build                 # All services
+npm run build:cms             # Frontend only
+npm run build:cms-api         # Backend only
 
-# Build for production
-npx nx build @keystone/cms
-npx nx build @keystone/cms-api
+# Type checking
+npm run type-check            # All services
 
-# Run tests
-npx nx test @keystone/cms
-npx nx test @keystone/cms-api
+# Linting
+npm run lint                  # All services
 
-# Lint code
-npx nx lint @keystone/cms
-npx nx lint @keystone/cms-api
-
-# View project graph
-npx nx graph
+# Testing
+npm run test                  # All services
 ```
 
-## Testing Database Connection
+## 🔄 **Adding New Apps**
 
-### 1. Check if MongoDB is running
-```bash
-# Test MongoDB connection
-mongosh --eval "db.runCommand({ping: 1})"
-```
+1. Create new app in `apps/front-ends/` or `apps/back-ends/`
+2. Add package.json with build scripts
+3. Update root package.json scripts if needed
+4. Turborepo automatically detects and caches new apps
 
-### 2. Test via API endpoints
-```bash
-# Backend health check
-curl http://localhost:3001/api/health
+## 📝 **Next Steps**
 
-# Frontend database status  
-curl http://localhost:4201/api/database/status
-```
+1. **Authentication**: Add AWS Cognito integration
+2. **More APIs**: Add additional backend services
+3. **Multi-tenancy**: Implement tenant isolation
+4. **Monitoring**: Add logging and analytics
+5. **Testing**: Add comprehensive test suites
 
-### 3. View in MongoDB
-```bash
-# Open MongoDB shell
-mongosh
+## 🤝 **Contributing**
 
-# Switch to keystone database
-use keystone
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-# Show collections (will be empty initially)
-show collections
+## 📄 **License**
 
-# Note: MongoDB creates databases automatically when first accessed
-# The "keystone" database will appear in the connection but may not
-# show in "show dbs" until collections are created
-```
-
-### Expected Response
-```json
-{
-  "status": "ok",
-  "database": {
-    "connected": true
-  }
-}
-```
+This project is licensed under the MIT License.

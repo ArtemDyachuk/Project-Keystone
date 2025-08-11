@@ -20,9 +20,16 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
+  "scripts": {
+    "build": "echo 'UI build skipped for now'",
+    "dev": "tsc --watch",
+    "lint": "echo 'No linting configured'",
+    "type-check": "tsc --noEmit"
+  },
   "devDependencies": {
     "@types/react": "^19.1.9",
-    "@types/react-dom": "^19.1.7"
+    "@types/react-dom": "^19.1.7",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "react": "^19.1.1",

@@ -3,19 +3,27 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import js from '@eslint/js';
 import { fixupConfigRules } from '@eslint/compat';
-import nx from '@nx/eslint-plugin';
 import baseConfig from '../../../eslint.config.mjs';
+
 const compat = new FlatCompat({
   baseDirectory: dirname(fileURLToPath(import.meta.url)),
   recommendedConfig: js.configs.recommended,
 });
 
-export default [
+const config = [
   ...fixupConfigRules(compat.extends('next')),
   ...fixupConfigRules(compat.extends('next/core-web-vitals')),
   ...baseConfig,
-  ...nx.configs['flat/react-typescript'],
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    rules: {
+      // Next.js specific rules
+      '@next/next/no-html-link-for-pages': 'error',
+    },
+  },
   {
     ignores: ['.next/**/*'],
   },
 ];
+
+export default config;
