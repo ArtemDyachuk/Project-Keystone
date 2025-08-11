@@ -1,4 +1,4 @@
-import { connectToDatabase, isConnectedToDatabase } from "@keystone/database";
+import { connectToDatabase, isConnectedToDatabase } from "../src/lib";
 
 /**
  * Initialize database connection for Next.js

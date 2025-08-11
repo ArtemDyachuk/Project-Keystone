@@ -1,9 +1,6 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@keystone/database', '@keystone/ui'],
-  outputFileTracingRoot: path.join(__dirname, "../../../"),
+  // Self-contained build - no workspace dependencies
 };
 
 module.exports = nextConfig;
