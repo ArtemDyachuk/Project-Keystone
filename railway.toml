@@ -11,5 +11,3 @@ startCommand = "cd apps/front-ends/cms && npx next start -p $PORT"
 restartPolicyType = "on_failure"
 healthcheckPath = "/"
 healthcheckTimeout = 300
-
-

@@ -1,48 +1,22 @@
 # Railway Deployment Guide
 
-Quick guide for deploying the Project Keystone NX monorepo to Railway.
+Super simple deployment for the Project Keystone NX monorepo.
 
-## 🚀 Quick Deployment
+## 🚀 Simple Deployment Process
 
-### For New Railway Account/Customer:
-1. **Create new Railway project** (empty project)
-2. **Connect this GitHub repo**
-3. **Railway auto-deploys** using `railway.toml` ✅
+### For Both Frontend AND Backend:
 
-That's it! The `railway.toml` file handles all configuration automatically.
+1. **Create empty Railway project**
+2. **Create two empty services** (one for frontend, one for backend)
+3. **Connect the same GitHub repo to both services**
+4. **Done!** ✅
 
-## 📁 Current Configuration
+Railway automatically detects and builds each service using NX.
 
-The repo contains a `railway.toml` file that configures the frontend service:
+## 📁 What's in the Repo
 
-```toml
-[build]
-builder = "nixpacks"
-buildCommand = "npx nx build @keystone/cms"
-
-[deploy]
-startCommand = "cd apps/front-ends/cms && npx next start -p $PORT"
-restartPolicyType = "on_failure"
-healthcheckPath = "/"
-healthcheckTimeout = 300
-```
-
-## 🔧 For Backend Service (Future)
-
-When ready to deploy the backend:
-1. Create separate Railway service
-2. Add this `railway.toml` in the backend service:
-
-```toml
-[build]
-builder = "nixpacks"
-buildCommand = "npx nx build @keystone/cms-api"
-
-[deploy]
-startCommand = "node apps/back-ends/cms-api/dist/main.js"
-restartPolicyType = "on_failure"
-healthcheckPath = "/health"
-```
+- `railway.toml` - Auto-configures the frontend service
+- Railway auto-detects the backend service using NX
 
 ## ⚠️ Troubleshooting
 
