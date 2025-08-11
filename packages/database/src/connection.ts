@@ -1,4 +1,8 @@
 import mongoose from "mongoose";
+import * as dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Simple cached connection
 let isConnected = false;
