@@ -46,6 +46,7 @@ build/
 **/src/shared/
 src/shared/
 apps/back-ends/cms-api/src/shared/
+apps/front-ends/cms/src/shared/
 
 # Lint/format caches
 .eslintcache

@@ -10,7 +10,7 @@
     "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules",
     "build:shared": "npm run build:database && npm run build:ui",
-    "build:cms": "turbo build --filter=@keystone/cms",
+    "build:cms": "npm run build:shared && mkdir -p apps/front-ends/cms/src/shared/ui && cp -r packages/database/dist/* apps/front-ends/cms/src/shared/ && cp -r packages/ui/dist/* apps/front-ends/cms/src/shared/ui/ && turbo build --filter=@keystone/cms",
     "build:cms-api": "turbo build --filter=@keystone/cms-api",
     "build:database": "turbo build --filter=@keystone/database",
     "build:ui": "turbo build --filter=@keystone/ui",
