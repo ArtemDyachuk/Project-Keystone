@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, Card, Input, Form, FormField, FormActions } from "@keystone/ui";
+import styles from './page.module.css';
+import { Button, Card, Input, Form, FormField, FormActions } from "../../src/shared/ui";
 import { useState } from "react";
-import styles from "./page.module.css";
 
 export default function UITestPage() {
   const [formData, setFormData] = useState({

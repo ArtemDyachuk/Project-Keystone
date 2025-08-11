@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "prebuild": "cd ../../../ && npm run build:shared && cd apps/front-ends/cms && mkdir -p src/shared/ui && cp -r ../../../packages/database/dist/* src/shared/ && cp -r ../../../packages/ui/dist/* src/shared/ui/",
     "build": "next build",
     "start": "next start",
     "dev": "next dev",
