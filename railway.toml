@@ -4,15 +4,14 @@
 [[services]]
 name = "cms-api"
 root = "."
-# Nixpacks installs dependencies automatically at the project root.
-buildCommand = "npx nx run @keystone/cms-api:build:production"
-startCommand = "node apps/back-ends/cms-api/dist/main.js"
+build = "npx nx run @keystone/cms-api:build:production"
+start = "node apps/back-ends/cms-api/dist/main.js"
 
 # Frontend service (Next.js)
 [[services]]
 name = "cms-web"
 root = "."
-buildCommand = "bash -lc 'cd apps/front-ends/cms && npx next build'"
-startCommand = "bash -lc 'cd apps/front-ends/cms && npx next start -p $PORT'"
+build = "npx nx run @keystone/cms:build"
+start = "npx nx run @keystone/cms:start -- -p $PORT"
 
 
