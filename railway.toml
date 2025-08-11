@@ -1,13 +1,17 @@
-# Railway Config as Code for a shared Nx monorepo
+# Railway Config as Code
 
-[services."cms-api"]
+# Backend (NestJS) - shared monorepo pattern (run from repo root)
+[[services]]
+name = "cms-api"
 root = "."
-buildCommand = "npx nx run @keystone/cms-api:build:production"
-startCommand = "node apps/back-ends/cms-api/dist/main.js"
+build = "npx nx run @keystone/cms-api:build:production"
+start = "node apps/back-ends/cms-api/dist/main.js"
 
-[services."cms"]
-root = "."
-buildCommand = "npx nx run @keystone/cms:build"
-startCommand = "npx nx run @keystone/cms:start -- -p $PORT"
+# Frontend (Next.js) - isolated pattern (run in app directory)
+[[services]]
+name = "cms"
+root = "apps/front-ends/cms"
+build = "npx next build"
+start = "npx next start -p $PORT"
 
 
