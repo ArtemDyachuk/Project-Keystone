@@ -21,7 +21,7 @@
     "react-dom": "^19.1.1"
   },
   "scripts": {
-    "build": "echo 'UI build skipped for now'",
+    "build": "tsc",
     "dev": "tsc --watch",
     "lint": "echo 'No linting configured'",
     "type-check": "tsc --noEmit"
