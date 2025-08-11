@@ -1,39 +1,7 @@
 import styles from './page.module.css';
-import { getHealthCheckUrl, debugConfig } from '../lib/config';
+import { getHealthCheckUrl } from '../lib/config';
 
-async function getDatabaseStatus() {
-  try {
-    // Debug configuration in development
-    if (process.env.NODE_ENV === 'development') {
-      debugConfig();
-    }
-    
-    const apiUrl = getHealthCheckUrl();
-    console.log('🔍 Fetching database status from:', apiUrl);
-    
-    // Direct API call to backend
-    const response = await fetch(apiUrl, {
-      cache: 'no-store'
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch database status');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching database status:', error);
-    return {
-      status: 'error',
-      database: { connected: false, initialized: false },
-      error: 'Failed to check database status'
-    };
-  }
-}
-
-export default async function HomePage() {
-  const dbStatus = await getDatabaseStatus();
-  
+export default function HomePage() {
   return (
     <div className={styles.container}>
       <main className={styles.main}>
@@ -49,11 +17,11 @@ export default async function HomePage() {
           <div className={styles.card}>
             <h2>📊 Database Status</h2>
             <div className={styles.status}>
-              <p><strong>Status:</strong> <span className={dbStatus.status === 'ok' ? styles.success : styles.error}>{dbStatus.status}</span></p>
-              <p><strong>Connected:</strong> {dbStatus.database?.connected ? '✅ Yes' : '❌ No'}</p>
-              {dbStatus.error && (
-                <p><strong>Error:</strong> <span className={styles.error}>{dbStatus.error}</span></p>
-              )}
+              <p><strong>Status:</strong> <span className={styles.loading}>Loading...</span></p>
+              <p><strong>Connected:</strong> <span className={styles.loading}>Checking...</span></p>
+              <div id="db-status" className={styles.loading}>
+                {/* Database status will be loaded client-side */}
+              </div>
             </div>
           </div>
 

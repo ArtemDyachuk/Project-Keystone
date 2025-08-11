@@ -2,7 +2,9 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalEnv": [
-    "MONGODB_URI"
+    "MONGODB_URI",
+    "LOGTAIL_URL",
+    "LOGTAIL_SOURCE_TOKEN"
   ],
   "tasks": {
     "build": {
@@ -33,9 +35,7 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": [
-        "coverage/**"
-      ]
+      "outputs": []
     },
     "type-check": {
       "dependsOn": ["^build"],
