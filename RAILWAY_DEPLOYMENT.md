@@ -14,8 +14,8 @@ Complete deployment guide for Project Keystone NX monorepo with MongoDB Atlas.
 ### **2. Connect GitHub Repo**
 
 - Connect **same GitHub repo** to both services
-- **Frontend**: Auto-detected and configured by `railway.toml`
-- **Backend**: Auto-detected but requires manual configuration
+- **Frontend**: Auto-detected and configured by `apps/front-ends/cms/railway.toml`
+- **Backend**: Auto-detected and configured by `apps/back-ends/cms-api/railway.toml`
 
 ### **3. Configure Environment Variables**
 
@@ -47,37 +47,26 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 2. Add `MONGODB_URI` with your MongoDB Atlas connection string
 3. Railway automatically sets `NODE_ENV=production`
 
-### **4. Configure Backend Service Manually**
+### **4. Service Configuration (Automatic via railway.toml files)**
 
-**IMPORTANT**: The backend service requires manual configuration in Railway dashboard:
+**Both services are now automatically configured via their respective `railway.toml` files:**
 
-1. **Go to Railway Dashboard → cms-api service**
-2. **Click "Settings" tab**
-3. **Find "Build & Deploy" section**
-4. **Set these values manually:**
+- **Frontend Service**: Uses `apps/front-ends/cms/railway.toml`
+- **Backend Service**: Uses `apps/back-ends/cms-api/railway.toml`
 
-```bash
-# Build Command
-npx nx build @keystone/cms-api
-
-# Start Command  
-node apps/back-ends/cms-api/dist/main.js
-
-# Install Command
-npm install
-```
+**No manual configuration needed in Railway dashboard!** 🎉
 
 ### **5. Deploy**
 
 - Push to main branch
-- **Frontend**: Deploys automatically using `railway.toml` ✅
-- **Backend**: Deploys using manual configuration ✅
+- **Frontend**: Deploys automatically using `apps/front-ends/cms/railway.toml` ✅
+- **Backend**: Deploys automatically using `apps/back-ends/cms-api/railway.toml` ✅
 
 ## 📁 **What's in the Repo**
 
-- `railway.toml` - **Frontend service configuration only**
-- `apps/back-ends/cms-api/` - **Backend requires manual Railway configuration**
-- `apps/front-ends/cms/` - **Frontend auto-configured by railway.toml**
+- `apps/front-ends/cms/railway.toml` - **Frontend service configuration**
+- `apps/back-ends/cms-api/railway.toml` - **Backend service configuration**
+- **Both services auto-configured via their respective railway.toml files** ✅
 - **Environment variables loaded via `dotenv`** ✅
 
 ## 🔗 **Architecture: Two Database Connection Types**
@@ -98,19 +87,21 @@ npm install
 
 **Why Both?** Direct connection for simple checks, backend API for complex operations.
 
-## ⚠️ **Important: Backend Service Configuration**
+## ✅ **Service Configuration Architecture**
 
-### **Why Manual Configuration is Required**
+### **Service-Specific railway.toml Files**
 
-Railway's auto-detection for NX monorepos can be unreliable because:
-- **Multiple `package.json` files** confuse the auto-detection
-- **Both services in same repo** can cause conflicts
-- **Railway.toml limitations** - only configures one service per file
+Each service now has its own configuration file for better organization:
 
-### **Solution: Hybrid Approach**
-- **Frontend**: Configured automatically via `railway.toml` ✅
-- **Backend**: Configured manually in Railway dashboard ✅
-- **Result**: Both services work correctly with proper configuration
+- **Frontend**: `apps/front-ends/cms/railway.toml` → Next.js configuration
+- **Backend**: `apps/back-ends/cms-api/railway.toml` → NestJS configuration
+
+### **Benefits of This Approach**
+- **Clean separation** of concerns
+- **Easy to add new services** in the future
+- **Each service self-contained** with its own configuration
+- **No more auto-detection confusion**
+- **Scalable architecture** for monorepos
 
 ## ✅ **Production Ready Features**
 

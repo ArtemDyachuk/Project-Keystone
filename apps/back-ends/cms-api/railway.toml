@@ -6,7 +6,7 @@ builder = "nixpacks"
 buildCommand = "npx nx build @keystone/cms-api"
 
 [deploy]
-startCommand = "node dist/main.js"
+startCommand = "node apps/back-ends/cms-api/dist/main.js"
 restartPolicyType = "on_failure"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
