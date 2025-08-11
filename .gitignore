@@ -27,12 +27,21 @@ pnpm-debug.log*
 # TypeScript
 **/*.tsbuildinfo
 
+# Source maps
+*.map
+**/*.map
+
 # Build outputs
 **/dist/
 **/.next/
 **/out/
 **/.turbo/
 **/.swc/
+
+# Shared build artifacts (copied during build)
+**/src/shared/
+src/shared/
+apps/back-ends/cms-api/src/shared/
 
 # Lint/format caches
 .eslintcache

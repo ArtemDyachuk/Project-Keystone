@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "prebuild": "cd ../../../packages/database && npm run build",
+    "prebuild": "cd ../../../packages/database && npm run build && cd ../../apps/back-ends/cms-api && mkdir -p src/shared && cp -r ../../../packages/database/dist/* src/shared/",
+    "postbuild": "cp -r src/shared dist/",
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
@@ -11,11 +12,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@keystone/database": "file:../../../packages/database",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "dotenv": "^17.2.1",
+    "mongoose": "^8.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0"
   },
