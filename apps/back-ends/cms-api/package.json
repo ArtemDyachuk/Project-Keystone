@@ -2,6 +2,9 @@
   "name": "@keystone/cms-api",
   "version": "0.0.1",
   "private": true,
+  "dependencies": {
+    "@keystone/database": "*"
+  },
   "nx": {
     "targets": {
       "build": {
@@ -25,7 +28,8 @@
         "executor": "@nx/js:node",
         "defaultConfiguration": "development",
         "dependsOn": [
-          "build"
+          "build",
+          "@keystone/database:build"
         ],
         "options": {
           "buildTarget": "@keystone/cms-api:build",

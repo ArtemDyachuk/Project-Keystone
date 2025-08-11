@@ -1,0 +1,22 @@
+{
+  "name": "@keystone/database",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared MongoDB database connection and utilities",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "mongoose": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "typescript": "^5.9.2"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}

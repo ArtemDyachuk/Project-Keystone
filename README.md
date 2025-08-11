@@ -22,6 +22,7 @@ npx nx serve @keystone/cms-api
 
 - **Node.js 22 LTS** (use `nvm use` if you have nvm)
 - **npm 10+**
+- **MongoDB** running locally (default: mongodb://localhost:27017)
 
 ### One-time Setup (macOS/Linux)
 
@@ -56,11 +57,25 @@ This fixes NX socket path issues on systems with long directory paths.
 
 See [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for details.
 
+## Environment Variables
+
+Create `.env` in the project root:
+
+```bash
+# MongoDB Configuration
+MONGODB_URI=mongodb://localhost:27017/keystone
+```
+
 ## Development
 
 ```bash
 # Install dependencies
 npm install
+
+# Start MongoDB (if not running)
+brew services start mongodb-community    # macOS with Homebrew
+# OR
+mongod                                    # Direct start
 
 # Start services
 npx nx dev @keystone/cms --port=4201      # Frontend on http://localhost:4201
@@ -80,4 +95,47 @@ npx nx lint @keystone/cms-api
 
 # View project graph
 npx nx graph
+```
+
+## Testing Database Connection
+
+### 1. Check if MongoDB is running
+```bash
+# Test MongoDB connection
+mongosh --eval "db.runCommand({ping: 1})"
+```
+
+### 2. Test via API endpoints
+```bash
+# Backend health check
+curl http://localhost:3001/api/health
+
+# Frontend database status  
+curl http://localhost:4201/api/database/status
+```
+
+### 3. View in MongoDB
+```bash
+# Open MongoDB shell
+mongosh
+
+# Switch to keystone database
+use keystone
+
+# Show collections (will be empty initially)
+show collections
+
+# Note: MongoDB creates databases automatically when first accessed
+# The "keystone" database will appear in the connection but may not
+# show in "show dbs" until collections are created
+```
+
+### Expected Response
+```json
+{
+  "status": "ok",
+  "database": {
+    "connected": true
+  }
+}
 ```

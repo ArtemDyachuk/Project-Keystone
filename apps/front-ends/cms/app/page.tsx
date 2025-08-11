@@ -1,6 +1,26 @@
 import styles from './page.module.css';
 
-export default function Index() {
+async function getDatabaseStatus() {
+  try {
+    const response = await fetch('http://localhost:3001/api/health', {
+      cache: 'no-store'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch database status');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching database status:', error);
+    return {
+      status: 'error',
+      database: { connected: false, initialized: false },
+      error: 'Failed to check database status'
+    };
+  }
+}
+
+export default async function Index() {
+  const dbStatus = await getDatabaseStatus();
   /*
    * Replace the elements below with your own.
    *
@@ -35,6 +55,12 @@ export default function Index() {
                 </svg>
                 <span>You&apos;re up and running</span>
               </h2>
+              <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+                <h3>Database Status</h3>
+                <p>Status: {dbStatus.status}</p>
+                <p>Connected: {dbStatus.database.connected ? '✅ Yes' : '❌ No'}</p>
+                {dbStatus.error && <p style={{ color: 'red' }}>Error: {dbStatus.error}</p>}
+              </div>
               <a href="#commands"> What&apos;s next? </a>
             </div>
             <div className="logo-container">

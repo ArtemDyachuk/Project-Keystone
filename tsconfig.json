@@ -11,6 +11,9 @@
     },
     {
       "path": "./apps/back-ends/cms-api"
+    },
+    {
+      "path": "./packages/database"
     }
   ]
 }

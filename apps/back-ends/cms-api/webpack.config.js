@@ -5,6 +5,9 @@ module.exports = {
   output: {
     path: join(__dirname, 'dist'),
   },
+  externals: {
+    '@keystone/database': 'commonjs @keystone/database'
+  },
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
