@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "prebuild": "cd ../../../packages/database && npm run build",
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
@@ -10,7 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@keystone/database": "*",
+    "@keystone/database": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",

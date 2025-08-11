@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "mongoose": "^8.0.0"
+    "mongoose": "^8.0.0",
+    "dotenv": "^17.2.1"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
