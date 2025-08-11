@@ -4,14 +4,14 @@
 [[services]]
 name = "cms-api"
 root = "."
-build = "npx nx run @keystone/cms-api:build:production"
-start = "node apps/back-ends/cms-api/dist/main.js"
+buildCommand = "npx nx run @keystone/cms-api:build:production"
+startCommand = "node apps/back-ends/cms-api/dist/main.js"
 
 # Frontend service (Next.js)
 [[services]]
 name = "cms-web"
 root = "."
-build = "npx nx run @keystone/cms:build"
-start = "npx nx run @keystone/cms:start -- -p $PORT"
+buildCommand = "npx nx run @keystone/cms:build"
+startCommand = "npx nx run @keystone/cms:start -- -p $PORT"
 
 
