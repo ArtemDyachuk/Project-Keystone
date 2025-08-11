@@ -4,18 +4,16 @@
 [[services]]
 name = "cms-api"
 root = "."
-install = "npm ci"
-build = "npx nx build @keystone/cms-api"
-start = "node apps/back-ends/cms-api/dist/main.js"
-watch_paths = ["apps/back-ends/cms-api/**/*", "package.json", "package-lock.json"]
+[services.build]
+buildCommand = "npm ci && npx nx build @keystone/cms-api"
+startCommand = "node apps/back-ends/cms-api/dist/main.js"
 
 # Frontend (Next.js) - shared monorepo pattern  
 [[services]]
 name = "cms"
 root = "."
-install = "npm ci"
-build = "npx nx build @keystone/cms"
-start = "cd apps/front-ends/cms && npx next start -p $PORT"
-watch_paths = ["apps/front-ends/cms/**/*", "package.json", "package-lock.json"]
+[services.build]
+buildCommand = "npm ci && npx nx build @keystone/cms"
+startCommand = "cd apps/front-ends/cms && npx next start -p $PORT"
 
 
