@@ -10,18 +10,24 @@ export const config = {
       return process.env.NEXT_PUBLIC_API_URL;
     }
     
-    // Priority 2: Railway service discovery (automatic)
-    if (process.env.RAILWAY_SERVICE_URL) {
-      return process.env.RAILWAY_SERVICE_URL;
+    // Priority 2: Railway internal networking (for private services in same project)
+    // This is the most reliable way for frontend to reach backend in Railway
+    if (process.env.RAILWAY_STATIC_URL) {
+      // Extract the project domain and construct internal backend URL
+      const staticUrl = process.env.RAILWAY_STATIC_URL;
+      const projectDomain = staticUrl.replace('https://', '').replace('http://', '');
+      
+      // Try to construct the internal backend URL
+      // Railway internal networking uses .railway.internal domain
+      const internalBackendUrl = `http://cms-api.${projectDomain.split('.').slice(1).join('.')}`;
+      
+      console.log('🔍 Constructed internal backend URL:', internalBackendUrl);
+      return internalBackendUrl;
     }
     
-    // Priority 3: Railway static URL fallback
-    if (process.env.RAILWAY_STATIC_URL) {
-      // Extract domain from static URL and construct backend URL
-      const staticUrl = process.env.RAILWAY_STATIC_URL;
-      const domain = staticUrl.replace('https://', '').replace('http://', '');
-      // Assuming backend service has similar naming pattern
-      return `https://${domain.replace('cms', 'cms-api')}`;
+    // Priority 3: Railway service discovery (automatic)
+    if (process.env.RAILWAY_SERVICE_URL) {
+      return process.env.RAILWAY_SERVICE_URL;
     }
     
     // Priority 4: Local development fallback
@@ -88,4 +94,32 @@ export function debugConfig() {
   console.log('  Railway Static URL:', config.railwayEnvironment.staticUrl);
   console.log('  Railway Service URL:', config.railwayEnvironment.serviceUrl);
   console.log('  Railway Public URL:', config.railwayEnvironment.publicUrl);
+  console.log('  All Railway Env Vars:', Object.keys(process.env).filter(key => key.startsWith('RAILWAY_')));
+}
+
+/**
+ * Test backend connectivity
+ */
+export async function testBackendConnectivity() {
+  const healthUrl = getHealthCheckUrl();
+  console.log('🧪 Testing backend connectivity to:', healthUrl);
+  
+  try {
+    const response = await fetch(healthUrl, { 
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Backend connection successful:', data);
+      return { success: true, data };
+    } else {
+      console.log('❌ Backend responded with error:', response.status, response.statusText);
+      return { success: false, status: response.status, statusText: response.statusText };
+    }
+  } catch (error) {
+    console.log('❌ Backend connection failed:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }

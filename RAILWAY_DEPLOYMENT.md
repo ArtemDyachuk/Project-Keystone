@@ -107,6 +107,23 @@ NEXT_PUBLIC_API_URL=https://your-backend-service-name.up.railway.app
 - **Debug**: Check `/api/config-debug` endpoint to verify configuration
 - **Verify**: Ensure backend service is deployed and running on Railway
 
+### Backend Service Fails to Start (SIGTERM Error)
+- **Root Cause**: Backend service crashes during startup or build
+- **Common Causes**:
+  - Missing environment variables (`MONGODB_URI`)
+  - Build failures in NX monorepo
+  - Port conflicts or resource limits
+- **Solutions**:
+  1. Check Railway backend service logs for specific errors
+  2. Verify `MONGODB_URI` is set in backend service variables
+  3. Ensure backend service has proper build configuration
+  4. Check if backend service is using correct port (Railway sets `PORT` automatically)
+- **Debug Steps**:
+  1. Go to Railway backend service → Deployments tab
+  2. Check latest deployment logs for startup errors
+  3. Verify environment variables are set correctly
+  4. Test backend build locally: `npx nx build @keystone/cms-api`
+
 ## 📚 **Useful Railway Commands**
 
 ```bash

@@ -1,5 +1,5 @@
 import styles from './page.module.css';
-import { getHealthCheckUrl, debugConfig } from '../lib/config';
+import { getHealthCheckUrl, debugConfig, testBackendConnectivity } from '../lib/config';
 
 async function getDatabaseStatus() {
   try {
@@ -10,6 +10,18 @@ async function getDatabaseStatus() {
     
     const apiUrl = getHealthCheckUrl();
     console.log('🔍 Fetching database status from:', apiUrl);
+    
+    // Test backend connectivity first
+    const connectivityTest = await testBackendConnectivity();
+    console.log('🧪 Connectivity test result:', connectivityTest);
+    
+    if (!connectivityTest.success) {
+      return {
+        status: 'error',
+        database: { connected: false, initialized: false },
+        error: `Backend connectivity failed: ${connectivityTest.error || connectivityTest.statusText || 'Unknown error'}`
+      };
+    }
     
     const response = await fetch(apiUrl, {
       cache: 'no-store'
