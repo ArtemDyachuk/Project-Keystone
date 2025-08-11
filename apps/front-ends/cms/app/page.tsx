@@ -1,5 +1,6 @@
 import styles from './page.module.css';
 import { getHealthCheckUrl } from '../lib/config';
+import ConnectionTest from './components/ConnectionTest';
 
 export default function HomePage() {
   return (
@@ -14,16 +15,7 @@ export default function HomePage() {
         </p>
 
         <div className={styles.grid}>
-          <div className={styles.card}>
-            <h2>📊 Database Status</h2>
-            <div className={styles.status}>
-              <p><strong>Status:</strong> <span className={styles.loading}>Loading...</span></p>
-              <p><strong>Connected:</strong> <span className={styles.loading}>Checking...</span></p>
-              <div id="db-status" className={styles.loading}>
-                {/* Database status will be loaded client-side */}
-              </div>
-            </div>
-          </div>
+          <ConnectionTest />
 
           <div className={styles.card}>
             <h2>🚀 Quick Links</h2>
