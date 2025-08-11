@@ -11,7 +11,9 @@
     "clean": "turbo clean && rm -rf node_modules",
     "build:cms": "turbo build --filter=@keystone/cms",
     "build:cms-api": "turbo build --filter=@keystone/cms-api",
+    "build:cms-api-render": "npm run build:database:direct && cd apps/back-ends/cms-api && npm run build",
     "build:database": "turbo build --filter=@keystone/database",
+    "build:database:direct": "cd packages/database && npm run build",
     "build:ui": "turbo build --filter=@keystone/ui",
     "dev:cms": "turbo dev --filter=@keystone/cms",
     "dev:cms-api": "turbo dev --filter=@keystone/cms-api"
@@ -19,7 +21,8 @@
   "private": true,
   "packageManager": "npm@10.9.3",
   "dependencies": {
-    "dotenv": "^17.2.1"
+    "dotenv": "^17.2.1",
+    "turbo": "^2.5.5"
   },
   "devDependencies": {
     "@eslint/compat": "^1.1.1",
@@ -28,7 +31,6 @@
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.6.2",
-    "turbo": "^2.5.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.29.0"
   },
