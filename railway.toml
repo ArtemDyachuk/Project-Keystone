@@ -1,17 +1,21 @@
 # Railway Config as Code
 
-# Backend (NestJS) - shared monorepo pattern (run from repo root)
+# Backend (NestJS) - shared monorepo pattern
 [[services]]
 name = "cms-api"
 root = "."
-build = "npx nx run @keystone/cms-api:build:production"
+install = "npm ci"
+build = "npx nx build @keystone/cms-api"
 start = "node apps/back-ends/cms-api/dist/main.js"
+watch_paths = ["apps/back-ends/cms-api/**/*", "package.json", "package-lock.json"]
 
-# Frontend (Next.js) - isolated pattern (run in app directory)
+# Frontend (Next.js) - shared monorepo pattern  
 [[services]]
 name = "cms"
-root = "apps/front-ends/cms"
-build = "npx next build"
-start = "npx next start -p $PORT"
+root = "."
+install = "npm ci"
+build = "npx nx build @keystone/cms"
+start = "cd apps/front-ends/cms && npx next start -p $PORT"
+watch_paths = ["apps/front-ends/cms/**/*", "package.json", "package-lock.json"]
 
 
