@@ -9,9 +9,16 @@ startCommand = "node apps/back-ends/cms-api/dist/main.js"
 
 # Frontend service (Next.js)
 [[services]]
-name = "cms-web"
+name = "cms"
 root = "."
 buildCommand = "npx nx run @keystone/cms:build"
 startCommand = "npx nx run @keystone/cms:start -- -p $PORT"
+
+# Optional alias if your Railway service is named "cms-api nest"
+[[services]]
+name = "cms-api nest"
+root = "."
+buildCommand = "npx nx run @keystone/cms-api:build:production"
+startCommand = "node apps/back-ends/cms-api/dist/main.js"
 
 
