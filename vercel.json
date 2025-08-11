@@ -1,6 +1,0 @@
-{
-  "buildCommand": "npm run build:cms",
-  "outputDirectory": "apps/front-ends/cms/.next",
-  "installCommand": "npm install",
-  "framework": "nextjs"
-}
