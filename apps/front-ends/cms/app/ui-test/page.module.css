@@ -1,0 +1,114 @@
+/* Page Layout */
+.container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 32px 0;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+/* Grid Layout */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Button Section */
+.buttonSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Card Variants Section */
+.cardVariantsSection {
+  grid-column: 1 / -1;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .cardGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.cardTitle {
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #111827;
+}
+
+.cardDescription {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Success Section */
+.successSection {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.successCard {
+  display: inline-block;
+  max-width: 400px;
+}
+
+.successContent {
+  text-align: center;
+}
+
+.successTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #059669;
+  margin: 0 0 8px 0;
+}
+
+.successDescription {
+  color: #6b7280;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.successAction {
+  margin-top: 16px;
+}
+
+/* Keyframes for button loading spinner */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
