@@ -2,8 +2,6 @@ import styles from './page.module.css';
 import { config } from '../lib/config';
 import ConnectionTest from './components/ConnectionTest';
 import { TenantService, connectToDatabase } from '@keystone/database';
-import { Button } from '@keystone/ui';
-import Link from 'next/link';
 
 export default async function HomePage() {
   // Server-side data fetching using shared TenantService
@@ -19,7 +17,7 @@ export default async function HomePage() {
     // Connect to database and fetch data using shared service
     await connectToDatabase();
     const tenants = await TenantService.getAllTenants();
-    
+
     serverSideData = {
       success: true,
       tenantCount: tenants.length,
@@ -45,24 +43,14 @@ export default async function HomePage() {
           Multi-tenant CMS built with <strong>Turborepo</strong>, <strong>Next.js</strong>, and <strong>NestJS</strong>
         </p>
 
-        {/* Authentication Buttons */}
-        <div className={styles.authButtons}>
-          <Link href="/signup">
-            <Button>Sign Up</Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="secondary">Login</Button>
-          </Link>
-        </div>
-
         <div className={styles.grid}>
           {/* Server-side data fetching result */}
           <div className={styles.card}>
             <h2>🗄️ Server-Side Database Test</h2>
             <p>Direct database access from server component using shared TenantService:</p>
-            <div style={{ 
-              padding: '1rem', 
-              backgroundColor: serverSideData.success ? '#f0f9ff' : '#fef2f2', 
+            <div style={{
+              padding: '1rem',
+              backgroundColor: serverSideData.success ? '#f0f9ff' : '#fef2f2',
               borderRadius: '4px',
               border: `1px solid ${serverSideData.success ? '#0ea5e9' : '#ef4444'}`,
               marginTop: '0.5rem'

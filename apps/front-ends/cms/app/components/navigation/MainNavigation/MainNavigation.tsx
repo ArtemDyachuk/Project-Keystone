@@ -1,8 +1,6 @@
 "use client";
 
-// This must be server side in future.
 import React, { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@keystone/ui";
 import { signOutUser } from "../../../../lib/auth-client";
@@ -17,21 +15,10 @@ interface UserInfo {
 export function MainNavigation() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const pathname = usePathname();
-
-  // Hide navigation on auth pages
-  const isAuthPage = pathname.startsWith("/login") ||
-    pathname.startsWith("/signup") ||
-    pathname.startsWith("/forgot-password") ||
-    pathname.startsWith("/reset-password");
 
   useEffect(() => {
-    if (!isAuthPage) {
-      checkAuthStatus();
-    } else {
-      setIsLoading(false);
-    }
-  }, [isAuthPage]);
+    checkAuthStatus();
+  }, []);
 
   const checkAuthStatus = async () => {
     try {
@@ -56,11 +43,6 @@ export function MainNavigation() {
       window.location.href = "/login";
     }
   };
-
-  // Don't render navigation on auth pages
-  if (isAuthPage) {
-    return null;
-  }
 
   if (isLoading) {
     return (

@@ -11,19 +11,14 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
   const isAuthenticated = !!accessToken;
 
-  // Auth pages: redirect to home if authenticated
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup") ||
-    pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password");
-
-  if (isAuthPage && isAuthenticated) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // If not authenticated, redirect to login
+  if (!isAuthenticated && pathname !== "/login") {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Protected pages: redirect to login if not authenticated
-  if (!isAuthPage && !isAuthenticated) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+  // If authenticated and on login page, redirect to home
+  if (isAuthenticated && pathname === "/login") {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
