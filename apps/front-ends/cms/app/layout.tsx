@@ -1,4 +1,5 @@
 import './global.css';
+import { ConditionalNavigation } from './components/ConditionalNavigation';
 
 export const metadata = {
   title: 'Welcome to cms',
@@ -12,7 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ConditionalNavigation />
+        {children}
+      </body>
     </html>
   );
 }

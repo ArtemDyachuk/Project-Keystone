@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input } from "@keystone/ui";
+import { signInUser, redirectTo } from "../../../lib/auth-client";
 import styles from "./login.module.css";
 import Link from "next/link";
 
@@ -19,27 +20,19 @@ export default function LoginPage() {
     setSuccess("");
 
     try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
+      const result = await signInUser(email, password);
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error);
+      if (!result.success) {
+        throw new Error(result.error || "Login failed");
       }
 
       setSuccess("Login successful! 🎉");
-      console.log("Login tokens:", data.tokens);
+      console.log("User logged in:", result.user);
       
-      // TODO: Store tokens and redirect to dashboard
+      // Wait a moment to show success message, then redirect
+      setTimeout(() => {
+        redirectTo("/");
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
