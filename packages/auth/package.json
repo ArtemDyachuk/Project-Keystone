@@ -10,7 +10,8 @@
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "setup:cognito": "./setup-cognito.sh development"
+    "setup:cognito": "./setup-cognito.sh development",
+    "setup:cognito:profile": "./setup-cognito.sh development"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.600.0",

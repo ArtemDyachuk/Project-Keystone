@@ -14,15 +14,27 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}🚀 Simple AWS Cognito Setup${NC}"
 echo "==============================="
+echo ""
+echo "Usage: ./setup-cognito.sh [environment] [aws-profile]"
+echo "Examples:"
+echo "  ./setup-cognito.sh development"
+echo "  ./setup-cognito.sh development my-personal-profile"
+echo "  ./setup-cognito.sh production company-prod-profile"
+echo ""
 
 # Environment setup
 ENVIRONMENT=${1:-development}
+AWS_PROFILE=${2:-""}
 REGION=${AWS_REGION:-us-east-1}
 USER_POOL_NAME="keystone-${ENVIRONMENT}-users"
 CLIENT_NAME="keystone-${ENVIRONMENT}-client"
-DOMAIN_PREFIX="keystone-${ENVIRONMENT}-auth"
+DOMAIN_PREFIX="keystone-${ENVIRONMENT}-auth-$(date +%s)"
 
 echo -e "${BLUE}Environment:${NC} $ENVIRONMENT"
+if [ ! -z "$AWS_PROFILE" ]; then
+    echo -e "${BLUE}AWS Profile:${NC} $AWS_PROFILE"
+    export AWS_PROFILE=$AWS_PROFILE
+fi
 echo -e "${BLUE}Region:${NC} $REGION"
 echo -e "${BLUE}User Pool:${NC} $USER_POOL_NAME"
 
@@ -110,11 +122,11 @@ CLIENT_OUTPUT=$(aws cognito-idp create-user-pool-client \
     --user-pool-id "$USER_POOL_ID" \
     --client-name "$CLIENT_NAME" \
     --generate-secret \
-    --explicit-auth-flows USER_SRP_AUTH ADMIN_NO_SRP_AUTH \
+    --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_ADMIN_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
     --supported-identity-providers COGNITO \
-    --callback-urls "http://localhost:3000/auth/callback,https://*.vercel.app/auth/callback" \
-    --logout-urls "http://localhost:3000,https://*.vercel.app" \
-    --allowed-o-auth-flows authorization_code \
+    --callback-urls "http://localhost:3000/auth/callback" "https://project-keystone-six.vercel.app/auth/callback" \
+    --logout-urls "http://localhost:3000" "https://project-keystone-six.vercel.app" \
+    --allowed-o-auth-flows code \
     --allowed-o-auth-scopes email openid profile \
     --allowed-o-auth-flows-user-pool-client \
     --prevent-user-existence-errors ENABLED \
