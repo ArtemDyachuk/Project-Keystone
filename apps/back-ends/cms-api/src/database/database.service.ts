@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
-import { connectToDatabase, disconnectFromDatabase, isConnectedToDatabase } from "../shared";
+import { connectToDatabase, disconnectFromDatabase, isConnectedToDatabase } from "@keystone/database";
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {

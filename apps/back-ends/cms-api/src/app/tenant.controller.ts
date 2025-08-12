@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
-import { TenantService, ITenant } from '../shared';
+import { TenantService, ITenant } from '@keystone/database';
 
 // DTOs for request validation
 export class CreateTenantDto {
