@@ -1,6 +1,6 @@
 # Render.com Deployment Guide for CMS API Backend
 
-## 🚀 Quick Setup
+## 🚀 **Turborepo-Optimized Setup**
 
 ### 1. Create New Web Service
 
@@ -16,8 +16,10 @@
 - **Branch**: `main`
 - **Root Directory**: `apps/back-ends/cms-api`
 - **Runtime**: Node
-- **Build Command**: `cd ../../../ && npm install && npm run build:cms-api`
+- **Build Command**: `npm run prebuild && npm run build`
 - **Start Command**: `npm start`
+
+✅ **Optimized Build Process**: The `prebuild` script automatically builds shared packages first!
 
 ### 3. Environment Variables
 
@@ -33,44 +35,111 @@ PORT=10000
 
 - **Instance Type**: Free (or Starter $7/month for no cold starts)
 - **Auto-Deploy**: Yes
-- **Health Check Path**: `/api/health` (if implemented)
+- **Health Check Path**: `/api/health`
 
-## 💰 Pricing Tiers
+## 🏗️ **True Monorepo Architecture**
+
+```
+Frontend (Vercel) ⟷ Shared Packages ⟷ Backend (Render.com) ⟷ MongoDB Atlas
+```
+
+**Shared Packages in Backend:**
+
+- ✅ **@keystone/database**: MongoDB models, repositories, services
+- ✅ **Type Safety**: Shared TypeScript interfaces
+- ✅ **Business Logic**: Reusable service layer
+- ✅ **Auto-Build**: Shared packages built automatically during deployment
+
+## 💰 **Pricing Tiers**
 
 ### Free Tier
 
 - ✅ **Cost**: $0/month
-- ⚠️ **Cold starts**: 15-minute inactivity timeout
+- ⚠️ **Cold starts**: 15-minute inactivity timeout (API sleeps after 15min)
 - ⚠️ **Resources**: 512MB RAM, 0.1 CPU
 - ⚠️ **Build time**: 750 hours/month limit
 
-### Starter Tier ($7/month)
+### Starter Tier ($7/month) - **Recommended for Production**
 
 - ✅ **No cold starts**: Always-on instances
 - ✅ **Better resources**: 1GB RAM, 0.5 CPU
 - ✅ **Faster builds**: Priority queue
+- ✅ **Better performance**: Sub-second API responses
 
-## 🔗 Architecture
+## 🔗 **API Architecture**
 
-```
-Frontend (Vercel) → Backend (Render.com) → MongoDB Atlas
-```
+**Available Endpoints:**
 
-- **API URL**: `https://keystone-cms-api.onrender.com`
 - **Health Check**: `https://keystone-cms-api.onrender.com/api/health`
-- **CORS**: Configure for your Vercel frontend domain
+- **Tenants**: `https://keystone-cms-api.onrender.com/api/tenants`
+- **Debug Info**: `https://keystone-cms-api.onrender.com/api/tenants/debug`
 
-## 📝 Deployment Notes
+**CORS Configuration:**
 
-- First deployment takes 5-10 minutes
-- Subsequent deployments: 2-3 minutes
-- Automatic deployments on git push
-- Logs available in dashboard
-- SSL certificate included
+```typescript
+// Automatically configured for:
+app.enableCors({
+  origin: [
+    'http://localhost:3000',
+    'https://*.vercel.app',
+    'https://your-domain.com'
+  ]
+});
+```
 
-## 🎯 Post-Deployment
+## 📝 **Deployment Process**
 
-1. Test API endpoints
-2. Update frontend's `NEXT_PUBLIC_API_URL` to point to your Render service
-3. Configure CORS if needed
-4. Monitor performance and upgrade to paid tier when ready
+### Build Steps (Automatic)
+
+1. **Install Dependencies**: `npm install` in monorepo root
+2. **Build Shared Database**: `npm run prebuild` (builds `@keystone/database`)
+3. **Build API**: `npm run build` (compiles TypeScript)
+4. **Start Server**: `npm start` (runs compiled JavaScript)
+
+### Timing
+
+- **First deployment**: ~5-10 minutes
+- **Incremental deployments**: ~2-4 minutes
+- **Automatic**: On every git push to main
+
+## 🔧 **Troubleshooting**
+
+### Build Failures
+
+**Common Issue**: `Cannot find module '@keystone/database'`
+**Solution**: The `prebuild` script should handle this automatically. If it fails:
+
+1. Check the `package.json` has `"prebuild": "cd ../../../packages/database && npm run build"`
+2. Verify the shared package builds successfully
+
+### Performance Issues
+
+- **Cold Starts**: Consider upgrading to Starter tier for production
+- **Memory**: Monitor usage in Render dashboard
+- **Database**: Ensure MongoDB connection pooling is configured
+
+### CORS Issues
+
+Update the CORS configuration in `src/main.ts` to include your domains:
+
+```typescript
+app.enableCors({
+  origin: ['https://your-vercel-app.vercel.app']
+});
+```
+
+## 🎯 **Post-Deployment Checklist**
+
+1. ✅ **Test API endpoints** - Visit health check URL
+2. ✅ **Update frontend** - Set `NEXT_PUBLIC_API_URL` in Vercel
+3. ✅ **Verify CORS** - Test frontend → backend communication
+4. ✅ **Monitor logs** - Check Render dashboard for errors
+5. ✅ **Performance** - Consider upgrading for production workloads
+
+## 🚀 **Production Recommendations**
+
+- **Upgrade to Starter**: Eliminates cold starts ($7/month)
+- **Monitor Performance**: Use Render's built-in metrics
+- **Database Indexing**: Optimize MongoDB queries
+- **Caching**: Consider Redis for session/cache data
+- **Logging**: Implement structured logging for debugging

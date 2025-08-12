@@ -9,11 +9,6 @@ node_modules/
 **/.turbo/
 **/.swc/
 
-# Shared build artifacts (copied during build)
-**/src/shared/
-apps/back-ends/cms-api/src/shared/
-apps/front-ends/cms/src/shared/
-
 # Environment variables
 .env
 .env.local
@@ -58,7 +53,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Nx cache/workspace data
-.nx/
-.nx/cache/
-.nx/workspace-data/
+# TypeScript build info
+**/*.tsbuildinfo

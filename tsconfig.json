@@ -7,9 +7,6 @@
       "path": "./apps/front-ends/cms"
     },
     {
-      "path": "./apps/back-ends/cms-api-e2e"
-    },
-    {
       "path": "./apps/back-ends/cms-api"
     },
     {
