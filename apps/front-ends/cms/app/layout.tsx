@@ -1,5 +1,5 @@
 import './global.css';
-import { ConditionalServerNavigation } from './components/navigation/ConditionalServerNavigation';
+import { MainNavigation } from './components/navigation/MainNavigation/MainNavigation';
 
 export const metadata = {
   title: 'Welcome to cms',
@@ -14,7 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ConditionalServerNavigation />
+        <MainNavigation />
         {children}
       </body>
     </html>

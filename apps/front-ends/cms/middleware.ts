@@ -26,10 +26,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Add header to indicate if this is an auth page
-  const response = NextResponse.next();
-  response.headers.set("x-is-auth-page", isAuthPage.toString());
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
