@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
 // Force dynamic rendering to prevent build-time prerendering errors
 export const dynamic = "force-dynamic";
 
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./login.module.css";
 import Link from "next/link";
