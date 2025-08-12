@@ -42,15 +42,6 @@ export async function getCognitoConfig(environment?: string): Promise<CognitoCon
   const domain = process.env.COGNITO_DOMAIN;
   const region = process.env.AWS_REGION || "us-east-1";
 
-  console.log("🔍 Environment variables check:", {
-    userPoolId: userPoolId ? "✅ Found" : "❌ Missing",
-    clientId: clientId ? "✅ Found" : "❌ Missing", 
-    domain: domain ? "✅ Found" : "❌ Missing",
-    region: region ? "✅ Found" : "❌ Missing",
-    nodeEnv: process.env.NODE_ENV,
-    allEnvKeys: Object.keys(process.env).filter(key => key.includes('COGNITO')),
-  });
-
   if (userPoolId && clientId && domain) {
     cachedConfig = {
       userPoolId,

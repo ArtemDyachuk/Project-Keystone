@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Routes that don't require authentication
+const PUBLIC_ROUTES = [
+  "/", // Home page
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password"
+];
+
+// Helper function to check if path is a public route
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -11,13 +25,13 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
   const isAuthenticated = !!accessToken;
 
-  // If not authenticated, redirect to login
-  if (!isAuthenticated && pathname !== "/login") {
+  // If not authenticated, only allow access to public routes
+  if (!isAuthenticated && !isPublicRoute(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If authenticated and on login page, redirect to home
-  if (isAuthenticated && pathname === "/login") {
+  // If authenticated and on auth pages, redirect to home
+  if (isAuthenticated && (pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password" || pathname === "/reset-password")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
