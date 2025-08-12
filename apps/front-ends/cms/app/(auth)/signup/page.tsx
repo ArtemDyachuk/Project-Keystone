@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+
+// Force dynamic rendering to prevent build-time prerendering errors
+export const dynamic = "force-dynamic";
 import { Button, Input } from "@keystone/ui";
 import styles from "./signup.module.css";
 import Link from "next/link";

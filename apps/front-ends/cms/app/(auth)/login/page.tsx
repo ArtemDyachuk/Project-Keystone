@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+// Force dynamic rendering to prevent build-time prerendering errors
+export const dynamic = "force-dynamic";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./login.module.css";
 import Link from "next/link";
@@ -11,9 +15,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
+
+  // Ensure component is mounted before accessing browser APIs
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Don't render until mounted to prevent hydration issues
+  if (!mounted) {
+    return null;
+  }
 
   useEffect(() => {
     // Check if user is already authenticated
