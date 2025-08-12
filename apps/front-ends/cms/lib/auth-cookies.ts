@@ -19,29 +19,29 @@ const REFRESH_TOKEN_COOKIE = "refreshToken";
  */
 export function setAuthCookies(tokens: AuthTokens): NextResponse {
   const response = NextResponse.json({ success: true });
-  
+
   // Calculate expiration times
   const accessTokenExpiry = new Date(Date.now() + (tokens.expiresIn * 1000));
   const refreshTokenExpiry = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days
-  
+
   // Set access token cookie (expires when token expires)
   response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
     ...COOKIE_CONFIG,
     expires: accessTokenExpiry,
   });
-  
+
   // Set ID token cookie (expires when token expires)
   response.cookies.set(ID_TOKEN_COOKIE, tokens.idToken, {
     ...COOKIE_CONFIG,
     expires: accessTokenExpiry,
   });
-  
+
   // Set refresh token cookie (long-lived)
   response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
     ...COOKIE_CONFIG,
     expires: refreshTokenExpiry,
   });
-  
+
   return response;
 }
 
@@ -54,7 +54,7 @@ export async function getAuthCookies(): Promise<{
   refreshToken: string | null;
 }> {
   const cookieStore = await cookies();
-  
+
   return {
     accessToken: cookieStore.get(ACCESS_TOKEN_COOKIE)?.value || null,
     idToken: cookieStore.get(ID_TOKEN_COOKIE)?.value || null,
@@ -67,25 +67,25 @@ export async function getAuthCookies(): Promise<{
  */
 export function clearAuthCookies(): NextResponse {
   const response = NextResponse.json({ success: true });
-  
+
   // Clear all auth cookies by setting them to expire immediately
   const expiredDate = new Date(0);
-  
+
   response.cookies.set(ACCESS_TOKEN_COOKIE, "", {
     ...COOKIE_CONFIG,
     expires: expiredDate,
   });
-  
+
   response.cookies.set(ID_TOKEN_COOKIE, "", {
     ...COOKIE_CONFIG,
     expires: expiredDate,
   });
-  
+
   response.cookies.set(REFRESH_TOKEN_COOKIE, "", {
     ...COOKIE_CONFIG,
     expires: expiredDate,
   });
-  
+
   return response;
 }
 
@@ -95,4 +95,31 @@ export function clearAuthCookies(): NextResponse {
 export async function isAuthenticated(): Promise<boolean> {
   const { accessToken, refreshToken } = await getAuthCookies();
   return !!(accessToken && refreshToken);
+}
+
+/**
+ * Set auth cookies directly in server actions
+ */
+export async function setAuthCookiesInAction(tokens: AuthTokens) {
+  const cookieStore = await cookies();
+
+  // Calculate expiration times
+  const accessTokenExpiry = new Date(Date.now() + (tokens.expiresIn * 1000));
+  const refreshTokenExpiry = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days
+
+  // Set cookies directly
+  cookieStore.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
+    ...COOKIE_CONFIG,
+    expires: accessTokenExpiry,
+  });
+
+  cookieStore.set(ID_TOKEN_COOKIE, tokens.idToken, {
+    ...COOKIE_CONFIG,
+    expires: accessTokenExpiry,
+  });
+
+  cookieStore.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
+    ...COOKIE_CONFIG,
+    expires: refreshTokenExpiry,
+  });
 }

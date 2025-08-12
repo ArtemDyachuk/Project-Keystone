@@ -1,47 +1,16 @@
-"use client";
-
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Button, Input } from "@keystone/ui";
-import { signInUser, redirectTo } from "../../../lib/auth-client";
 import styles from "./login.module.css";
 import Link from "next/link";
+import { Button, Input } from "@keystone/ui";
+import { loginAction } from "./actions";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect") || "/";
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const result = await signInUser(email, password);
-
-      if (!result.success) {
-        throw new Error(result.error || "Login failed");
-      }
-
-      setSuccess("Login successful! 🎉");
-      console.log("User logged in:", result.user);
-      
-      // Wait a moment to show success message, then redirect
-      setTimeout(() => {
-        redirectTo(redirectUrl);
-      }, 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string; error?: string }>;
+}) {
+  const params = await searchParams;
+  const redirectUrl = params.redirect || "/";
+  const error = params.error;
 
   return (
     <div className={styles.container}>
@@ -49,14 +18,15 @@ export default function LoginPage() {
         <h1 className={styles.title}>Login</h1>
         <p className={styles.subtitle}>Welcome back to Keystone CMS</p>
 
-        <form onSubmit={handleLogin} className={styles.form}>
+        <form action={loginAction} className={styles.form}>
+          <input type="hidden" name="redirect" value={redirectUrl} />
+
           <div className={styles.field}>
             <label htmlFor="email">Email</label>
             <Input
               id="email"
+              name="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
             />
@@ -66,9 +36,8 @@ export default function LoginPage() {
             <label htmlFor="password">Password</label>
             <Input
               id="password"
+              name="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
             />
@@ -80,14 +49,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          {success && (
-            <div className={styles.success}>
-              ✅ {success}
-            </div>
-          )}
-
-          <Button type="submit" disabled={loading} className={styles.submitButton}>
-            {loading ? "Signing in..." : "Login"}
+          <Button type="submit" className={styles.submitButton}>
+            Login
           </Button>
 
           <div className={styles.forgotPassword}>
