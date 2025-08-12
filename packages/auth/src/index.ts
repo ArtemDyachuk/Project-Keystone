@@ -15,3 +15,10 @@ export {
   getTokenExpiration,
   extractUserFromIdToken,
 } from "./jwt-utils";
+
+// Reset Token Utilities
+export {
+  generateResetToken,
+  verifyResetToken,
+  type ResetTokenPayload,
+} from "./reset-token";

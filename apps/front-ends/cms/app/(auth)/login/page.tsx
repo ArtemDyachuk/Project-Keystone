@@ -93,6 +93,12 @@ export default function LoginPage() {
           <Button type="submit" disabled={loading} className={styles.submitButton}>
             {loading ? "Signing in..." : "Login"}
           </Button>
+
+          <div className={styles.forgotPassword}>
+            <Link href="/forgot-password" className={styles.forgotLink}>
+              Forgot password?
+            </Link>
+          </div>
         </form>
 
         <div className={styles.links}>

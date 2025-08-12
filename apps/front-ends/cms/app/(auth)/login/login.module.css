@@ -74,6 +74,23 @@
   font-size: 0.9rem;
 }
 
+.forgotPassword {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.forgotLink {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.forgotLink:hover {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
 .links {
   margin-top: 2rem;
   text-align: center;
