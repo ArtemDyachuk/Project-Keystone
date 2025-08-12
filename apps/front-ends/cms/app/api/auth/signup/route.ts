@@ -3,20 +3,20 @@ import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, firstName, lastName } = await request.json();
+    const { email, firstName, lastName, password } = await request.json();
 
     const config = await getCognitoConfig();
     const authClient = new CognitoAuthClient(config);
 
     const result = await authClient.signUp({
       email,
-      password: "TempPassword123!", // Will be changed after confirmation
+      password, // Use the provided temporary password
       givenName: firstName,
       familyName: lastName,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       userSub: result.userSub,
       username: result.username
     });

@@ -48,16 +48,12 @@ export class CognitoAuthClient {
    * Sign up a new user
    */
   private generateUsernameFromEmail(email: string): string {
-    // Extract the part before @ and clean it up
-    const baseUsername = email.split('@')[0]
+    // Replace @ with __at__ but keep dots as dots
+    // e.g., "a.dyachuk@icloud.com" → "a.dyachuk__at__icloud.com"
+    return email
       .toLowerCase()
-      .replace(/[^a-z0-9]/g, '') // Remove special characters
-      .substring(0, 20); // Limit length
-
-    // Add timestamp to ensure uniqueness
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits
-
-    return `${baseUsername}${timestamp}`;
+      .replace('@', '__at__')
+      .substring(0, 64); // Cognito username max length is 128, using 64 for safety
   }
 
   async signUp(params: SignUpParams): Promise<{ userSub: string; deliveryMedium: string; username: string }> {
@@ -113,32 +109,75 @@ export class CognitoAuthClient {
    * Sign in user with email and password
    */
   async signIn(params: SignInParams): Promise<AuthTokens> {
-    const command = new InitiateAuthCommand({
-      ClientId: this.config.clientId,
-      AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
-      AuthParameters: {
-        USERNAME: params.email,
-        PASSWORD: params.password,
-        SECRET_HASH: this.generateSecretHash(params.email),
-      },
-    });
+    // Try login with email first (alias), then with generated username if that fails
+    let authError: Error | null = null;
 
-    const result = await this.client.send(command);
+    // First attempt: Login with email (using alias)
+    try {
+      const command = new InitiateAuthCommand({
+        ClientId: this.config.clientId,
+        AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
+        AuthParameters: {
+          USERNAME: params.email,
+          PASSWORD: params.password,
+          SECRET_HASH: this.generateSecretHash(params.email),
+        },
+      });
 
-    if (result.ChallengeName) {
-      throw new Error(`Authentication challenge not supported: ${result.ChallengeName}`);
+      const result = await this.client.send(command);
+
+      if (result.ChallengeName) {
+        throw new Error(`Authentication challenge not supported: ${result.ChallengeName}`);
+      }
+
+      if (!result.AuthenticationResult) {
+        throw new Error("Authentication failed");
+      }
+
+      return {
+        accessToken: result.AuthenticationResult.AccessToken!,
+        idToken: result.AuthenticationResult.IdToken!,
+        refreshToken: result.AuthenticationResult.RefreshToken!,
+        expiresIn: result.AuthenticationResult.ExpiresIn!,
+      };
+    } catch (error) {
+      authError = error as Error;
+      // If email login fails, try with generated username format
     }
 
-    if (!result.AuthenticationResult) {
-      throw new Error("Authentication failed");
-    }
+    // Second attempt: Login with generated username format
+    try {
+      const generatedUsername = this.generateUsernameFromEmail(params.email);
+      const command = new InitiateAuthCommand({
+        ClientId: this.config.clientId,
+        AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
+        AuthParameters: {
+          USERNAME: generatedUsername,
+          PASSWORD: params.password,
+          SECRET_HASH: this.generateSecretHash(generatedUsername),
+        },
+      });
 
-    return {
-      accessToken: result.AuthenticationResult.AccessToken!,
-      idToken: result.AuthenticationResult.IdToken!,
-      refreshToken: result.AuthenticationResult.RefreshToken!,
-      expiresIn: result.AuthenticationResult.ExpiresIn!,
-    };
+      const result = await this.client.send(command);
+
+      if (result.ChallengeName) {
+        throw new Error(`Authentication challenge not supported: ${result.ChallengeName}`);
+      }
+
+      if (!result.AuthenticationResult) {
+        throw new Error("Authentication failed");
+      }
+
+      return {
+        accessToken: result.AuthenticationResult.AccessToken!,
+        idToken: result.AuthenticationResult.IdToken!,
+        refreshToken: result.AuthenticationResult.RefreshToken!,
+        expiresIn: result.AuthenticationResult.ExpiresIn!,
+      };
+    } catch {
+      // Both attempts failed, throw the original error
+      throw authError || new Error("Authentication failed");
+    }
   }
 
   /**

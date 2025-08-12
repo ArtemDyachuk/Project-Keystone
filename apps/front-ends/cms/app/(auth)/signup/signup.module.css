@@ -98,6 +98,47 @@
   margin-bottom: 1rem;
 }
 
+.emailHelp {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.helpText {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #495057;
+  line-height: 1.4;
+}
+
+.resendSection {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.resendButton {
+  width: 100%;
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.resendButton:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.resendButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .complete h2 {
   color: #16a34a;
   margin-bottom: 1rem;
@@ -115,6 +156,16 @@
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid #fecaca;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.success {
+  background: #f0fdf4;
+  color: #16a34a;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
   font-size: 0.9rem;
   margin-top: 1rem;
 }

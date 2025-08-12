@@ -18,6 +18,7 @@ export default function SignupPage() {
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +35,7 @@ export default function SignupPage() {
           email,
           firstName,
           lastName,
+          password: "TempPassword123!", // Temporary password for account creation
         }),
       });
 
@@ -101,11 +103,56 @@ export default function SignupPage() {
     }
 
     try {
-      // For now, just complete the signup process
-      // In a full implementation, you'd implement password change via API
+      const response = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
       setStep("complete");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setLoading(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const response = await fetch("/api/auth/resend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      setSuccessMessage("✅ Verification code resent! Check your email and spam folder.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend code");
     } finally {
       setLoading(false);
     }
@@ -167,6 +214,17 @@ export default function SignupPage() {
                 <br />
                 <strong>{email}</strong>
               </p>
+              <div className={styles.emailHelp}>
+                <p className={styles.helpText}>
+                  💡 <strong>Can't find the email?</strong>
+                  <br />
+                  • Check your spam/junk folder
+                  <br />
+                  • Wait up to 5 minutes for delivery
+                  <br />
+                  • Try the resend button below
+                </p>
+              </div>
             </div>
 
             <div className={styles.field}>
@@ -186,9 +244,21 @@ export default function SignupPage() {
               {loading ? "Verifying..." : "Verify Code"}
             </Button>
 
-            <Button 
-              type="button" 
-              variant="secondary" 
+            <div className={styles.resendSection}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleResendCode}
+                disabled={loading}
+                className={styles.resendButton}
+              >
+                📨 Resend Verification Code
+              </Button>
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
               onClick={() => setStep("email")}
               className={styles.backButton}
             >
@@ -246,7 +316,7 @@ export default function SignupPage() {
             <h2>Account Created Successfully!</h2>
             <p>Welcome to Keystone CMS, {firstName}!</p>
             <p>Your account has been created and verified.</p>
-            
+
             <Link href="/login">
               <Button className={styles.submitButton}>
                 Login to Your Account
@@ -290,6 +360,12 @@ export default function SignupPage() {
         {error && (
           <div className={styles.error}>
             ❌ {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className={styles.success}>
+            {successMessage}
           </div>
         )}
 
