@@ -2,6 +2,8 @@ import styles from './page.module.css';
 import { config } from '../lib/config';
 import ConnectionTest from './components/ConnectionTest';
 import { TenantService, connectToDatabase } from '@keystone/database';
+import { Button } from '@keystone/ui';
+import Link from 'next/link';
 
 export default async function HomePage() {
   // Server-side data fetching using shared TenantService
@@ -42,6 +44,16 @@ export default async function HomePage() {
         <p className={styles.description}>
           Multi-tenant CMS built with <strong>Turborepo</strong>, <strong>Next.js</strong>, and <strong>NestJS</strong>
         </p>
+
+        {/* Authentication Buttons */}
+        <div className={styles.authButtons}>
+          <Link href="/signup">
+            <Button>Sign Up</Button>
+          </Link>
+          <Link href="/login">
+            <Button variant="secondary">Login</Button>
+          </Link>
+        </div>
 
         <div className={styles.grid}>
           {/* Server-side data fetching result */}

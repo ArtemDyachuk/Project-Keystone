@@ -54,7 +54,7 @@ export interface SignInParams {
 }
 
 export interface ConfirmSignUpParams {
-  email: string;
+  username: string;
   confirmationCode: string;
 }
 

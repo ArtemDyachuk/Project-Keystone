@@ -15,15 +15,51 @@ export async function getCognitoConfig(environment?: string): Promise<CognitoCon
 
   const env = environment || process.env.NODE_ENV || "development";
 
-  // For local development, use environment variables
-  if (env === "development" && process.env.COGNITO_USER_POOL_ID) {
+  // For browser/client-side, use public environment variables
+  if (typeof window !== "undefined") {
+    const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+    const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
+    const region = process.env.NEXT_PUBLIC_AWS_REGION || "us-east-1";
+
+    if (!userPoolId || !clientId || !domain) {
+      throw new Error("Missing required Cognito environment variables. Please set NEXT_PUBLIC_COGNITO_USER_POOL_ID, NEXT_PUBLIC_COGNITO_CLIENT_ID, and NEXT_PUBLIC_COGNITO_DOMAIN in your .env.local file.");
+    }
+
     cachedConfig = {
-      userPoolId: process.env.COGNITO_USER_POOL_ID!,
-      clientId: process.env.COGNITO_CLIENT_ID!,
-      clientSecret: process.env.COGNITO_CLIENT_SECRET!,
-      domain: process.env.COGNITO_DOMAIN!,
-      region: process.env.AWS_REGION || "us-east-1",
+      userPoolId,
+      clientId,
+      clientSecret: "", // Not needed for public client
+      domain,
+      region,
     };
+    return cachedConfig;
+  }
+
+  // For server-side, use environment variables
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+  const domain = process.env.COGNITO_DOMAIN;
+  const region = process.env.AWS_REGION || "us-east-1";
+
+  console.log("🔍 Environment variables check:", {
+    userPoolId: userPoolId ? "✅ Found" : "❌ Missing",
+    clientId: clientId ? "✅ Found" : "❌ Missing", 
+    domain: domain ? "✅ Found" : "❌ Missing",
+    region: region ? "✅ Found" : "❌ Missing",
+    nodeEnv: process.env.NODE_ENV,
+    allEnvKeys: Object.keys(process.env).filter(key => key.includes('COGNITO')),
+  });
+
+  if (userPoolId && clientId && domain) {
+    cachedConfig = {
+      userPoolId,
+      clientId,
+      clientSecret: process.env.COGNITO_CLIENT_SECRET || "",
+      domain,
+      region,
+    };
+    console.log("✅ Using environment variables config");
     return cachedConfig;
   }
 
@@ -55,7 +91,7 @@ export async function getCognitoConfig(environment?: string): Promise<CognitoCon
   } catch (error) {
     console.error("Failed to fetch Cognito configuration:", error);
     throw new Error(
-      "Failed to load Cognito configuration. Ensure AWS credentials are configured and parameters exist."
+      "Cognito environment variables not found. Please check your .env file contains COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, etc."
     );
   }
 }

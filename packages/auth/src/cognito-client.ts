@@ -47,7 +47,23 @@ export class CognitoAuthClient {
   /**
    * Sign up a new user
    */
-  async signUp(params: SignUpParams): Promise<{ userSub: string; deliveryMedium: string }> {
+  private generateUsernameFromEmail(email: string): string {
+    // Extract the part before @ and clean it up
+    const baseUsername = email.split('@')[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '') // Remove special characters
+      .substring(0, 20); // Limit length
+
+    // Add timestamp to ensure uniqueness
+    const timestamp = Date.now().toString().slice(-6); // Last 6 digits
+
+    return `${baseUsername}${timestamp}`;
+  }
+
+  async signUp(params: SignUpParams): Promise<{ userSub: string; deliveryMedium: string; username: string }> {
+    // Generate user-friendly username from email
+    const username = this.generateUsernameFromEmail(params.email);
+
     const userAttributes = [
       { Name: "email", Value: params.email },
       { Name: "given_name", Value: params.givenName },
@@ -64,9 +80,9 @@ export class CognitoAuthClient {
 
     const command = new SignUpCommand({
       ClientId: this.config.clientId,
-      Username: params.email,
+      Username: username,
       Password: params.password,
-      SecretHash: this.generateSecretHash(params.email),
+      SecretHash: this.generateSecretHash(username),
       UserAttributes: userAttributes,
     });
 
@@ -75,6 +91,7 @@ export class CognitoAuthClient {
     return {
       userSub: result.UserSub!,
       deliveryMedium: result.CodeDeliveryDetails?.DeliveryMedium || "EMAIL",
+      username,
     };
   }
 
@@ -84,9 +101,9 @@ export class CognitoAuthClient {
   async confirmSignUp(params: ConfirmSignUpParams): Promise<void> {
     const command = new ConfirmSignUpCommand({
       ClientId: this.config.clientId,
-      Username: params.email,
+      Username: params.username,
       ConfirmationCode: params.confirmationCode,
-      SecretHash: this.generateSecretHash(params.email),
+      SecretHash: this.generateSecretHash(params.username),
     });
 
     await this.client.send(command);
@@ -98,7 +115,7 @@ export class CognitoAuthClient {
   async signIn(params: SignInParams): Promise<AuthTokens> {
     const command = new InitiateAuthCommand({
       ClientId: this.config.clientId,
-      AuthFlow: AuthFlowType.USER_SRP_AUTH,
+      AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
       AuthParameters: {
         USERNAME: params.email,
         PASSWORD: params.password,

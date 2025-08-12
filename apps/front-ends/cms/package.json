@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@keystone/auth": "file:../../../packages/auth",
     "@keystone/database": "file:../../../packages/database",
     "@keystone/ui": "file:../../../packages/ui",
     "next": "^15.4.6",

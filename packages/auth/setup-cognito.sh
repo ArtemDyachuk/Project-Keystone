@@ -27,6 +27,9 @@ ENVIRONMENT=${1:-development}
 AWS_PROFILE=${2:-""}
 REGION=${AWS_REGION:-us-east-1}
 USER_POOL_NAME="keystone-${ENVIRONMENT}-users"
+if [ "$ENVIRONMENT" = "production" ]; then
+    USER_POOL_NAME="keystone-prod-users"
+fi
 CLIENT_NAME="keystone-${ENVIRONMENT}-client"
 DOMAIN_PREFIX="keystone-${ENVIRONMENT}-auth-$(date +%s)"
 
@@ -67,6 +70,10 @@ USER_POOL_OUTPUT=$(aws cognito-idp create-user-pool \
             "RequireNumbers": true,
             "RequireSymbols": true
         }
+    }' \
+    --mfa-configuration OPTIONAL \
+    --user-pool-add-ons '{
+        "AdvancedSecurityMode": "ENFORCED"
     }' \
     --auto-verified-attributes email \
     --alias-attributes email \
@@ -122,12 +129,12 @@ CLIENT_OUTPUT=$(aws cognito-idp create-user-pool-client \
     --user-pool-id "$USER_POOL_ID" \
     --client-name "$CLIENT_NAME" \
     --generate-secret \
-    --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_ADMIN_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+    --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_ADMIN_USER_PASSWORD_AUTH ALLOW_CUSTOM_AUTH ALLOW_USER_AUTH ALLOW_REFRESH_TOKEN_AUTH \
     --supported-identity-providers COGNITO \
     --callback-urls "http://localhost:3000/auth/callback" "https://project-keystone-six.vercel.app/auth/callback" \
     --logout-urls "http://localhost:3000" "https://project-keystone-six.vercel.app" \
     --allowed-o-auth-flows code \
-    --allowed-o-auth-scopes email openid profile \
+    --allowed-o-auth-scopes email openid profile aws.cognito.signin.user.admin \
     --allowed-o-auth-flows-user-pool-client \
     --prevent-user-existence-errors ENABLED \
     --access-token-validity 24 \
@@ -178,7 +185,7 @@ echo "COGNITO_DOMAIN=$DOMAIN_PREFIX"
 echo "AWS_REGION=$REGION"
 echo ""
 echo -e "${BLUE}🔗 Next Steps:${NC}"
-echo "1. Copy environment variables to your .env.local file"
+echo "1. Copy environment variables to your .env file (project root)"
 echo "2. Add environment variables to Vercel dashboard"
 echo "3. Add environment variables to Render dashboard"
 echo "4. Test authentication in your app!"
@@ -187,4 +194,11 @@ echo -e "${BLUE}🧪 Test Commands:${NC}"
 echo "# Test sign up with your auth package:"
 echo "# await authClient.signUp({ email: 'test@example.com', password: 'Test123!' })"
 echo "# Check email for 6-digit verification code"
-echo "# await authClient.confirmSignUp({ email: 'test@example.com', confirmationCode: '123456' })"
+echo "# await authClient.confirmSignUp({ username: 'generatedUsername', confirmationCode: '123456' })"
+echo ""
+echo -e "${BLUE}🔐 Security Features Enabled:${NC}"
+echo "✅ Multiple auth flows (password, SRP, custom, WebAuthn-ready)"
+echo "✅ Advanced Security Mode (bot detection, risk analysis)"
+echo "✅ MFA ready (TOTP apps, SMS)"
+echo "✅ Passkey/WebAuthn ready (ALLOW_USER_AUTH flow)"
+echo "✅ Email alias support"

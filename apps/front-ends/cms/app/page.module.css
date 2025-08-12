@@ -108,6 +108,17 @@
   text-decoration: underline;
 }
 
+.authButtons {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+  justify-content: center;
+}
+
+.authButtons a {
+  text-decoration: none;
+}
+
 .features {
   list-style: none;
   padding: 0;
