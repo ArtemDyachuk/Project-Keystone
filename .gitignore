@@ -1,35 +1,6 @@
-# OS
-.DS_Store
-Thumbs.db
-
-# Node
+# Dependencies
 node_modules/
 **/node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Env files
-.env
-.env.local
-.env.*.local
-
-# Editors/IDE
-.vscode/
-.idea/
-
-# Nx cache/workspace data
-.nx/
-.nx/cache/
-.nx/workspace-data/
-
-# TypeScript
-**/*.tsbuildinfo
-
-# Source maps
-*.map
-**/*.map
 
 # Build outputs
 **/dist/
@@ -37,25 +8,38 @@ pnpm-debug.log*
 **/out/
 **/.turbo/
 **/.swc/
-dist/
-build/
-*/dist/
-*/build/
 
 # Shared build artifacts (copied during build)
 **/src/shared/
-src/shared/
 apps/back-ends/cms-api/src/shared/
 apps/front-ends/cms/src/shared/
 
-# Lint/format caches
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+**/*.tsbuildinfo
+
+# Source maps (if not needed for debugging)
+*.map
+**/*.map
+
+# Cache and temporary files
 .eslintcache
+.npm
+jspm_packages/
 
 # Logs
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Coverage
+# Coverage reports
 coverage/
 *.lcov
 .nyc_output
@@ -66,8 +50,15 @@ pids
 *.seed
 *.pid.lock
 
-# Dependency directories
-jspm_packages/
+# OS files
+.DS_Store
+Thumbs.db
 
-# Optional npm cache directory
-.npm
+# Editors/IDE
+.vscode/
+.idea/
+
+# Nx cache/workspace data
+.nx/
+.nx/cache/
+.nx/workspace-data/
