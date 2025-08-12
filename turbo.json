@@ -9,7 +9,9 @@
     "COGNITO_USER_POOL_ID",
     "COGNITO_CLIENT_ID",
     "COGNITO_CLIENT_SECRET",
-    "COGNITO_DOMAIN"
+    "COGNITO_DOMAIN",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY"
   ],
   "tasks": {
     "build": {
