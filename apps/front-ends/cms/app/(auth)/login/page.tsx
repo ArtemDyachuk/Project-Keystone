@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, Input } from "@keystone/ui";
 import { signInUser, redirectTo } from "../../../lib/auth-client";
 import styles from "./login.module.css";
@@ -12,6 +13,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +34,7 @@ export default function LoginPage() {
       
       // Wait a moment to show success message, then redirect
       setTimeout(() => {
-        redirectTo("/");
+        redirectTo(redirectUrl);
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
