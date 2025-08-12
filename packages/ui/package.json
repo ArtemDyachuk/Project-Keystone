@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rm -rf dist && tsc && mkdir -p dist/components && cp src/components/*.css dist/components/ 2>/dev/null || true",
     "dev": "tsc --watch",
     "lint": "eslint src",
     "type-check": "tsc --noEmit"

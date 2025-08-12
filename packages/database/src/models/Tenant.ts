@@ -21,4 +21,5 @@ const tenantSchema = new mongoose.Schema<ITenant>({
 // Create index for faster queries
 tenantSchema.index({ name: 1 });
 
-export const Tenant = mongoose.model<ITenant>("Tenant", tenantSchema);
+// Handle Next.js development mode where models may be compiled multiple times
+export const Tenant = mongoose.models.Tenant || mongoose.model<ITenant>("Tenant", tenantSchema);

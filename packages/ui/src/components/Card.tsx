@@ -1,4 +1,5 @@
 import React from "react";
+import styles from "./Card.module.css";
 
 export interface CardProps {
   title?: string;
@@ -17,33 +18,19 @@ export function Card({
   className,
   children 
 }: CardProps) {
-  const baseStyles = "rounded-lg border";
-  
-  const variantStyles = {
-    default: "bg-white border-gray-200",
-    outlined: "bg-white border-gray-300 border-2",
-    elevated: "bg-white border-gray-200 shadow-lg"
-  };
-  
-  const paddingStyles = {
-    sm: "p-3",
-    md: "p-4",
-    lg: "p-6"
-  };
-  
-  const finalClassName = [
-    baseStyles,
-    variantStyles[variant],
-    paddingStyles[padding],
+  const classes = [
+    styles.card,
+    styles[variant],
+    styles[padding],
     className
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={finalClassName}>
+    <div className={classes}>
       {(title || subtitle) && (
-        <div className="mb-4">
-          {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
-          {subtitle && <p className="text-sm text-gray-600 mt-1">{subtitle}</p>}
+        <div className={styles.header}>
+          {title && <h3 className={styles.title}>{title}</h3>}
+          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         </div>
       )}
       {children}
