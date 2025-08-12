@@ -2,93 +2,49 @@ import React from "react";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  error?: string;
 }
 
-export const Input: React.FC<InputProps> = ({
-  label,
-  error,
-  helperText,
-  leftIcon,
-  rightIcon,
-  className = "",
+export function Input({ 
+  label, 
+  helperText, 
+  error, 
+  className,
   id,
-  ...props
-}) => {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
+  ...props 
+}: InputProps) {
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   
-  const containerStyle: React.CSSProperties = { width: "100%" };
+  const baseStyles = "block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 transition-colors";
+  const normalStyles = "border-gray-300 focus:border-blue-500 focus:ring-blue-500";
+  const errorStyles = "border-red-500 focus:border-red-500 focus:ring-red-500";
   
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: "14px",
-    fontWeight: 500,
-    color: "#374151",
-    marginBottom: "4px"
-  };
-  
-  const wrapperStyle: React.CSSProperties = { position: "relative", width: "100%" };
-  
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: `8px ${rightIcon ? "40px" : "12px"} 8px ${leftIcon ? "40px" : "12px"}`,
-    border: `1px solid ${error ? "#dc2626" : "#d1d5db"}`,
-    borderRadius: "6px",
-    fontSize: "16px",
-    color: "#111827",
-    backgroundColor: "white",
-    outline: "none"
-  };
-  
-  const iconStyle: React.CSSProperties = {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: "20px",
-    height: "20px",
-    color: "#9ca3af",
-    pointerEvents: leftIcon ? "none" : "auto"
-  };
-  
-  const textStyle: React.CSSProperties = {
-    marginTop: "4px",
-    fontSize: "14px",
-    color: error ? "#dc2626" : "#6b7280"
-  };
+  const finalClassName = [
+    baseStyles,
+    error ? errorStyles : normalStyles,
+    className
+  ].filter(Boolean).join(" ");
 
   return (
-    <div style={containerStyle} className={className}>
+    <div className="space-y-1">
       {label && (
-        <label htmlFor={inputId} style={labelStyle}>
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
           {label}
         </label>
       )}
       
-      <div style={wrapperStyle}>
-        {leftIcon && (
-          <div style={{ ...iconStyle, left: "12px" }}>
-            {leftIcon}
-          </div>
-        )}
-        
-        <input
-          id={inputId}
-          style={inputStyle}
-          {...props}
-        />
-        
-        {rightIcon && (
-          <div style={{ ...iconStyle, right: "12px" }}>
-            {rightIcon}
-          </div>
-        )}
-      </div>
+      <input
+        id={inputId}
+        className={finalClassName}
+        {...props}
+      />
       
-      {error && <p style={textStyle}>{error}</p>}
-      {helperText && !error && <p style={textStyle}>{helperText}</p>}
+      {(helperText || error) && (
+        <p className={`text-sm ${error ? "text-red-600" : "text-gray-500"}`}>
+          {error || helperText}
+        </p>
+      )}
     </div>
   );
-};
+}

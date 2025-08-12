@@ -1,5 +1,2 @@
-// Export all UI components
+// Main entry point for @keystone/ui package
 export * from "./components";
-
-// Export any utility functions if needed in the future
-// export * from "./utils";
