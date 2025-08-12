@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd ../../../ && npm run build:shared && cd apps/front-ends/cms && rm -rf src/shared && mkdir -p src/shared && cp -r ../../../packages/database/dist src/shared/database && cp -r ../../../packages/ui/dist src/shared/ui && npm run build",
+  "installCommand": "cd ../../../ && npm install",
+  "framework": "nextjs"
+}
