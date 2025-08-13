@@ -4,14 +4,29 @@ import { NextRequest, NextResponse } from "next/server";
 const PUBLIC_ROUTES = [
   "/", // Home page
   "/login",
-  "/signup",
+  "/signup", 
   "/forgot-password",
   "/reset-password"
 ];
 
+// Routes that require authentication (CMS dashboard)
+const PROTECTED_ROUTES = [
+  "/dashboard"
+];
+
 // Helper function to check if path is a public route
 function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+  return PUBLIC_ROUTES.some(route => {
+    if (route === "/") {
+      return pathname === "/";
+    }
+    return pathname.startsWith(route);
+  });
+}
+
+// Helper function to check if path is a protected route
+function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTES.some(route => pathname.startsWith(route));
 }
 
 export function middleware(request: NextRequest) {
@@ -25,14 +40,19 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
   const isAuthenticated = !!accessToken;
 
-  // If not authenticated, only allow access to public routes
+  // If not authenticated and trying to access protected routes, redirect to login
+  if (!isAuthenticated && isProtectedRoute(pathname)) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // If not authenticated and not on public routes, redirect to login
   if (!isAuthenticated && !isPublicRoute(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If authenticated and on auth pages, redirect to home
+  // If authenticated and on auth pages, redirect to dashboard
   if (isAuthenticated && (pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password" || pathname === "/reset-password")) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

@@ -1,6 +1,6 @@
 import styles from './page.module.css';
-import { config } from '../lib/config';
-import ConnectionTest from './components/ConnectionTest';
+import { config } from '../../lib/config';
+import ConnectionTest from '../components/ConnectionTest';
 import { TenantService, connectToDatabase } from '@keystone/database';
 
 export default async function HomePage() {

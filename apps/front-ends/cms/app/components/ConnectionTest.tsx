@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import styles from '../page.module.css';
+import styles from '../(public)/page.module.css';
 
 interface ConnectionStatus {
   status: 'loading' | 'success' | 'error';

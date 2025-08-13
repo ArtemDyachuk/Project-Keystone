@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: false,
         message: "No authentication tokens found",
-      });
+      }, { status: 401 });
     }
     
     // Check if access token is expired
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         success: false,
         message: "Access token expired",
         needsRefresh: true,
-      });
+      }, { status: 401 });
     }
     
     // Extract user info from ID token

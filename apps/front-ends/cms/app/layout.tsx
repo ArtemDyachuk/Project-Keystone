@@ -1,5 +1,4 @@
 import './global.css';
-import { MainNavigation } from './components/navigation/MainNavigation/MainNavigation';
 
 export const metadata = {
   title: 'Welcome to cms',
@@ -14,7 +13,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <MainNavigation />
         {children}
       </body>
     </html>
