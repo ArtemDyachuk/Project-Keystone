@@ -64,7 +64,7 @@ export function ResetPasswordForm() {
       return;
     }
 
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]/.test(newPassword)) {
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_.])[A-Za-z\d@$!%*?&_.]/.test(newPassword)) {
       setError("Password must contain uppercase, lowercase, number, and special character");
       setLoading(false);
       return;
@@ -182,8 +182,8 @@ export function ResetPasswordForm() {
               <li className={/\d/.test(newPassword) ? styles.valid : ""}>
                 One number
               </li>
-              <li className={/[@$!%*?&_]/.test(newPassword) ? styles.valid : ""}>
-                One special character (@$!%*?&_)
+              <li className={/[@$!%*?&_.]/.test(newPassword) ? styles.valid : ""}>
+                One special character (@$!%*?&_.)
               </li>
             </ul>
           </div>
