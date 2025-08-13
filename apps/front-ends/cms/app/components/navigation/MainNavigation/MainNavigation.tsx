@@ -1,9 +1,8 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { Button } from "@keystone/ui";
-import { signOutUser } from "../../../../lib/auth-client";
+import { getAuthCookies } from "../../../../lib/auth-cookies";
+import { isTokenExpired, extractUserFromIdToken } from "@keystone/auth";
 import styles from "./MainNavigation.module.css";
 
 interface UserInfo {
@@ -12,51 +11,23 @@ interface UserInfo {
   family_name: string;
 }
 
-export function MainNavigation() {
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch("/api/auth/status");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUser(data.user);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to check auth status:", error);
-    } finally {
-      setIsLoading(false);
+export async function MainNavigation() {
+  // Server-side auth check - no loading state needed
+  let user: UserInfo | null = null;
+  
+  try {
+    const { accessToken, idToken } = await getAuthCookies();
+    
+    if (accessToken && idToken && !isTokenExpired(accessToken)) {
+      const userData = extractUserFromIdToken(idToken);
+      user = {
+        email: userData.email || "",
+        given_name: userData.given_name || "",
+        family_name: userData.family_name || "",
+      };
     }
-  };
-
-  const handleSignOut = async () => {
-    const success = await signOutUser();
-    if (success) {
-      setUser(null);
-      window.location.href = "/login";
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <nav className={styles.navbar}>
-        <div className={styles.container}>
-          <Link href="/" className={styles.logo}>
-            Keystone CMS
-          </Link>
-          <div className={styles.authSection}>
-            <div className={styles.loading}>Loading...</div>
-          </div>
-        </div>
-      </nav>
-    );
+  } catch (error) {
+    // User not authenticated, user remains null
   }
 
   return (
@@ -72,13 +43,11 @@ export function MainNavigation() {
               <span className={styles.welcome}>
                 Welcome, {user.given_name}!
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                Sign Out
-              </Button>
+              <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
+                <Button type="submit" variant="outline" size="sm">
+                  Sign Out
+                </Button>
+              </form>
             </div>
           ) : (
             <div className={styles.guestSection}>

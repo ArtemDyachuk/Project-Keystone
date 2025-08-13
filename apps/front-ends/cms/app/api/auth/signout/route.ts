@@ -1,13 +1,40 @@
-import { NextRequest } from "next/server";
-import { clearAuthCookies } from "../../../../lib/auth-cookies";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    // Clear all authentication cookies
-    const response = clearAuthCookies();
-    
-    return response;
+    // Create redirect response
+    const redirectResponse = NextResponse.redirect(new URL("/", request.url));
+
+    // Clear all authentication cookies in the redirect response
+    const expiredDate = new Date(0);
+
+    redirectResponse.cookies.set("accessToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: expiredDate,
+    });
+
+    redirectResponse.cookies.set("idToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: expiredDate,
+    });
+
+    redirectResponse.cookies.set("refreshToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: expiredDate,
+    });
+
+    return redirectResponse;
   } catch (error) {
-    return clearAuthCookies(); // Still clear cookies even if there's an error
+    // If something goes wrong, still try to redirect
+    return NextResponse.redirect(new URL("/", request.url));
   }
 }

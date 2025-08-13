@@ -25,9 +25,11 @@ export default function DashboardLayout({
           <h1 className={styles.logo}>Keystone CMS</h1>
           <div className={styles.headerActions}>
             <span className={styles.userInfo}>Admin User</span>
-            <button className={styles.logoutButton}>
-              Logout
-            </button>
+            <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
+              <button type="submit" className={styles.logoutButton}>
+                Logout
+              </button>
+            </form>
           </div>
         </div>
       </header>
