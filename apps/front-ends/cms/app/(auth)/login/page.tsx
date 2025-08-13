@@ -1,4 +1,4 @@
-import { LoginForm } from "./LoginForm";
+import { LoginForm } from "../../components/authentication";
 
 export default async function LoginPage({
   searchParams,

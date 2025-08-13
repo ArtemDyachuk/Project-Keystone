@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import styles from "./login.module.css";
+import styles from "./styles.module.css";
 import Link from "next/link";
 import { Button, Input } from "@keystone/ui";
+import { AuthForm } from "../AuthForm";
 
 interface LoginFormProps {
   redirectUrl: string;
@@ -47,12 +48,8 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>Login</h1>
-        <p className={styles.subtitle}>Welcome back to Keystone CMS</p>
-
-        <form onSubmit={handleSubmit} className={styles.form}>
+    <AuthForm title="Login" subtitle="Welcome back to Keystone CMS">
+      <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
             <label htmlFor="email">Email</label>
             <Input
@@ -107,7 +104,6 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
             </Link>
           </p>
         </div>
-      </div>
-    </div>
+    </AuthForm>
   );
 }
