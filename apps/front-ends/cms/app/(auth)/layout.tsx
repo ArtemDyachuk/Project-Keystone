@@ -1,19 +1,21 @@
+import styles from './auth.module.css';
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ 
-      minHeight: '100vh',
-      width: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '2rem'
-    }}>
-      {children}
+    <div className={styles.authContainer}>
+      {/* Animated background elements for liquid glass effect */}
+      <div className={`${styles.liquidOrbs} liquid-glass-bg`} />
+      
+      <div className={styles.textureOverlay} />
+      
+      {/* Main content container with liquid glass effect */}
+      <div className={styles.contentContainer}>
+        {children}
+      </div>
     </div>
   );
 }
