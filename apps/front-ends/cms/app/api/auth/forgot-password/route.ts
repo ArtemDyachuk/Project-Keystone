@@ -14,8 +14,10 @@ export async function POST(request: NextRequest) {
     // Step 2: Generate our custom JWT reset token
     const resetToken = generateResetToken(email);
     
-    // Step 3: Create the reset link
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // Step 3: Create the reset link using current request's host
+    const protocol = request.headers.get("x-forwarded-proto") || "http";
+    const host = request.headers.get("host") || request.headers.get("x-forwarded-host") || "localhost:3000";
+    const baseUrl = `${protocol}://${host}`;
     const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
 
     // In a real app, you'd send a custom email with the reset link
