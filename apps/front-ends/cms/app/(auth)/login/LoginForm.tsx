@@ -17,21 +17,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/status");
-        if (response.ok) {
-          router.push(redirectUrl);
-        }
-      } catch (error) {
-        // User not authenticated, stay on login page
-      }
-    };
-
-    checkAuth();
-  }, [redirectUrl, router]);
+  // Removed checkAuth useEffect - middleware handles this now
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
