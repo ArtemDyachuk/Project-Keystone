@@ -6,11 +6,12 @@ export default function AuthLayout({
   return (
     <div style={{ 
       minHeight: '100vh',
+      width: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#f8fafc',
-      padding: '1rem'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '2rem'
     }}>
       {children}
     </div>

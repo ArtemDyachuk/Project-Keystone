@@ -6,12 +6,8 @@ const PUBLIC_ROUTES = [
   "/login",
   "/signup", 
   "/forgot-password",
-  "/reset-password"
-];
-
-// Routes that require authentication (CMS dashboard)
-const PROTECTED_ROUTES = [
-  "/dashboard"
+  "/reset-password",
+  "/ui-test"
 ];
 
 // Helper function to check if path is a public route
@@ -24,11 +20,6 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
-// Helper function to check if path is a protected route
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-}
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -39,11 +30,6 @@ export function middleware(request: NextRequest) {
 
   const accessToken = request.cookies.get("accessToken")?.value;
   const isAuthenticated = !!accessToken;
-
-  // If not authenticated and trying to access protected routes, redirect to login
-  if (!isAuthenticated && isProtectedRoute(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
 
   // If not authenticated and not on public routes, redirect to login
   if (!isAuthenticated && !isPublicRoute(pathname)) {
