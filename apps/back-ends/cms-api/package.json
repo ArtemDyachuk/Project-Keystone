@@ -3,8 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "prebuild": "cd ../../../packages/database && npm run build",
+    "prepare": "npm run build:deps",
+    "prebuild": "npm run build:deps",
+    "build:deps": "cd ../../../packages/auth && npm run build && cd ../database && npm run build",
     "build": "tsc",
+    "deploy": "cd ../../.. && npm install && npm run build",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
     "lint": "eslint src",

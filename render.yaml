@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: keystone-cms-api
+    env: node
+    buildCommand: cd apps/back-ends/cms-api && npm run deploy
+    startCommand: cd apps/back-ends/cms-api && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: COGNITO_USER_POOL_ID
+        sync: false
+      - key: COGNITO_CLIENT_ID
+        sync: false
+      - key: COGNITO_CLIENT_SECRET
+        sync: false
+      - key: COGNITO_DOMAIN
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
