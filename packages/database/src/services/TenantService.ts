@@ -26,11 +26,13 @@ export class TenantService {
   }
 
   /**
-   * Get all tenants
+   * Get all tenants - REMOVED FOR SECURITY
+   * In a multi-tenant system, users should only access their assigned tenants
+   * Use getTenantsByIds() instead with proper user tenant filtering
    */
-  static async getAllTenants(): Promise<ITenant[]> {
-    return await this.tenantRepository.findAll();
-  }
+  // static async getAllTenants(): Promise<ITenant[]> {
+  //   return await this.tenantRepository.findAll();
+  // }
 
   /**
    * Get tenants by IDs (for filtering user's tenants)
@@ -39,7 +41,7 @@ export class TenantService {
     if (!tenantIds || tenantIds.length === 0) {
       return [];
     }
-    
+
     return await this.tenantRepository.findByIds(tenantIds);
   }
 

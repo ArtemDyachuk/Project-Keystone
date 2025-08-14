@@ -1,28 +1,28 @@
 import { NextResponse } from 'next/server';
-import { TenantService, connectToDatabase } from '@keystone/database';
+import { connectToDatabase } from '@keystone/database';
 
 export async function GET() {
   const startTime = Date.now();
-  
+
   try {
     // Ensure database connection is established
     await connectToDatabase();
-    
-    // Test server-side direct database access using shared TenantService
-    const tenants = await TenantService.getAllTenants();
+
+    // Test server-side direct database access - removed tenant count for security
+    // In multi-tenant systems, connection tests should not expose tenant information
     const responseTime = Date.now() - startTime;
-    
+
     return NextResponse.json({
       status: 'success',
       method: 'Server-Side Direct DB',
       connected: true,
       responseTime,
-      tenantCount: tenants.length,
-      message: 'Successfully accessed database via shared TenantService'
+      tenantCount: 0, // Hidden for security in multi-tenant system
+      message: 'Successfully connected to database (tenant data hidden for security)'
     });
   } catch (error) {
     const responseTime = Date.now() - startTime;
-    
+
     return NextResponse.json({
       status: 'error',
       method: 'Server-Side Direct DB',

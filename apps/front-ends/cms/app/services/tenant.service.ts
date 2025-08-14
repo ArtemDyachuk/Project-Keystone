@@ -1,5 +1,6 @@
 import { TenantService, connectToDatabase } from "@keystone/database";
 import { ITenant } from "@keystone/database";
+import { getUserDataFromJWT } from "@/lib/auth-utils";
 
 interface SerializedTenant {
   _id: string;
@@ -54,13 +55,21 @@ export class TenantServiceClient {
   }
 
   /**
-   * Get a single tenant by ID
+   * Get a single tenant by ID with user access validation
    * @param tenantId The tenant ID to fetch
-   * @returns Promise<Tenant | null> Tenant object or null if not found
+   * @returns Promise<Tenant | null> Tenant object or null if not found/unauthorized
    */
   static async getTenantById(tenantId: string): Promise<SerializedTenant | null> {
     try {
       await this.ensureConnection();
+      
+      // SECURITY: Validate user has access to this tenant
+      const userData = await getUserDataFromJWT();
+      if (!userData?.tenantIds || !userData.tenantIds.includes(tenantId)) {
+        console.warn(`Unauthorized tenant access attempt blocked for user: ${userData?.username || 'unknown'}`);
+        return null; // Return null instead of throwing error to avoid information disclosure
+      }
+      
       const tenant = await TenantService.getTenantById(tenantId);
       
       if (!tenant) {
@@ -75,17 +84,18 @@ export class TenantServiceClient {
   }
 
   /**
-   * Get all tenants (for admin purposes)
-   * @returns Promise<Tenant[]> Array of all tenant objects
+   * Get all tenants - REMOVED FOR SECURITY
+   * In a multi-tenant system, users should only access their assigned tenants
+   * Use getTenantsByIds() instead with proper user tenant filtering
    */
-  static async getAllTenants(): Promise<SerializedTenant[]> {
-    try {
-      await this.ensureConnection();
-      const tenants = await TenantService.getAllTenants();
-      return tenants.map(tenant => this.serializeTenant(tenant));
-    } catch (error) {
-      console.error("Failed to fetch all tenants:", error);
-      throw new Error(`Failed to fetch all tenants: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
+  // static async getAllTenants(): Promise<SerializedTenant[]> {
+  //   try {
+  //     await this.ensureConnection();
+  //     const tenants = await TenantService.getAllTenants();
+  //     return tenants.map(tenant => this.serializeTenant(tenant));
+  //   } catch (error) {
+  //     console.error("Failed to fetch all tenants:", error);
+  //     throw new Error(`Failed to fetch all tenants: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  //   }
+  // }
 }

@@ -37,15 +37,17 @@ export default function AuthError({
           </Link>
         </div>
 
-        <div className="error-details">
-          <details>
-            <summary>Error Details</summary>
-            <pre className="error-stack">
-              {error.message}
-              {error.digest && `\nError ID: ${error.digest}`}
-            </pre>
-          </details>
-        </div>
+        {process.env.NODE_ENV === "development" && (
+          <div className="error-details">
+            <details>
+              <summary>Error Details (Development Only)</summary>
+              <pre className="error-stack">
+                {error.message}
+                {error.digest && `\nError ID: ${error.digest}`}
+              </pre>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );

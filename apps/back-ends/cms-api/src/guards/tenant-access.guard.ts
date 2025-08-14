@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { CognitoAdminService } from '../services/cognito-admin.service';
-import { decodeJwtToken } from '@keystone/auth';
+import { decodeJwtToken, verifyJwtToken } from '@keystone/auth';
 
 @Injectable()
 export class TenantAccessGuard implements CanActivate {
@@ -23,9 +23,25 @@ export class TenantAccessGuard implements CanActivate {
     }
 
     try {
-      // Decode JWT to get user info
+      // Verify and decode JWT to get user info
       const token = authHeader.replace('Bearer ', '');
-      const decoded = decodeJwtToken(token);
+      
+      // SECURITY: Always verify JWT signatures in production
+      let decoded;
+      if (process.env.NODE_ENV === 'production') {
+        const userPoolId = process.env.COGNITO_USER_POOL_ID;
+        const region = process.env.AWS_REGION || 'us-east-1';
+        if (userPoolId) {
+          // Use verified JWT in production
+          decoded = await verifyJwtToken(token, userPoolId, region, 'access');
+        } else {
+          throw new UnauthorizedException('Authentication service not properly configured');
+        }
+      } else {
+        // For development, decode without verification (but log warning)
+        decoded = decodeJwtToken(token);
+        console.warn('⚠️ JWT signature verification disabled in development mode');
+      }
       const username = decoded.username || decoded.email || decoded.sub;
 
       if (!username) {
@@ -35,8 +51,8 @@ export class TenantAccessGuard implements CanActivate {
       // Get user's tenant info from Cognito
       const userPoolId = process.env.COGNITO_USER_POOL_ID;
       if (!userPoolId) {
-        console.warn('COGNITO_USER_POOL_ID not set, skipping tenant validation');
-        return true; // Allow access if Cognito not configured
+        console.error('COGNITO_USER_POOL_ID not set - SECURITY: Denying access');
+        throw new UnauthorizedException('Authentication service not properly configured');
       }
 
       const tenantInfo = await this.cognitoAdminService.getUserTenantInfo(

@@ -1,7 +1,7 @@
 import styles from './page.module.css';
 import { config } from '../../lib/config';
 import ConnectionTest from '../components/ConnectionTest';
-import { TenantService, connectToDatabase } from '@keystone/database';
+import { connectToDatabase } from '@keystone/database';
 
 export default async function HomePage() {
   // Server-side data fetching using shared TenantService
@@ -14,13 +14,13 @@ export default async function HomePage() {
 
   const startTime = Date.now();
   try {
-    // Connect to database and fetch data using shared service
+    // Connect to database - removed tenant count for security
+    // In multi-tenant systems, public pages should not expose tenant information
     await connectToDatabase();
-    const tenants = await TenantService.getAllTenants();
 
     serverSideData = {
       success: true,
-      tenantCount: tenants.length,
+      tenantCount: 0, // Hidden for security in multi-tenant system
       responseTime: Date.now() - startTime,
       error: null
     };

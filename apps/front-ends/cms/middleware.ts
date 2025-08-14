@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthCookies, isAuthenticated } from "./lib/auth-cookies";
+import { isAuthenticated } from "./lib/auth-cookies";
 import { getUserDataFromJWT } from "./lib/auth-utils";
 
 // Routes that don't require authentication
@@ -28,6 +28,39 @@ function isAuthPage(pathname: string): boolean {
   return ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 }
 
+// Helper function to validate tenant access
+async function validateTenantAccess(pathname: string, userData: any, request: NextRequest): Promise<NextResponse | null> {
+  // If user has no tenants, redirect to tenant creation
+  if (!userData?.tenantIds || userData.tenantIds.length === 0) {
+    if (!pathname.startsWith("/tenants/create")) {
+      return NextResponse.redirect(new URL("/tenants/create", request.url));
+    }
+    return null;
+  }
+
+  // User has tenants - validate access to specific tenant routes
+  const tenantIdMatch = pathname.match(/^\/tenants\/([^\/]+)(?:\/|$)/);
+  if (tenantIdMatch) {
+    const requestedTenantId = tenantIdMatch[1];
+
+    // Skip validation for non-ID routes
+    if (requestedTenantId !== "create" && requestedTenantId !== "page") {
+      if (!userData.tenantIds.includes(requestedTenantId)) {
+        // SECURITY: Reduced logging to prevent information disclosure
+        console.warn(`Unauthorized tenant access blocked for user: ${userData.username}`);
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+  }
+
+  // If user has tenants but tries to access tenant creation, redirect to dashboard
+  if (pathname.startsWith("/tenants/create")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -49,19 +82,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // TENANT VALIDATION: Check if user has any tenants
-  if (authenticated && pathname.startsWith("/dashboard")) {
-    // Use your existing getUserDataFromJWT function for tenant validation
+  // TENANT VALIDATION: Check if user has any tenants and validate tenant-specific access
+  if (authenticated && (pathname.startsWith("/dashboard") || pathname.startsWith("/tenants"))) {
     try {
       const userData = await getUserDataFromJWT();
+      const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
 
-      // If user has no tenants, redirect to tenant creation
-      if (!userData?.tenantIds || userData.tenantIds.length === 0) {
-        return NextResponse.redirect(new URL("/tenants/create", request.url));
+      if (tenantValidationResult) {
+        return tenantValidationResult;
       }
     } catch (error) {
-      console.error("Failed to get user data for tenant validation:", error);
-      // If we can't get user data, redirect to login for safety
+      console.error("Tenant validation failed:", error);
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
