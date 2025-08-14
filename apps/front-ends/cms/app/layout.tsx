@@ -1,4 +1,5 @@
 import './global.css';
+import { ThemeScript } from './components/theme/ThemeScript';
 
 export const metadata = {
   title: 'Welcome to cms',
@@ -11,7 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body>
         {children}
       </body>
