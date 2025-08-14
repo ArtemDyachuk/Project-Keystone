@@ -1,2 +1,0 @@
-# Run tests before commit
-npm run test

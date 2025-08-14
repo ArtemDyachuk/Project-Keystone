@@ -11,8 +11,7 @@
     "test": "turbo test --filter=@keystone/cms --filter=@keystone/cms-api",
     "test:security": "turbo test --filter='*security*'",
     "clean": "turbo clean && rm -rf node_modules",
-    "setup:cognito": "cd packages/auth && npm run setup:cognito",
-    "prepare": "husky"
+    "setup:cognito": "cd packages/auth && npm run setup:cognito"
   },
   "private": true,
   "packageManager": "npm@10.9.3",
@@ -27,7 +26,6 @@
     "@eslint/js": "^9.8.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
-    "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
