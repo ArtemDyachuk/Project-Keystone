@@ -25,18 +25,26 @@ export interface AuthTokens {
 
 export interface DecodedToken {
   sub: string;
-  email: string;
-  email_verified: boolean;
-  given_name: string;
-  family_name: string;
+  email?: string;
+  email_verified?: boolean;
+  given_name?: string;
+  family_name?: string;
   "custom:tenantId"?: string;
   "custom:role"?: string;
-  aud: string;
-  auth_time: number;
+  "custom:tenantIds"?: string;
+  "custom:selectedTenantId"?: string;
+  aud?: string;
+  auth_time?: number;
   exp: number;
   iat: number;
-  iss: string;
-  token_use: "access" | "id";
+  iss?: string;
+  token_use?: "access" | "id";
+  username?: string;
+  client_id?: string;
+  origin_jti?: string;
+  event_id?: string;
+  scope?: string;
+  jti?: string;
 }
 
 export interface SignUpParams {

@@ -22,6 +22,11 @@ export interface ITenantRepository {
   findByName(name: string): Promise<ITenant | null>;
 
   /**
+   * Find tenants by IDs (for filtering user's tenants)
+   */
+  findByIds(tenantIds: string[]): Promise<ITenant[]>;
+
+  /**
    * Update tenant by ID
    */
   updateById(id: string, updates: Partial<ITenant>): Promise<ITenant | null>;

@@ -7,12 +7,6 @@ export async function POST(request: NextRequest) {
 
     const config = await getCognitoConfig();
 
-    console.log("🔍 Set Password - Config check:", {
-      userPoolId: config.userPoolId,
-      region: config.region,
-      awsProfile: process.env.AWS_PROFILE || "default",
-    });
-
     // Use AWS SDK directly to set permanent password
     const { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } = await import("@aws-sdk/client-cognito-identity-provider");
 

@@ -1,6 +1,7 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "jsx": "preserve",
     "noEmit": true,
     "emitDeclarationOnly": false,
@@ -19,7 +20,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/components/*": ["./app/components/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/app/*": ["./app/*"],
+      "@/services/*": ["./app/services/*"]
     },
     "outDir": "dist",
     "rootDir": "."
@@ -34,6 +39,10 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "lib/**/*.ts",
+    "contexts/**/*.ts",
+    "contexts/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

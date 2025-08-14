@@ -1,4 +1,4 @@
-import styles from "./dashboard-page.module.css";
+import styles from "./dashboard.module.css";
 
 export default function DashboardPage() {
   return (

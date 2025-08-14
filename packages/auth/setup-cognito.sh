@@ -106,6 +106,24 @@ USER_POOL_OUTPUT=$(aws cognito-idp create-user-pool \
             "AttributeDataType": "String",
             "Required": true,
             "Mutable": true
+        },
+        {
+            "Name": "tenantIds",
+            "AttributeDataType": "String",
+            "Required": false,
+            "Mutable": true,
+            "StringAttributeConstraints": {
+                "MaxLength": "1000"
+            }
+        },
+        {
+            "Name": "selectedTenantId",
+            "AttributeDataType": "String",
+            "Required": false,
+            "Mutable": true,
+            "StringAttributeConstraints": {
+                "MaxLength": "100"
+            }
         }
     ]' \
     --user-pool-tags Project=Keystone,Environment=$ENVIRONMENT,ManagedBy=Script \
@@ -202,3 +220,19 @@ echo "✅ Advanced Security Mode (bot detection, risk analysis)"
 echo "✅ MFA ready (TOTP apps, SMS)"
 echo "✅ Passkey/WebAuthn ready (ALLOW_USER_AUTH flow)"
 echo "✅ Email alias support"
+echo "✅ Multi-tenancy support (tenantIds, selectedTenantId)"
+echo ""
+echo -e "${BLUE}🔧 To Add Custom Attributes to Existing User Pool:${NC}"
+echo "# If you already have a user pool and want to add these attributes:"
+echo "aws cognito-idp add-custom-attributes \\"
+echo "  --user-pool-id YOUR_USER_POOL_ID \\"
+echo "  --custom-attributes '{\"tenantIds\":{\"AttributeDataType\":\"String\",\"Required\":false,\"Mutable\":true,\"StringAttributeConstraints\":{\"MaxLength\":\"1000\"}},\"selectedTenantId\":{\"AttributeDataType\":\"String\",\"Required\":false,\"Mutable\":true,\"StringAttributeConstraints\":{\"MaxLength\":\"100\"}}}'"
+echo ""
+echo "# Or add them one by one:"
+echo "aws cognito-idp add-custom-attributes \\"
+echo "  --user-pool-id YOUR_USER_POOL_ID \\"
+echo "  --custom-attributes '{\"tenantIds\":{\"AttributeDataType\":\"String\",\"Required\":false,\"Mutable\":true,\"StringAttributeConstraints\":{\"MaxLength\":\"1000\"}}}'"
+echo ""
+echo "aws cognito-idp add-custom-attributes \\"
+echo "  --user-pool-id YOUR_USER_POOL_ID \\"
+echo "  --custom-attributes '{\"selectedTenantId\":{\"AttributeDataType\":\"String\",\"Required\":false,\"Mutable\":true,\"StringAttributeConstraints\":{\"MaxLength\":\"100\"}}}'"

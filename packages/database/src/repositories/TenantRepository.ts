@@ -32,6 +32,19 @@ export class TenantRepository implements ITenantRepository {
   }
 
   /**
+   * Find tenants by IDs (for filtering user's tenants)
+   */
+  async findByIds(tenantIds: string[]): Promise<ITenant[]> {
+    if (!tenantIds || tenantIds.length === 0) {
+      return [];
+    }
+    
+    // Convert string IDs to ObjectIds and find tenants
+    const objectIds = tenantIds.map(id => id.trim()).filter(Boolean);
+    return await Tenant.find({ _id: { $in: objectIds } }).sort({ name: 1 });
+  }
+
+  /**
    * Update tenant by ID
    */
   async updateById(id: string, updates: Partial<ITenant>): Promise<ITenant | null> {

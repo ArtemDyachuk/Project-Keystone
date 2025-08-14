@@ -33,6 +33,17 @@ export class TenantService {
   }
 
   /**
+   * Get tenants by IDs (for filtering user's tenants)
+   */
+  static async getTenantsByIds(tenantIds: string[]): Promise<ITenant[]> {
+    if (!tenantIds || tenantIds.length === 0) {
+      return [];
+    }
+    
+    return await this.tenantRepository.findByIds(tenantIds);
+  }
+
+  /**
    * Get tenant by ID
    */
   static async getTenantById(id: string): Promise<ITenant | null> {
