@@ -18,14 +18,14 @@
     "@aws-sdk/client-cognito-identity-provider": "^3.600.0",
     "@aws-sdk/client-ssm": "^3.600.0",
     "jose": "^5.2.0",
-    "jsonwebtoken": "^9.0.2"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.0",
+    "jsonwebtoken": "^9.0.2",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/estree": "^1.0.5",
     "@types/json-schema": "^7.0.15",
-    "@types/ms": "^0.7.31",
+    "@types/ms": "^0.7.31"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
     "typescript": "^5.9.2"
   }
 }
