@@ -1,13 +1,11 @@
-"use client";
-
-import { useState } from "react";
-import styles from "./Sidebar.module.css";
+import { getSidebarState } from "@/lib/auth-cookies";
+import { SidebarClient } from "./SidebarClient";
 
 interface SidebarProps {
   className?: string;
 }
 
-interface NavItem {
+export interface NavItem {
   href: string;
   label: string;
   icon: string;
@@ -18,48 +16,15 @@ const navigationItems: NavItem[] = [
   { href: "/tenants", label: "Tenants", icon: "🏢" },
 ];
 
-export function Sidebar({ className }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+export async function Sidebar({ className }: SidebarProps) {
+  // Get initial state from server-side cookies
+  const isCollapsed = await getSidebarState();
 
   return (
-    <aside className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : styles.expanded} ${className || ""}`}>
-      <div className={styles.sidebarHeader}>
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className={styles.toggleButton}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <span className={styles.toggleIcon}>
-            {isCollapsed ? "→" : "←"}
-          </span>
-        </button>
-      </div>
-      
-      <nav className={styles.navigation} role="navigation" aria-label="Main navigation">
-        <ul className={styles.navList}>
-          {navigationItems.map((item) => (
-            <li key={item.href} className={styles.navItem}>
-              <a 
-                href={item.href} 
-                className={styles.navLink}
-                title={isCollapsed ? item.label : undefined}
-              >
-                <span className={styles.navIcon} aria-hidden="true">
-                  {item.icon}
-                </span>
-                <span className={styles.navLabel}>
-                  {item.label}
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </aside>
+    <SidebarClient 
+      initialCollapsed={isCollapsed}
+      navigationItems={navigationItems}
+      className={className}
+    />
   );
 }
