@@ -1,10 +1,12 @@
-import { TenantSwitcher } from "@/app/components/tenants";
-import { Sidebar } from "@/app/components/navigation";
-import { Footer } from "@/app/components/layout/Footer";
+import { Sidebar, CMSNavigation } from "@/app/components/navigation";
+import { Footer } from "@/app/components/navigation/Footer/Footer";
 import { ThemeProvider } from "@/app/context/ThemeContext";
-import { getUserDataFromJWT, getUserDisplayName } from "@/lib/auth-utils";
+import { getUserDataFromJWT } from "@/lib/auth-utils";
 import { TenantServiceClient } from "@/app/services";
 import styles from "./styles.module.css";
+
+// Force dynamic rendering since we use cookies
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardLayout({
   children,
@@ -29,28 +31,16 @@ export default async function DashboardLayout({
   if (!selectedTenant && userTenants.length > 0) {
     selectedTenant = userTenants[0];
   }
-  
+
   return (
     <ThemeProvider>
       <div className={styles.appContainer}>
         {/* Application Header - Full Width */}
-        <header className={styles.appHeader}>
-          <div className={styles.headerContent}>
-            <h1 className={styles.logo}>Keystone CMS</h1>
-            <div className={styles.headerActions}>
-              <TenantSwitcher
-                selectedTenant={selectedTenant}
-                userTenants={userTenants}
-              />
-              <span className={styles.userInfo}>{userData ? getUserDisplayName(userData) : "Admin User"}</span>
-              <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
-                <button type="submit" className={styles.logoutButton}>
-                  Logout
-                </button>
-              </form>
-            </div>
-          </div>
-        </header>
+        <CMSNavigation
+          userData={userData}
+          selectedTenant={selectedTenant}
+          userTenants={userTenants}
+        />
 
         {/* Application Body - Sidebar + Main Content */}
         <div className={styles.appBody}>

@@ -19,7 +19,7 @@ export async function connectToDatabase(): Promise<void> {
 
   while (retryCount < maxRetries) {
     try {
-      console.log(`🔄 Attempting to connect to MongoDB (attempt ${retryCount + 1}/${maxRetries})...`);
+      // console.log(`🔄 Attempting to connect to MongoDB (attempt ${retryCount + 1}/${maxRetries})...`);
       
       await mongoose.connect(uri, {
         serverSelectionTimeoutMS: 10000, // 10 seconds for server selection

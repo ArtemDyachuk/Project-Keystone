@@ -1,5 +1,8 @@
 import styles from "./dashboard.module.css";
 
+// Force dynamic rendering since layout uses cookies
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   return (
     <div className={styles.container}>

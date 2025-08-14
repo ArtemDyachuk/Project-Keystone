@@ -9,9 +9,6 @@ export function Footer() {
           <span className={styles.copyright}>
             © {new Date().getFullYear()} Keystone CMS. All rights reserved.
           </span>
-          <span className={styles.version}>
-            v1.0.0
-          </span>
         </div>
 
         <ThemeSwitcher />

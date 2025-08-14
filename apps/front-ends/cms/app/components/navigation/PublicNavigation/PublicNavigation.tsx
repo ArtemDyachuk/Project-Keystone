@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@keystone/ui";
-import styles from "./MainNavigation.module.css";
+import styles from "./PublicNavigation.module.css";
 
 interface UserInfo {
   email: string;
@@ -11,7 +11,7 @@ interface UserInfo {
   lastName: string;
 }
 
-export function MainNavigation() {
+export function PublicNavigation() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

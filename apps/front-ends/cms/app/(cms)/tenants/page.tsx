@@ -1,60 +1,16 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { Tenant } from "@/components/tenants/types";
-import { getTenants } from "@/lib/tenants";
+import { getUserDataFromJWT } from "@/lib/auth-utils";
+import { TenantServiceClient } from "@/app/services";
 import styles from "./page.module.css";
 
-export default function TenantsPage() {
-  const [userTenants, setUserTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Force dynamic rendering since we use cookies
+export const dynamic = 'force-dynamic';
 
-  useEffect(() => {
-    const fetchTenants = async () => {
-      try {
-        setLoading(true);
-        const tenants = await getTenants();
-        setUserTenants(tenants);
-        console.log("Tenants page - Fetched tenants:", tenants.length);
-      } catch (err) {
-        console.error("Failed to load tenants:", err);
-        setError(err instanceof Error ? err.message : "Failed to load organizations");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTenants();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>🏢 Organizations</h1>
-          <p>Manage your organizations and their settings.</p>
-        </div>
-        <div className={styles.loading}>
-          <p>Loading organizations...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>🏢 Organizations</h1>
-          <p>Manage your organizations and their settings.</p>
-        </div>
-        <div className={styles.error}>
-          <p>Error loading organizations: {error}</p>
-        </div>
-      </div>
-    );
-  }
+export default async function TenantsPage() {
+  // Get user data from JWT
+  const userData = await getUserDataFromJWT();
+  
+  // Get user's tenants from database
+  const userTenants = await TenantServiceClient.getTenantsByIds(userData?.tenantIds || []);
 
   return (
     <div className={styles.container}>

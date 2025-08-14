@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { setCurrentTenant } from "@/lib/tenants";
+import { createTenant } from "@/app/actions";
 import styles from "./TenantCreate.module.css";
 
 export function TenantCreate() {
@@ -36,33 +37,18 @@ export function TenantCreate() {
     setError("");
 
     try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error("Not authenticated");
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const result = await createTenant(name);
       
-      const response = await fetch(`${apiUrl}/api/tenants`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ name: name.trim() }),
-      });
+      if (result.success && result.tenant) {
+        // Store new tenant info using utility function
+        setCurrentTenant(result.tenant._id, result.tenant.name);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to create organization");
+        // Refresh router to update navigation with fresh token data, then navigate
+        router.refresh();
+        router.push("/dashboard");
+      } else {
+        throw new Error(result.error || "Failed to create organization");
       }
-
-      // Store new tenant info using utility function
-      setCurrentTenant(data._id, data.name);
-
-      // Redirect to dashboard
-      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create organization");
     } finally {

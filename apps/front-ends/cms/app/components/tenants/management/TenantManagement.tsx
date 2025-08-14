@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Tenant } from "../types";
+import { deleteTenant } from "@/app/actions";
 import styles from "./TenantManagement.module.css";
 
 interface TenantManagementProps {
@@ -71,23 +72,14 @@ export function TenantManagement({ tenant }: TenantManagementProps) {
     setError("");
 
     try {
-      const accessToken = await getAccessToken();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const result = await deleteTenant(tenant._id!);
       
-      const response = await fetch(`${apiUrl}/api/tenants/${tenant._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to delete organization");
+      if (result.success) {
+        // Use window.location.href to force a full navigation and avoid race conditions
+        window.location.href = "/tenants";
+      } else {
+        throw new Error(result.error || "Failed to delete organization");
       }
-
-      // Redirect to tenants list
-      router.push("/tenants");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete organization");
       setIsDeleting(false);

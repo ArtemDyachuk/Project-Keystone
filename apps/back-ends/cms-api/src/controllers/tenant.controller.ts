@@ -98,13 +98,14 @@ export class TenantController {
    * POST /tenants
    */
   @Post()
-  async createTenant(@Body() createTenantDto: CreateTenantDto, @Headers('authorization') authHeader: string): Promise<ITenant> {
+  async createTenant(@Body() createTenantDto: CreateTenantDto & { refreshToken?: string }, @Headers('authorization') authHeader: string): Promise<any> {
     try {
       // 1. Create tenant in database
       const tenant = await TenantService.createTenant(createTenantDto.name);
 
       // 2. Extract user info from JWT token
       const userInfo = this.extractUserFromJWT(authHeader);
+      const { refreshToken } = createTenantDto;
 
       // 3. Update Cognito user with new tenant (only if configured)
       const userPoolId = process.env.COGNITO_USER_POOL_ID;
@@ -116,12 +117,31 @@ export class TenantController {
             userInfo.username,
             tenant._id!
           );
+          
+          // If refresh token provided, get fresh tokens with updated attributes
+          if (refreshToken && userInfo.username) {
+            try {
+              const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
+              
+              return { 
+                ...tenant,
+                tokens: newTokens 
+              };
+            } catch (refreshError) {
+              console.warn("Failed to refresh tokens after tenant creation:", refreshError);
+              return { 
+                ...tenant,
+                tokens: null,
+                refreshError: "Failed to refresh tokens"
+              };
+            }
+          }
         } catch {
           // Continue without Cognito integration
         }
       }
 
-      return tenant;
+      return { ...tenant, tokens: null };
     } catch (error) {
       console.error('❌ Tenant creation failed:', error);
       throw new HttpException(
@@ -226,8 +246,9 @@ export class TenantController {
   @UseGuards(TenantAccessGuard)
   async deleteTenant(
     @Param('id') id: string,
-    @Headers('authorization') authHeader: string
-  ): Promise<{ message: string }> {
+    @Headers('authorization') authHeader: string,
+    @Body() body: { refreshToken?: string }
+  ): Promise<{ message: string; tokens?: any; refreshError?: string }> {
     try {
       // 1. Delete tenant from database
       const deleted = await TenantService.deleteTenant(id);
@@ -277,12 +298,30 @@ export class TenantController {
               ""
             );
           }
+
+          // Refresh tokens if provided
+          if (body.refreshToken && userInfo.username) {
+            try {
+              const newTokens = await this.cognitoAdminService.refreshUserTokens(body.refreshToken, userInfo.username);
+              return { 
+                message: `Tenant with ID "${id}" deleted successfully`, 
+                tokens: newTokens 
+              };
+            } catch (refreshError) {
+              console.warn("Failed to refresh tokens after tenant deletion:", refreshError);
+              return { 
+                message: `Tenant with ID "${id}" deleted successfully`, 
+                tokens: null, 
+                refreshError: "Failed to refresh tokens" 
+              };
+            }
+          }
         } catch {
           // Continue without Cognito integration if it fails
         }
       }
 
-      return { message: `Tenant with ID "${id}" deleted successfully` };
+      return { message: `Tenant with ID "${id}" deleted successfully`, tokens: null };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -312,12 +351,12 @@ export class TenantController {
   }
 
   /**
-   * Update user's selected tenant
+   * Update user's selected tenant and return fresh tokens
    * PUT /tenants/user/selected
    */
   @Put("user/selected")
   async updateUserSelectedTenant(
-    @Body() body: { tenantId: string },
+    @Body() body: { tenantId: string; refreshToken?: string },
     @Headers("authorization") authHeader?: string,
   ) {
     try {
@@ -326,16 +365,81 @@ export class TenantController {
       }
 
       const userInfo = this.extractUserFromJWT(authHeader);
-      const { tenantId } = body;
+      const { tenantId, refreshToken } = body;
 
       // Update Cognito user's selectedTenantId
       if (process.env.COGNITO_USER_POOL_ID) {
         await this.cognitoAdminService.updateSelectedTenant(process.env.COGNITO_USER_POOL_ID, userInfo.username, tenantId);
+
+        // If refresh token provided, get fresh tokens with updated attributes
+        if (refreshToken && userInfo.username) {
+          try {
+            const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
+
+            return {
+              message: "Selected tenant updated successfully",
+              tokens: newTokens
+            };
+          } catch (refreshError) {
+            console.warn("Failed to refresh tokens, but tenant was updated:", refreshError);
+            return {
+              message: "Selected tenant updated successfully",
+              tokens: null,
+              refreshError: "Failed to refresh tokens"
+            };
+          }
+        }
       }
 
-      return { message: "Selected tenant updated successfully" };
+      return { message: "Selected tenant updated successfully", tokens: null };
     } catch (error) {
-      console.error("❌ Error updating selected tenant:", error);
+      console.error("Error updating selected tenant:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh user tokens with updated attributes
+   * POST /tenants/user/refresh-tokens
+   */
+  @Post("user/refresh-tokens")
+  async refreshUserTokens(
+    @Body() body: { refreshToken: string },
+    @Headers("authorization") authHeader?: string,
+  ) {
+    try {
+      if (!authHeader) {
+        throw new UnauthorizedException("Authorization header required");
+      }
+
+      const userInfo = this.extractUserFromJWT(authHeader);
+      const { refreshToken } = body;
+
+      if (!refreshToken) {
+        throw new UnauthorizedException("Refresh token required");
+      }
+
+      if (process.env.COGNITO_USER_POOL_ID) {
+        try {
+          const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
+
+          return {
+            message: "Tokens refreshed successfully",
+            tokens: newTokens
+          };
+        } catch (refreshError) {
+          console.warn("Failed to refresh tokens:", refreshError);
+          return {
+            message: "Failed to refresh tokens",
+            tokens: null,
+            error: "Token refresh failed"
+          };
+        }
+      }
+
+      return { message: "Cognito not configured", tokens: null };
+    } catch (error) {
+      console.error("Error refreshing tokens:", error);
       throw error;
     }
   }
@@ -383,31 +487,56 @@ export class TenantController {
    */
   private extractUserFromJWT(authHeader: string): { username: string; sub: string } {
     try {
-      // Remove 'Bearer ' prefix
-      const token = authHeader.replace('Bearer ', '');
+      // Validate authorization header format
+      if (!authHeader || typeof authHeader !== 'string') {
+        throw new Error('Invalid authorization header format');
+      }
+
+      // Remove 'Bearer ' prefix and validate
+      const bearerPrefix = 'Bearer ';
+      if (!authHeader.startsWith(bearerPrefix)) {
+        throw new Error('Authorization header must start with "Bearer "');
+      }
+
+      const token = authHeader.slice(bearerPrefix.length).trim();
 
       if (!token) {
-        throw new Error('No token provided');
+        throw new Error('No token provided in authorization header');
+      }
+
+      // Validate token format (JWT should have 3 parts separated by dots)
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error('Invalid JWT format: token must have 3 parts');
       }
 
       // Decode JWT using the auth package
       const decoded = decodeJwtToken(token);
 
+      // Validate decoded token has required fields
+      if (!decoded || typeof decoded !== 'object') {
+        throw new Error('Invalid token: failed to decode payload');
+      }
+
       // Extract user information from decoded token
-      const username = decoded.username || decoded.email || decoded.sub || 'unknown';
+      const username = decoded.username || decoded.email || decoded.sub;
+      const sub = decoded.sub;
 
-      // Keep the encoded username format (__at__ for @) as Cognito stores it this way
-      // Don't decode it - Cognito expects the encoded format
-
-      const sub = decoded.sub || 'unknown';
+      if (!username || !sub) {
+        throw new Error('Invalid token: missing required user information (username/sub)');
+      }
 
       return {
-        username,
-        sub
+        username: String(username),
+        sub: String(sub)
       };
     } catch (error) {
-      console.error('Error extracting user from JWT:', error);
-      throw new Error('Invalid authorization header');
+      console.error('Error extracting user from JWT:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        authHeaderLength: authHeader?.length,
+        authHeaderPrefix: authHeader?.substring(0, 10) + '...'
+      });
+      throw new UnauthorizedException(`Invalid authorization header: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

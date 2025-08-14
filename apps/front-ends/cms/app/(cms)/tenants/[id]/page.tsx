@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { TenantManagement } from "@/components/tenants";
 import { TenantServiceClient } from "@/app/services";
 
+// Force dynamic rendering since TenantManagement uses server actions with cookies
+export const dynamic = 'force-dynamic';
+
 interface TenantPageProps {
   params: {
     id: string;

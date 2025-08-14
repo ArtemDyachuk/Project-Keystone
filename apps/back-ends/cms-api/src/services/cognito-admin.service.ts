@@ -5,6 +5,7 @@ import {
   AdminGetUserCommand,
   type AttributeType,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
 
 @Injectable()
 export class CognitoAdminService {
@@ -31,7 +32,7 @@ export class CognitoAdminService {
     // Convert MongoDB ObjectIds to strings for Cognito
     const tenantIdsString = tenantIds.map(id => id.toString()).join(",");
     const selectedTenantIdString = selectedTenantId.toString();
-    
+
     const command = new AdminUpdateUserAttributesCommand({
       UserPoolId: userPoolId,
       Username: username,
@@ -61,7 +62,7 @@ export class CognitoAdminService {
 
     const result = await this.client.send(command);
     const attributes = result.UserAttributes || [];
-    
+
     const attributeMap: Record<string, string> = {};
     attributes.forEach((attr: AttributeType) => {
       if (attr.Name && attr.Value) {
@@ -80,7 +81,7 @@ export class CognitoAdminService {
     selectedTenantId: string | null;
   }> {
     const attributes = await this.getUserAttributes(userPoolId, username);
-    
+
     const tenantIds = attributes["custom:tenantIds"]?.split(",").filter(Boolean) || [];
     const selectedTenantId = attributes["custom:selectedTenantId"] || null;
 
@@ -99,11 +100,11 @@ export class CognitoAdminService {
     newTenantId: string
   ): Promise<void> {
     const currentInfo = await this.getUserTenantInfo(userPoolId, username);
-    
+
     // Add new tenant if not already present
     if (!currentInfo.tenantIds.includes(newTenantId)) {
       const updatedTenantIds = [...currentInfo.tenantIds, newTenantId];
-      
+
       await this.updateUserTenants(
         userPoolId,
         username,
@@ -122,7 +123,7 @@ export class CognitoAdminService {
     selectedTenantId: string
   ): Promise<void> {
     const currentInfo = await this.getUserTenantInfo(userPoolId, username);
-    
+
     // Verify user has access to this tenant
     if (!currentInfo.tenantIds.includes(selectedTenantId)) {
       throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
@@ -134,5 +135,30 @@ export class CognitoAdminService {
       currentInfo.tenantIds,
       selectedTenantId
     );
+  }
+
+  /**
+   * Refresh user tokens using Cognito refresh token
+   * Returns fresh tokens with updated user attributes
+   */
+  async refreshUserTokens(
+    refreshToken: string,
+    username: string
+  ): Promise<{ accessToken: string; idToken: string; refreshToken: string }> {
+    try {
+      const cognitoConfig = await getCognitoConfig();
+      const cognitoClient = new CognitoAuthClient(cognitoConfig);
+
+      const newTokens = await cognitoClient.refreshTokens(refreshToken, username);
+
+      return {
+        accessToken: newTokens.accessToken,
+        idToken: newTokens.idToken,
+        refreshToken: newTokens.refreshToken
+      };
+    } catch (error) {
+      console.error("Failed to refresh tokens in CognitoAdminService:", error);
+      throw new Error(`Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decodeJwtToken } from "@keystone/auth";
-
-// Simple in-memory cache for JWT validation (in production, consider Redis)
-const jwtCache = new Map<string, { tenantIds: string[]; expiresAt: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+import { getAuthCookies, isAuthenticated } from "./lib/auth-cookies";
+import { getUserDataFromJWT } from "./lib/auth-utils";
 
 // Routes that don't require authentication
+// Route groups (auth) and (public) are organizational only - they don't appear in URLs
 const PUBLIC_ROUTES = [
   "/", // Home page
-  "/login",
-  "/signup", 
-  "/forgot-password",
-  "/reset-password",
-  "/ui-test"
+  "/login", // Actually accessible at /login (from (auth) folder)
+  "/signup", // Actually accessible at /signup (from (auth) folder)
+  "/forgot-password", // Actually accessible at /forgot-password (from (auth) folder)
+  "/reset-password", // Actually accessible at /reset-password (from (auth) folder)
+  "/ui-test" // From (public) folder
 ];
 
 // Helper function to check if path is a public route
@@ -25,43 +23,12 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
-// Get user's tenant IDs from JWT token with caching
-function getUserTenantsFromJWT(request: NextRequest): string[] {
-  try {
-    const idToken = request.cookies.get("idToken")?.value;
-    if (!idToken) return [];
-
-    // Check cache first
-    const cacheKey = idToken.substring(0, 50); // Use first 50 chars as cache key
-    const cached = jwtCache.get(cacheKey);
-    
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.tenantIds;
-    }
-
-    // Decode JWT if not cached or expired
-    const decoded = decodeJwtToken(idToken);
-    const tenantIds = decoded["custom:tenantIds"];
-    
-    let result: string[] = [];
-    if (typeof tenantIds === "string") {
-      result = tenantIds.split(",").filter(Boolean);
-    }
-    
-    // Cache the result
-    jwtCache.set(cacheKey, {
-      tenantIds: result,
-      expiresAt: Date.now() + CACHE_TTL
-    });
-    
-    return result;
-  } catch (error) {
-    console.error("Failed to decode JWT for tenant validation:", error);
-    return [];
-  }
+// Helper function to check if path is an auth page
+function isAuthPage(pathname: string): boolean {
+  return ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip API routes and static files
@@ -69,26 +36,33 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const accessToken = request.cookies.get("accessToken")?.value;
-  const isAuthenticated = !!accessToken;
+  // Use your existing isAuthenticated function
+  const authenticated = await isAuthenticated();
 
   // If not authenticated and not on public routes, redirect to login
-  if (!isAuthenticated && !isPublicRoute(pathname)) {
+  if (!authenticated && !isPublicRoute(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // If authenticated and on auth pages, redirect to dashboard
-  if (isAuthenticated && (pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password" || pathname === "/reset-password")) {
+  if (authenticated && isAuthPage(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // TENANT VALIDATION: Check if user has any tenants
-  if (isAuthenticated && pathname.startsWith("/dashboard")) {
-    const userTenants = getUserTenantsFromJWT(request);
-    
-    // If user has no tenants, redirect to tenant creation
-    if (userTenants.length === 0) {
-      return NextResponse.redirect(new URL("/tenants/create", request.url));
+  if (authenticated && pathname.startsWith("/dashboard")) {
+    // Use your existing getUserDataFromJWT function for tenant validation
+    try {
+      const userData = await getUserDataFromJWT();
+
+      // If user has no tenants, redirect to tenant creation
+      if (!userData?.tenantIds || userData.tenantIds.length === 0) {
+        return NextResponse.redirect(new URL("/tenants/create", request.url));
+      }
+    } catch (error) {
+      console.error("Failed to get user data for tenant validation:", error);
+      // If we can't get user data, redirect to login for safety
+      return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
