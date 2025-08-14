@@ -43,7 +43,7 @@ npm run build:safe
 ```
 1. You: git commit -m "Fix bug"
 2. Hook: Running tests...
-3. Tests: ✅ 86 passed (1.2s)
+3. Tests: ✅ 86 passed (2s)
 4. Git: ✅ Commit successful
 
 OR
@@ -106,19 +106,8 @@ git commit           # Now allowed to commit
 
 ### **`.husky/pre-commit`** - Git Hook
 ```bash
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-npx lint-staged
-```
-
-### **`package.json`** - Lint-Staged Config
-```json
-"lint-staged": {
-  "*.{ts,tsx}": [
-    "npm run lint",
-    "npm run test"
-  ]
-}
+# Run tests before commit
+npm run test
 ```
 
 ### **`turbo.json`** - Build Dependencies
@@ -150,7 +139,7 @@ git commit --no-verify -m "Emergency fix"
 ```bash
 # Remove git hooks
 rm -rf .husky
-npm uninstall husky lint-staged
+npm uninstall husky
 ```
 
 ## **🎉 Bottom Line**
