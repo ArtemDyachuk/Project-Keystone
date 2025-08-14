@@ -24,6 +24,16 @@
         "!.next/cache/**"
       ]
     },
+    "build:safe": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
     "build:cms": {
       "dependsOn": [
         "^build"

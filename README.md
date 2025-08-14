@@ -236,36 +236,90 @@ Visit your deployed apps to see these features in action:
 - **🐛 Debug Info**: `/api/tenants/debug` - System information
 - **🔒 CORS**: Pre-configured for Vercel frontend
 
+## 🧪 **Testing**
+
+Your multi-tenant CMS has **comprehensive security testing** covering authentication and tenant isolation.
+
+### **🚀 Quick Start**
+
+```bash
+# Run all tests (86 tests in ~1 second)
+npm test
+
+# Run tests in watch mode (auto-rerun on changes)
+npm run test:watch
+
+# Run security tests only
+npm run test:security
+
+# Build safely (tests + build)
+npm run build:safe
+```
+
+### **📊 Test Coverage**
+
+```
+✅ Backend Tests: 48 tests (Authentication, Tenant isolation, API security)
+✅ Frontend Tests: 38 tests (Middleware, JWT parsing, Client validation)
+✅ Total: 86 security tests covering multi-tenant isolation
+```
+
+### **🎯 What We Test**
+
+| Security Area | Tests | What It Prevents |
+|--------------|-------|------------------|
+| **Tenant Isolation** | 32 tests | Users accessing other organizations' data |
+| **Authentication** | 25 tests | Unauthorized access, invalid tokens |
+| **API Security** | 17 tests | Route protection, request validation |
+| **Attack Prevention** | 12 tests | JWT tampering, cross-tenant attacks |
+
+### **⚡ Automated Testing**
+
+Tests run automatically:
+- **Development**: Watch mode (`npm run test:watch`)
+- **Pre-commit**: Git hooks run tests before commits
+- **CI/CD**: Tests must pass before deployment
+- **Production**: `npm run build:safe` ensures tests pass
+
+### **📚 Documentation**
+
+Detailed testing guides are in `/documentation/`:
+- 🧪 **TESTING_GUIDE.md** - Beginner-friendly testing overview
+- 🏢 **MULTI_TENANT_TESTING_GUIDE.md** - Tenant isolation testing
+- 🔐 **AUTH_TESTING_GUIDE.md** - Authentication testing strategies
+
 ## 📝 **Next Steps & Scaling**
 
-### Phase 1: Core Features
+### Phase 1: Core Features ✅
 
-- ✅ **Shared Database Package** - Complete
-- ✅ **Shared UI Components** - Complete  
-- ✅ **Server-Side Rendering** - Complete
-- ✅ **Production Deployments** - Complete
+- ✅ **Multi-tenant Architecture** - Complete with secure isolation
+- ✅ **Authentication & Authorization** - JWT + Cognito integration
+- ✅ **Comprehensive Testing** - 86 security tests
+- ✅ **Production Deployments** - Vercel + Render.com
 
 ### Phase 2: Production Enhancements
 
-- 🔐 **Authentication**: Add JWT or OAuth integration
 - 📈 **Monitoring**: Add logging and analytics
-- 🧪 **Testing**: Add comprehensive test suites
 - 🚀 **Performance**: Database indexing and caching
+- 🔄 **Integration Tests**: API + Database integration testing
+- 🎭 **E2E Tests**: Browser-based user workflow testing
 
 ### Phase 3: Advanced Features
 
-- 🏢 **Multi-tenancy**: Implement tenant isolation
 - 🔄 **Real-time**: Add WebSocket support
 - 📱 **Mobile**: Add React Native app
-- 🤖 **CI/CD**: Enhanced deployment pipelines
+- 🤖 **Advanced CI/CD**: Enhanced deployment pipelines
+- 🌍 **Internationalization**: Multi-language support
 
 ## 🤝 **Contributing**
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+3. **Run tests**: `npm test` (must pass)
+4. Add tests for new features
+5. Make your changes
+6. Test thoroughly
+7. Submit a pull request
 
 ## 📄 **License**
 
