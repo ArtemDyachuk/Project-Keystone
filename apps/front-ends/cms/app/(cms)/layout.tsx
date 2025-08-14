@@ -8,17 +8,14 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Extract user data from JWT token (server-side)
+  // Get user data from JWT
   const userData = await getUserDataFromJWT();
-  const displayName = userData ? getUserDisplayName(userData) : "Admin User";
-
-  // Fetch user's tenants server-side if we have tenant IDs
+  
+  // Get user's tenants from database
   const userTenants = await TenantServiceClient.getTenantsByIds(userData?.tenantIds || []);
-  const selectedTenant = userTenants.find(t => t._id === userData?.selectedTenantId);
-
-  console.log("🔍 Display Name:", userData);
-  console.log("🔍 User Tenants:", userTenants);
-  console.log("🔍 Selected Tenant:", selectedTenant);
+  
+  // Find selected tenant
+  const selectedTenant = userTenants.find(tenant => tenant._id === userData?.selectedTenantId) || null;
 
   return (
     <div className={styles.container}>
@@ -31,7 +28,7 @@ export default async function DashboardLayout({
               selectedTenant={selectedTenant}
               userTenants={userTenants}
             />
-            <span className={styles.userInfo}>{displayName}</span>
+            <span className={styles.userInfo}>{userData ? getUserDisplayName(userData) : "Admin User"}</span>
             <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
               <button type="submit" className={styles.logoutButton}>
                 Logout

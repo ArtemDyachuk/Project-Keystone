@@ -22,14 +22,18 @@ export async function connectToDatabase(): Promise<void> {
       console.log(`🔄 Attempting to connect to MongoDB (attempt ${retryCount + 1}/${maxRetries})...`);
       
       await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 10000, // Increased timeout
-        socketTimeoutMS: 45000,
-        // Connection pool options
-        maxPoolSize: 10,
-        minPoolSize: 1,
+        serverSelectionTimeoutMS: 10000, // 10 seconds for server selection
+        socketTimeoutMS: 45000, // 45 seconds for socket operations
+        // Connection pool options - optimized for production
+        maxPoolSize: 20, // Increased from 10 for better concurrency
+        minPoolSize: 5,  // Increased from 1 for better performance
         // Retry options
         retryWrites: true,
         retryReads: true,
+        // Additional performance options
+        bufferCommands: false, // Disable mongoose buffering
+        // Connection timeout
+        connectTimeoutMS: 30000, // 30 seconds to establish connection
       });
       
       isConnected = true;

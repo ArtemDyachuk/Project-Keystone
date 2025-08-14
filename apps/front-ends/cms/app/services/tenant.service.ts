@@ -1,4 +1,12 @@
 import { TenantService, connectToDatabase } from "@keystone/database";
+import { ITenant } from "@keystone/database";
+
+interface SerializedTenant {
+  _id: string;
+  name: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
 /**
  * Service for tenant operations that can run server-side
@@ -20,13 +28,12 @@ export class TenantServiceClient {
   /**
    * Convert MongoDB object to plain object for React serialization
    */
-  private static serializeTenant(tenant: any): any {
+  private static serializeTenant(tenant: ITenant): SerializedTenant {
     return {
-      _id: tenant._id?.toString(),
+      _id: tenant._id?.toString() || "",
       name: tenant.name,
       createdAt: tenant.createdAt,
       updatedAt: tenant.updatedAt,
-      // Add any other fields you need
     };
   }
 
@@ -35,19 +42,10 @@ export class TenantServiceClient {
    * @param tenantIds Array of tenant IDs to fetch
    * @returns Promise<Tenant[]> Array of tenant objects
    */
-  static async getTenantsByIds(tenantIds: string[]): Promise<any[]> {
+  static async getTenantsByIds(tenantIds: string[]): Promise<SerializedTenant[]> {
     try {
-      if (!tenantIds || tenantIds.length === 0) {
-        return [];
-      }
-
-      // Ensure database connection is established
       await this.ensureConnection();
-
-      // Use the database service directly
       const tenants = await TenantService.getTenantsByIds(tenantIds);
-      
-      // Serialize MongoDB objects to plain objects
       return tenants.map(tenant => this.serializeTenant(tenant));
     } catch (error) {
       console.error("Failed to fetch tenants by IDs:", error);
@@ -60,20 +58,16 @@ export class TenantServiceClient {
    * @param tenantId The tenant ID to fetch
    * @returns Promise<Tenant | null> Tenant object or null if not found
    */
-  static async getTenantById(tenantId: string): Promise<any | null> {
+  static async getTenantById(tenantId: string): Promise<SerializedTenant | null> {
     try {
-      if (!tenantId) {
-        return null;
-      }
-
-      // Ensure database connection is established
       await this.ensureConnection();
-
-      // Use the database service directly
       const tenant = await TenantService.getTenantById(tenantId);
       
-      // Serialize MongoDB object to plain object
-      return tenant ? this.serializeTenant(tenant) : null;
+      if (!tenant) {
+        return null;
+      }
+      
+      return this.serializeTenant(tenant);
     } catch (error) {
       console.error("Failed to fetch tenant by ID:", error);
       throw new Error(`Failed to fetch tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -84,15 +78,10 @@ export class TenantServiceClient {
    * Get all tenants (for admin purposes)
    * @returns Promise<Tenant[]> Array of all tenant objects
    */
-  static async getAllTenants(): Promise<any[]> {
+  static async getAllTenants(): Promise<SerializedTenant[]> {
     try {
-      // Ensure database connection is established
       await this.ensureConnection();
-
-      // Use the database service directly
       const tenants = await TenantService.getAllTenants();
-      
-      // Serialize MongoDB objects to plain objects
       return tenants.map(tenant => this.serializeTenant(tenant));
     } catch (error) {
       console.error("Failed to fetch all tenants:", error);

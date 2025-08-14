@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeJwtToken } from "@keystone/auth";
 
+// Simple in-memory cache for JWT validation (in production, consider Redis)
+const jwtCache = new Map<string, { tenantIds: string[]; expiresAt: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+
 // Routes that don't require authentication
 const PUBLIC_ROUTES = [
   "/", // Home page
@@ -21,20 +25,36 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
-// Get user's tenant IDs from JWT token
+// Get user's tenant IDs from JWT token with caching
 function getUserTenantsFromJWT(request: NextRequest): string[] {
   try {
     const idToken = request.cookies.get("idToken")?.value;
     if (!idToken) return [];
 
+    // Check cache first
+    const cacheKey = idToken.substring(0, 50); // Use first 50 chars as cache key
+    const cached = jwtCache.get(cacheKey);
+    
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.tenantIds;
+    }
+
+    // Decode JWT if not cached or expired
     const decoded = decodeJwtToken(idToken);
     const tenantIds = decoded["custom:tenantIds"];
     
+    let result: string[] = [];
     if (typeof tenantIds === "string") {
-      return tenantIds.split(",").filter(Boolean);
+      result = tenantIds.split(",").filter(Boolean);
     }
     
-    return [];
+    // Cache the result
+    jwtCache.set(cacheKey, {
+      tenantIds: result,
+      expiresAt: Date.now() + CACHE_TTL
+    });
+    
+    return result;
   } catch (error) {
     console.error("Failed to decode JWT for tenant validation:", error);
     return [];

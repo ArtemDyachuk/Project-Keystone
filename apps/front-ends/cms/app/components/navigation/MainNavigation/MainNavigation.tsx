@@ -31,7 +31,11 @@ export function MainNavigation() {
           });
         }
       } catch (error) {
-        console.error("Auth check failed:", error);
+        // Silently handle auth check failures in production
+        // In development, you might want to log this
+        if (process.env.NODE_ENV === "development") {
+          console.error("Auth check failed:", error);
+        }
       } finally {
         setIsLoading(false);
       }

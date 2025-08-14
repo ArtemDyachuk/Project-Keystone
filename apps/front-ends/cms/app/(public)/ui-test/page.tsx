@@ -12,7 +12,11 @@ export default function UITestPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Form submitted: ${JSON.stringify(formData, null, 2)}`);
+    // TODO: Replace with proper form submission handling
+    // For now, just log to console in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("Form submitted:", formData);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

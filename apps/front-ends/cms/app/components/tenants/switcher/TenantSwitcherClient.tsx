@@ -44,7 +44,7 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
       });
       
       if (response.ok) {
-        console.log("Successfully updated selected tenant to:", tenant.name);
+        // Successfully updated selected tenant
         // Refresh the page to get updated data from server
         window.location.reload();
       } else {
@@ -53,7 +53,7 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
       }
     } catch (error) {
       console.error("Failed to update selected tenant:", error);
-      // You could add a toast notification here for better UX
+      // TODO: Replace with proper toast notification
       alert(`Failed to switch to ${tenant.name}. Please try again.`);
     } finally {
       setIsUpdating(false);
