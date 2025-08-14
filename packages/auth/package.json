@@ -23,6 +23,9 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/jsonwebtoken": "^9.0.2",
+    "@types/estree": "^1.0.5",
+    "@types/json-schema": "^7.0.15",
+    "@types/ms": "^0.7.31",
     "typescript": "^5.9.2"
   }
 }

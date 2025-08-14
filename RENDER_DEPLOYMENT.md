@@ -2,21 +2,22 @@
 
 ## **🚨 Important: Monorepo Deployment**
 
-This is a **monorepo** with local package dependencies. Render.com needs special configuration to handle this properly.
+This is a **monorepo** with local package dependencies. Render.com needs to build from the root.
 
-## **🔧 Deployment Configuration**
+## **🔧 Simple Deployment Configuration**
 
-### **Option 1: Root-Level Build (Recommended)**
+### **Build Command:**
+```bash
+npm install && npm run build
+```
 
-1. **Set Build Command** to: `npm run build`
-2. **Set Start Command** to: `cd apps/back-ends/cms-api && npm start`
-3. **Set Root Directory** to: `/` (root of monorepo)
+### **Start Command:**
+```bash
+cd apps/back-ends/cms-api && npm start
+```
 
-### **Option 2: Package-Level Build**
-
-1. **Set Build Command** to: `cd apps/back-ends/cms-api && npm run deploy`
-2. **Set Start Command** to: `cd apps/back-ends/cms-api && npm start`
-3. **Set Root Directory** to: `/` (root of monorepo)
+### **Root Directory:**
+`/` (root of monorepo)
 
 ## **📋 Environment Variables**
 
@@ -33,32 +34,26 @@ AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 ```
 
-## **🚀 Build Process**
+## **🚀 What Happens**
 
-The build process will:
-
-1. **Install dependencies** at root level
-2. **Build packages** (`@keystone/auth`, `@keystone/database`)
-3. **Build cms-api** with all dependencies available
+1. **npm install** - Installs all dependencies including types
+2. **npm run build** - Builds all packages in the right order (turbo handles this)
+3. **Start** - Runs the cms-api service
 
 ## **🔍 Troubleshooting**
 
-### **"Cannot find module '@keystone/auth'" Error**
+### **Type Definition Errors**
 
-This usually means:
-- Packages weren't built before cms-api build
-- Module resolution is failing
-- Dependencies aren't properly linked
+If you see errors like "Cannot find type definition file for 'jsonwebtoken'":
 
-**Solution**: Use **Option 1** (root-level build) as it ensures proper dependency resolution.
+**Solution**: Make sure the build command is `npm install && npm run build` (not just `npm run build`)
 
-### **Build Fails on Dependencies**
+### **Module Resolution Errors**
 
-**Solution**: Make sure all environment variables are set, especially AWS credentials for Cognito integration.
+**Solution**: Ensure you're building from the root directory, not from individual packages.
 
 ## **✅ Success Indicators**
 
-- Build completes without errors
-- All packages are built successfully
+- Build completes without type errors
+- All packages build successfully
 - cms-api starts without module resolution errors
-- API endpoints respond correctly
