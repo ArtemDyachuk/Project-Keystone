@@ -273,20 +273,23 @@ npm run build:safe
 | **API Security** | 17 tests | Route protection, request validation |
 | **Attack Prevention** | 12 tests | JWT tampering, cross-tenant attacks |
 
-### **⚡ Automated Testing**
+### **⚡ Manual Testing (When You Need It)**
 
-Tests run automatically:
+Run tests manually:
+
 - **Development**: Watch mode (`npm run test:watch`)
-- **Pre-commit**: Git hooks run tests before commits
-- **CI/CD**: Tests must pass before deployment
-- **Production**: `npm run build:safe` ensures tests pass
+- **Before deploy**: `npm run build:safe` (tests + build)
+- **Quick check**: `npm test` (86 tests in 2 seconds)
+- **Security focus**: `npm run test:security`
 
 ### **📚 Documentation**
 
 Detailed testing guides are in `/documentation/`:
+
 - 🧪 **TESTING_GUIDE.md** - Beginner-friendly testing overview
 - 🏢 **MULTI_TENANT_TESTING_GUIDE.md** - Tenant isolation testing
 - 🔐 **AUTH_TESTING_GUIDE.md** - Authentication testing strategies
+- 🎯 **MANUAL_TESTING.md** - How to run tests manually (deployment-friendly)
 
 ## 📝 **Next Steps & Scaling**
 
