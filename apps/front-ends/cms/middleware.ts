@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { decodeJwtToken } from "@keystone/auth";
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = [
@@ -20,6 +21,26 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
+// Get user's tenant IDs from JWT token
+function getUserTenantsFromJWT(request: NextRequest): string[] {
+  try {
+    const idToken = request.cookies.get("idToken")?.value;
+    if (!idToken) return [];
+
+    const decoded = decodeJwtToken(idToken);
+    const tenantIds = decoded["custom:tenantIds"];
+    
+    if (typeof tenantIds === "string") {
+      return tenantIds.split(",").filter(Boolean);
+    }
+    
+    return [];
+  } catch (error) {
+    console.error("Failed to decode JWT for tenant validation:", error);
+    return [];
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -39,6 +60,16 @@ export function middleware(request: NextRequest) {
   // If authenticated and on auth pages, redirect to dashboard
   if (isAuthenticated && (pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password" || pathname === "/reset-password")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // TENANT VALIDATION: Check if user has any tenants
+  if (isAuthenticated && pathname.startsWith("/dashboard")) {
+    const userTenants = getUserTenantsFromJWT(request);
+    
+    // If user has no tenants, redirect to tenant creation
+    if (userTenants.length === 0) {
+      return NextResponse.redirect(new URL("/tenants/create", request.url));
+    }
   }
 
   return NextResponse.next();

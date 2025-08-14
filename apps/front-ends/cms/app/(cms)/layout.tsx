@@ -32,9 +32,11 @@ export default async function DashboardLayout({
               userTenants={userTenants}
             />
             <span className={styles.userInfo}>{displayName}</span>
-            <a href="/api/auth/signout" className={styles.logoutButton}>
-              Logout
-            </a>
+            <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
+              <button type="submit" className={styles.logoutButton}>
+                Logout
+              </button>
+            </form>
           </div>
         </div>
       </header>

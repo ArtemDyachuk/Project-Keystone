@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { TenantService, ITenant } from '@keystone/database';
 import { CognitoAdminService } from '../services/cognito-admin.service';
 import { decodeJwtToken } from '@keystone/auth';
+import { TenantAccessGuard } from '../guards/tenant-access.guard';
 
 // DTOs for request validation
 export class CreateTenantDto {
@@ -68,6 +69,7 @@ export class TenantController {
    * GET /tenants/:id
    */
   @Get(':id')
+  @UseGuards(TenantAccessGuard)
   async getTenantById(@Param('id') id: string): Promise<ITenant> {
     try {
       const tenant = await TenantService.getTenantById(id);
@@ -184,13 +186,12 @@ export class TenantController {
     }
   }
 
-
-
   /**
    * Update tenant
    * PUT /tenants/:id
    */
   @Put(':id')
+  @UseGuards(TenantAccessGuard)
   async updateTenant(
     @Param('id') id: string,
     @Body() updateTenantDto: UpdateTenantDto
@@ -222,6 +223,7 @@ export class TenantController {
    * DELETE /tenants/:id
    */
   @Delete(':id')
+  @UseGuards(TenantAccessGuard)
   async deleteTenant(
     @Param('id') id: string,
     @Headers('authorization') authHeader: string
@@ -370,7 +372,7 @@ export class TenantController {
       console.error("❌ Error fetching user attributes:", error);
       throw new HttpException(
         `Failed to fetch user attributes: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.BAD_REQUEST
       );
     }
   }

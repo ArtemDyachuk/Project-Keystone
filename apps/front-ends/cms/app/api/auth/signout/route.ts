@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET(request: NextRequest) {
+  return await handleSignout(request);
+}
+
 export async function POST(request: NextRequest) {
+  return await handleSignout(request);
+}
+
+async function handleSignout(request: NextRequest) {
   try {
     // Create redirect response
     const redirectResponse = NextResponse.redirect(new URL("/", request.url));
