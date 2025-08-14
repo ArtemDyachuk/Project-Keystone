@@ -1,6 +1,6 @@
 import { Tenant } from "../app/components/tenants/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 export interface CreateTenantDto {
   name: string;
@@ -14,23 +14,23 @@ export interface UpdateTenantDto {
 
 export const getCurrentTenant = () => {
   if (typeof window === "undefined") return null;
-  
+
   const tenantId = localStorage.getItem("currentTenantId");
   const tenantName = localStorage.getItem("currentTenantName");
-  
+
   return tenantId && tenantName ? { id: tenantId, name: tenantName } : null;
 };
 
 export const setCurrentTenant = (tenantId: string, tenantName: string) => {
   if (typeof window === "undefined") return;
-  
+
   localStorage.setItem("currentTenantId", tenantId);
   localStorage.setItem("currentTenantName", tenantName);
 };
 
 export const clearCurrentTenant = () => {
   if (typeof window === "undefined") return;
-  
+
   localStorage.removeItem("currentTenantId");
   localStorage.removeItem("currentTenantName");
 };
@@ -55,7 +55,7 @@ export async function getTenants(): Promise<Tenant[]> {
       throw new Error("Failed to get access token");
     }
     const { accessToken } = await tokenResponse.json();
-    
+
     const response = await fetch(`${API_BASE}/api/tenants`, {
       method: "GET",
       headers: {
@@ -84,7 +84,7 @@ export async function getTenant(id: string): Promise<Tenant | null> {
       throw new Error("Failed to get access token");
     }
     const { accessToken } = await tokenResponse.json();
-    
+
     const response = await fetch(`${API_BASE}/api/tenants/${id}`, {
       method: "GET",
       headers: {
@@ -115,7 +115,7 @@ export async function createTenant(data: CreateTenantDto): Promise<Tenant> {
     throw new Error("Failed to get access token");
   }
   const { accessToken } = await tokenResponse.json();
-  
+
   const response = await fetch(`${API_BASE}/api/tenants`, {
     method: "POST",
     headers: {
@@ -140,7 +140,7 @@ export async function updateTenant(id: string, data: UpdateTenantDto): Promise<T
     throw new Error("Failed to get access token");
   }
   const { accessToken } = await tokenResponse.json();
-  
+
   const response = await fetch(`${API_BASE}/api/tenants/${id}`, {
     method: "PUT",
     headers: {
@@ -165,7 +165,7 @@ export async function deleteTenant(id: string): Promise<void> {
     throw new Error("Failed to get access token");
   }
   const { accessToken } = await tokenResponse.json();
-  
+
   const response = await fetch(`${API_BASE}/api/tenants/${id}`, {
     method: "DELETE",
     headers: {

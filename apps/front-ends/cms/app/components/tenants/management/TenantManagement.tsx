@@ -34,8 +34,8 @@ export function TenantManagement({ tenant }: TenantManagementProps) {
         throw new Error("Not authenticated");
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
       const response = await fetch(`${apiUrl}/api/tenants/${tenant._id}`, {
         method: "PUT",
         headers: {
@@ -54,7 +54,7 @@ export function TenantManagement({ tenant }: TenantManagementProps) {
       // Update local state and exit edit mode
       setIsEditing(false);
       setLoading(false);
-      
+
       // Refresh the page to show updated data
       router.refresh();
     } catch (err) {
@@ -73,7 +73,7 @@ export function TenantManagement({ tenant }: TenantManagementProps) {
 
     try {
       const result = await deleteTenant(tenant._id!);
-      
+
       if (result.success) {
         // Use window.location.href to force a full navigation and avoid race conditions
         window.location.href = "/tenants";
@@ -125,14 +125,14 @@ export function TenantManagement({ tenant }: TenantManagementProps) {
           </div>
 
           <div className={styles.actions}>
-            <button 
-              type="submit" 
-              disabled={loading || !name.trim()} 
+            <button
+              type="submit"
+              disabled={loading || !name.trim()}
               className={styles.editButton}
             >
               {loading ? "Updating..." : "Update Organization"}
             </button>
-            
+
             <button
               type="button"
               onClick={() => {

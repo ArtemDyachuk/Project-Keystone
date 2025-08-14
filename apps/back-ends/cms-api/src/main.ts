@@ -3,28 +3,28 @@
  * This is only a minimal backend to get started.
  */
 
-import * as dotenv from 'dotenv';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 
-// Load environment variables
-dotenv.config();
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for all origins (or specify your Vercel domain)
+  // Enable CORS
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3002',
-      'https://project-keystone-six.vercel.app',
-      'https://*.vercel.app', // Allow all Vercel preview deployments
-    ],
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow localhost on any port and all Vercel domains
+      if (!origin ||
+        origin.startsWith('http://localhost:') ||
+        origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // Required for credentials: "include"
+    credentials: true,
   });
 
   const globalPrefix = 'api';

@@ -72,7 +72,7 @@ export default function ConnectionTest({ serverData }: Props) {
     const startTime = Date.now();
     try {
       // Get the backend URL from config
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${apiUrl}/api/health`);
       const responseTime = Date.now() - startTime;
 

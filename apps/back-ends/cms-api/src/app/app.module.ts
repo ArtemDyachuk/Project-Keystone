@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantController } from '../controllers/tenant.controller';
@@ -7,7 +8,12 @@ import { CognitoAdminService } from '../services/cognito-admin.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // Makes config available throughout the app
+    }),
+    DatabaseModule
+  ],
   controllers: [AppController, TenantController],
   providers: [AppService, CognitoAdminService, TenantAccessGuard],
 })
