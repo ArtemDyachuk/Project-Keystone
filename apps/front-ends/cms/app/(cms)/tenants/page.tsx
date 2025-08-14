@@ -1,23 +1,45 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Tenant } from "@/components/tenants/types";
-import { TenantServiceClient } from "@/app/services";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
+import { getTenants } from "@/lib/tenants";
 import styles from "./page.module.css";
 
-export default async function TenantsPage() {
-  let userTenants: Tenant[] = [];
-  let error: string | null = null;
+export default function TenantsPage() {
+  const [userTenants, setUserTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  try {
-    // Get user data from JWT (server-side)
-    const userData = await getUserDataFromJWT();
-    
-    if (userData?.tenantIds && userData.tenantIds.length > 0) {
-      // Use the service to fetch tenants directly from database
-      userTenants = await TenantServiceClient.getTenantsByIds(userData.tenantIds);
-    }
-  } catch (err) {
-    console.error("Failed to load tenants:", err);
-    error = err instanceof Error ? err.message : "Failed to load organizations";
+  useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        setLoading(true);
+        const tenants = await getTenants();
+        setUserTenants(tenants);
+        console.log("Tenants page - Fetched tenants:", tenants.length);
+      } catch (err) {
+        console.error("Failed to load tenants:", err);
+        setError(err instanceof Error ? err.message : "Failed to load organizations");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTenants();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h1>🏢 Organizations</h1>
+          <p>Manage your organizations and their settings.</p>
+        </div>
+        <div className={styles.loading}>
+          <p>Loading organizations...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

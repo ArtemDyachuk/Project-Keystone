@@ -7,28 +7,30 @@
 
 .select {
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
-  background-color: white;
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
   font-size: 14px;
   min-width: 150px;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .select:hover {
-  border-color: #cbd5e0;
+  border-color: var(--border-secondary);
+  background: var(--glass-hover);
 }
 
 .select:focus {
   outline: none;
-  border-color: #3182ce;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  border-color: var(--accent-bg);
+  box-shadow: 0 0 0 3px var(--accent-shadow);
 }
 
 .select:disabled {
-  background-color: #f7fafc;
-  color: #a0aec0;
+  background-color: var(--surface-secondary);
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
@@ -41,17 +43,17 @@
 .manageLink,
 .createLink {
   font-size: 12px;
-  color: #4a5568;
+  color: var(--text-secondary);
   text-decoration: none;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .manageLink:hover,
 .createLink:hover {
-  background-color: #f7fafc;
-  color: #2d3748;
+  background-color: var(--glass-hover);
+  color: var(--text-primary);
 }
 
 .noTenants {
@@ -60,18 +62,18 @@
   align-items: center;
   gap: 8px;
   padding: 12px;
-  color: #718096;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .createLink {
-  color: #3182ce;
+  color: var(--accent-bg);
   font-weight: 500;
 }
 
 .createLink:hover {
-  color: #2c5aa0;
-  background-color: #ebf8ff;
+  color: var(--accent-text);
+  background-color: var(--accent-bg);
 }
 
 /* Custom Dropdown Styles */
@@ -80,28 +82,31 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--glass-border);
   border-radius: 6px;
-  background-color: white;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   font-size: 14px;
   min-width: 180px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dropdownButton:hover {
-  border-color: #cbd5e0;
-  background-color: #f7fafc;
+  background: var(--glass-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .selectedTenant {
   font-weight: 500;
-  color: #2d3748;
+  color: var(--text-primary);
 }
 
 .dropdownArrow {
   font-size: 12px;
-  color: #718096;
+  color: var(--text-secondary);
   transition: transform 0.2s ease;
 }
 
@@ -115,18 +120,20 @@
   left: 0;
   right: 0;
   margin-top: 4px;
-  background-color: white;
-  border: 1px solid #e2e8f0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   z-index: 50;
   min-width: 280px;
 }
 
 .dropdownHeader {
   padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #f7fafc;
+  border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(180deg, var(--glass-hover) 0%, transparent 100%);
   border-radius: 8px 8px 0 0;
 }
 
@@ -134,18 +141,19 @@
   margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--text-primary);
 }
 
 .dropdownHeader p {
   margin: 0;
   font-size: 14px;
-  color: #718096;
+  color: var(--text-secondary);
 }
 
 .tenantList {
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden; /* Hide horizontal scrollbar */
 }
 
 .tenantOption {
@@ -157,17 +165,20 @@
   border: none;
   background: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
+  color: var(--text-primary);
 }
 
 .tenantOption:hover {
-  background-color: #f7fafc;
+  background: var(--glass-hover);
+  transform: translateX(4px);
 }
 
 .tenantOption.selected {
-  background-color: #ebf8ff;
-  color: #3182ce;
+  background: var(--accent-bg);
+  color: var(--accent-text);
+  transform: translateX(4px);
 }
 
 .tenantName {
@@ -175,14 +186,14 @@
 }
 
 .checkmark {
-  color: #3182ce;
+  color: currentColor;
   font-weight: bold;
 }
 
 .dropdownFooter {
   padding: 16px;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f7fafc;
+  border-top: 1px solid var(--glass-border);
+  background: linear-gradient(0deg, var(--glass-hover) 0%, transparent 100%);
   border-radius: 0 0 8px 8px;
   text-align: center;
 }
@@ -190,16 +201,31 @@
 .manageButton {
   display: inline-block;
   padding: 8px 16px;
-  background-color: #3182ce;
-  color: white;
+  background: var(--accent-bg);
+  color: var(--accent-text);
   text-decoration: none;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
 }
 
 .manageButton:hover {
-  background-color: #2c5aa0;
-  color: white;
+  background: var(--accent-bg);
+  color: var(--accent-text);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.loading,
+.noTenants {
+  padding: 12px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.loading {
+  color: var(--text-primary);
 }
