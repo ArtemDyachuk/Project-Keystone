@@ -25,7 +25,8 @@
       "@/lib/*": ["./lib/*"],
       "@/app/*": ["./app/*"],
       "@/services/*": ["./app/services/*"],
-      "@/actions/*": ["./app/actions/*"]
+      "@/actions/*": ["./app/actions/*"],
+      "@/context/*": ["./app/context/*"]
     },
     "outDir": "dist",
     "rootDir": "."

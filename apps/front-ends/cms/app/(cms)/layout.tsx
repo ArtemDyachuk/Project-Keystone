@@ -1,6 +1,6 @@
 import { Sidebar, CMSNavigation } from "@/app/components/navigation";
 import { Footer } from "@/app/components/navigation/Footer/Footer";
-import { ThemeProvider } from "@/app/context/ThemeContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { getUserDataFromJWT } from "@/lib/auth-utils";
 import { TenantServiceClient } from "@/app/services";
 import styles from "./styles.module.css";
@@ -16,8 +16,10 @@ export default async function DashboardLayout({
   // Get user data from JWT
   const userData = await getUserDataFromJWT();
 
-  // Get user's tenants from database
-  const userTenants = await TenantServiceClient.getTenantsByIds(userData?.tenantIds || []);
+  // Get user's tenants from database (only if user has tenant IDs)
+  const userTenants = userData?.tenantIds && userData.tenantIds.length > 0 
+    ? await TenantServiceClient.getTenantsByIds(userData.tenantIds)
+    : [];
 
   // Find selected tenant with robust comparison
   let selectedTenant = userTenants.find(tenant => {

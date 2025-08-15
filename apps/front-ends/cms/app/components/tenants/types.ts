@@ -1,4 +1,4 @@
-import { ITenant } from "@keystone/database";
+import { SerializedTenant } from "@/app/services/tenant.service";
 
 export interface UserData {
   sub: string;
@@ -11,5 +11,5 @@ export interface UserData {
   selectedTenantId?: string;  // Single selected tenant ID
 }
 
-// Use database types directly for single source of truth
-export type Tenant = ITenant;
+// Use serialized types for client components to ensure proper JSON serialization
+export type Tenant = SerializedTenant;

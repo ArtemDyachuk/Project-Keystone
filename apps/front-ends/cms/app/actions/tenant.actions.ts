@@ -2,6 +2,7 @@
 
 import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth-cookies";
 import { config } from "@/lib/config";
+import { TenantServiceClient } from "@/app/services/tenant.service";
 
 /**
  * Server action to update user's selected tenant
@@ -126,7 +127,7 @@ export async function createTenant(name: string) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         name: name.trim(),
         refreshToken: refreshToken || undefined
       }),
@@ -155,44 +156,57 @@ export async function createTenant(name: string) {
 }
 
 /**
- * Server action to delete a tenant (no redirect - client handles navigation)
+ * Server action to update tenant
+ * Takes tenantId and updateData object, returns result
  */
-export async function deleteTenant(tenantId: string) {
+export async function updateTenant(tenantId: string, updateData: Record<string, any>) {
   try {
-    const { accessToken, refreshToken } = await getAuthCookies();
-
-    if (!accessToken) {
-      throw new Error("No access token found. Please log in again.");
+    if (!tenantId) {
+      throw new Error("Tenant ID is required");
     }
 
-    // Delete tenant via backend API
-    const response = await fetch(`${config.apiBaseUrl}/api/tenants/${tenantId}`, {
-      method: "DELETE",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refreshToken: refreshToken || undefined }),
-    });
+    const updatedTenant = await TenantServiceClient.updateTenant(tenantId, updateData);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to delete organization");
+    if (!updatedTenant) {
+      throw new Error("Failed to update organization - tenant not found or access denied");
     }
 
-    const result = await response.json();
+    // Revalidate to show updated data in other parts of the app
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath(`/tenants/${tenantId}`);
 
-    // If backend returned fresh tokens, update cookies
-    if (result.tokens) {
-      await setAuthCookiesInAction(result.tokens);
-    }
-
-    return { success: true };
+    return { success: true, tenant: updatedTenant };
   } catch (error) {
-    console.error("❌ Delete tenant error:", error);
+    console.error("❌ Update tenant error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error"
     };
   }
 }
+
+/**
+ * Server action to delete a tenant
+ * Takes tenantId, returns result
+ */
+export async function deleteTenant(tenantId: string) {
+  if (!tenantId) {
+    throw new Error("Tenant ID is required");
+  }
+
+  const deleted = await TenantServiceClient.deleteTenant(tenantId);
+
+  if (!deleted) {
+    throw new Error("Failed to delete organization - tenant not found or access denied");
+  }
+
+  // Revalidate the tenants list page
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/tenants");
+
+  // Server-side redirect to avoid client component re-render issues
+  const { redirect } = await import("next/navigation");
+  redirect("/tenants");
+}
+
+

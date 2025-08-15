@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "@/app/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import styles from "./ThemeSwitcher.module.css";
 
 export function ThemeSwitcher() {

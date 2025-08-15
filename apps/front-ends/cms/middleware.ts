@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "./lib/auth-cookies";
-import { getUserDataFromJWT } from "./lib/auth-utils";
+import { getUserDataFromJWT, UserData } from "./lib/auth-utils";
 
 // Routes that don't require authentication
 // Route groups (auth) and (public) are organizational only - they don't appear in URLs
@@ -29,8 +29,8 @@ function isAuthPage(pathname: string): boolean {
 }
 
 // Helper function to validate tenant access
-async function validateTenantAccess(pathname: string, userData: any, request: NextRequest): Promise<NextResponse | null> {
-  // If user has no tenants, redirect to tenant creation
+async function validateTenantAccess(pathname: string, userData: UserData, request: NextRequest): Promise<NextResponse | null> {
+  // If user has no tenants, redirect to tenant creation (unless already there)
   if (!userData?.tenantIds || userData.tenantIds.length === 0) {
     if (!pathname.startsWith("/tenants/create")) {
       return NextResponse.redirect(new URL("/tenants/create", request.url));
@@ -43,21 +43,23 @@ async function validateTenantAccess(pathname: string, userData: any, request: Ne
   if (tenantIdMatch) {
     const requestedTenantId = tenantIdMatch[1];
 
-    // Skip validation for non-ID routes
-    if (requestedTenantId !== "create" && requestedTenantId !== "page") {
+    // Skip validation for special routes and allow tenant management pages
+    const allowedSpecialRoutes = ["create", "page"];
+    if (!allowedSpecialRoutes.includes(requestedTenantId)) {
+      // Validate that user has access to the specific tenant
       if (!userData.tenantIds.includes(requestedTenantId)) {
-        // SECURITY: Reduced logging to prevent information disclosure
-        console.warn(`Unauthorized tenant access blocked for user: ${userData.username}`);
+        // SECURITY: Log security violation but don't expose tenant IDs
+        console.warn(`Unauthorized tenant access attempt blocked`, {
+          userId: userData.sub,
+          requestedPath: pathname,
+          // Don't log the actual tenant ID for security
+        });
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
   }
 
-  // If user has tenants but tries to access tenant creation, redirect to dashboard
-  if (pathname.startsWith("/tenants/create")) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
+  // Allow users to create additional tenants regardless of existing tenant count
   return null;
 }
 
@@ -69,7 +71,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Use your existing isAuthenticated function
+  // Check authentication once
   const authenticated = await isAuthenticated();
 
   // If not authenticated and not on public routes, redirect to login
@@ -77,23 +79,39 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If authenticated and on auth pages, redirect to dashboard
-  if (authenticated && isAuthPage(pathname)) {
+  // If not authenticated, allow public routes
+  if (!authenticated) {
+    return NextResponse.next();
+  }
+
+  // User is authenticated from here on
+
+  // For authenticated users on auth pages, always redirect to dashboard
+  if (isAuthPage(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // TENANT VALIDATION: Check if user has any tenants and validate tenant-specific access
-  if (authenticated && (pathname.startsWith("/dashboard") || pathname.startsWith("/tenants"))) {
-    try {
-      const userData = await getUserDataFromJWT();
-      const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
+  // TENANT VALIDATION: Only for protected routes that need tenant context
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/tenants")) {
+    let userData: UserData | null;
 
-      if (tenantValidationResult) {
-        return tenantValidationResult;
+    try {
+      userData = await getUserDataFromJWT();
+
+      // If we can't get user data but they're authenticated, something's wrong
+      if (!userData) {
+        console.error("Authenticated user but no JWT data available");
+        return NextResponse.redirect(new URL("/login", request.url));
       }
     } catch (error) {
-      console.error("Tenant validation failed:", error);
+      console.error("Failed to get user data:", error);
       return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
+
+    if (tenantValidationResult) {
+      return tenantValidationResult;
     }
   }
 

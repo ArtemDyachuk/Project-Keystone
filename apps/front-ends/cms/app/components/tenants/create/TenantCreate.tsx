@@ -1,35 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { setCurrentTenant } from "@/lib/tenants";
 import { createTenant } from "@/app/actions";
+import { UserData } from "@/lib/auth-utils";
 import styles from "./TenantCreate.module.css";
 
-export function TenantCreate() {
+interface TenantCreateProps {
+  userData: UserData;
+}
+
+export function TenantCreate({ userData }: TenantCreateProps) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    // Check authentication
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        setIsAuthenticated(true);
-      } else {
-        router.push("/login");
-      }
-    } catch (err) {
-      router.push("/login");
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +30,12 @@ export function TenantCreate() {
         // Store new tenant info using utility function
         setCurrentTenant(result.tenant._id, result.tenant.name);
 
+        // Show success toast
+        toast.success("🎉 Organization created successfully!", {
+          description: `Welcome to ${result.tenant.name || name}! You're all set up.`,
+          duration: 4000,
+        });
+
         // Refresh router to update navigation with fresh token data, then navigate
         router.refresh();
         router.push("/dashboard");
@@ -50,43 +43,24 @@ export function TenantCreate() {
         throw new Error(result.error || "Failed to create organization");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create organization");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create organization";
+      setError(errorMessage);
+      toast.error("❌ Failed to create organization", {
+        description: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const getAccessToken = async (): Promise<string> => {
-    try {
-      const response = await fetch("/api/auth/me", {
-        method: "GET",
-        credentials: "include",
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.accessToken || "";
-      }
-      
-      return "";
-    } catch (err) {
-      return "";
-    }
-  };
 
-  if (!isAuthenticated) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>Checking authentication...</div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>🏢 Create Organization</h1>
-        <p>Welcome to Keystone CMS! Let's get started by creating your organization.</p>
+        <p>Welcome to Keystone CMS, {userData.firstName || userData.email?.split("@")[0] || "User"}! Let's get started by creating your organization.</p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>

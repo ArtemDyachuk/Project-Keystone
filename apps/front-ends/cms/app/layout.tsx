@@ -1,5 +1,7 @@
+import React from 'react';
 import './global.css';
 import { ThemeScript } from './components/theme/ThemeScript';
+import { Providers } from '@/context/Providers';
 
 export const metadata = {
   title: 'Welcome to cms',
@@ -17,7 +19,9 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
