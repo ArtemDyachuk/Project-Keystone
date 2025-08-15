@@ -71,7 +71,7 @@ USER_POOL_OUTPUT=$(aws cognito-idp create-user-pool \
             "RequireSymbols": true
         }
     }' \
-    --mfa-configuration OPTIONAL \
+    --mfa-configuration OFF \
     --user-pool-add-ons '{
         "AdvancedSecurityMode": "ENFORCED"
     }' \
