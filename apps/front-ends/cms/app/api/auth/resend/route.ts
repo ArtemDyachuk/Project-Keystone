@@ -16,7 +16,20 @@ export async function POST(request: NextRequest) {
     // Use AWS SDK directly for resend (bypassing our client which doesn't have this method)
     const { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } = await import("@aws-sdk/client-cognito-identity-provider");
 
-    const cognitoClient = new CognitoIdentityProviderClient({ region: config.region });
+    // Explicit credentials for better compatibility in serverless environments
+    const clientConfig: any = {
+      region: config.region,
+    };
+    
+    // In serverless environments, explicitly set credentials if available
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      clientConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+
+    const cognitoClient = new CognitoIdentityProviderClient(clientConfig);
 
     const command = new ResendConfirmationCodeCommand({
       ClientId: config.clientId,

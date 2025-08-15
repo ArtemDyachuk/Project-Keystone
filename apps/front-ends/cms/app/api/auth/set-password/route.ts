@@ -10,9 +10,20 @@ export async function POST(request: NextRequest) {
     // Use AWS SDK directly to set permanent password
     const { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } = await import("@aws-sdk/client-cognito-identity-provider");
 
-    const cognitoClient = new CognitoIdentityProviderClient({
+    // Explicit credentials for better compatibility in serverless environments
+    const clientConfig: any = {
       region: config.region,
-    });
+    };
+    
+    // In serverless environments, explicitly set credentials if available
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      clientConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+
+    const cognitoClient = new CognitoIdentityProviderClient(clientConfig);
 
     const command = new AdminSetUserPasswordCommand({
       UserPoolId: config.userPoolId,
