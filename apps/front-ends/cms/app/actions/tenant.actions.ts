@@ -31,8 +31,16 @@ export async function updateSelectedTenant(tenantId: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update selected tenant");
+      let errorMessage = "Failed to update selected tenant";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        // If response is not JSON (e.g., HTML error page), use status text
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        console.error("Failed to parse error response as JSON:", parseError);
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -91,8 +99,16 @@ export async function updateSelectedTenantAndRedirect(tenantId: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update selected tenant");
+      let errorMessage = "Failed to update selected tenant";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        // If response is not JSON (e.g., HTML error page), use status text
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        console.error("Failed to parse error response as JSON:", parseError);
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -134,8 +150,16 @@ export async function createTenant(name: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to create organization");
+      let errorMessage = "Failed to create organization";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        // If response is not JSON (e.g., HTML error page), use status text
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        console.error("Failed to parse error response as JSON:", parseError);
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
