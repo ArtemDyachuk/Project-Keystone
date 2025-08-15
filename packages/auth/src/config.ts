@@ -56,9 +56,19 @@ export async function getCognitoConfig(environment?: string): Promise<CognitoCon
 
   // For production, fetch from AWS Parameter Store
   try {
-    const ssmClient = new SSMClient({
+    const ssmConfig: any = {
       region: process.env.AWS_REGION || "us-east-1",
-    });
+    };
+    
+    // In serverless environments, explicitly set credentials if available
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      ssmConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+    
+    const ssmClient = new SSMClient(ssmConfig);
 
     const [userPoolId, clientId, domain, region] = await Promise.all([
       getParameter(ssmClient, `/keystone/${env}/cognito/user-pool-id`),

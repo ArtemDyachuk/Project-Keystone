@@ -30,9 +30,21 @@ export class CognitoAuthClient {
 
   constructor(config: CognitoConfig) {
     this.config = config;
-    this.client = new CognitoIdentityProviderClient({
+    
+    // Explicit credentials for better compatibility in serverless environments
+    const clientConfig: any = {
       region: config.region,
-    });
+    };
+    
+    // In serverless environments, explicitly set credentials if available
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      clientConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+    
+    this.client = new CognitoIdentityProviderClient(clientConfig);
   }
 
   /**
