@@ -1,8 +1,6 @@
 "use server";
 
 import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth-cookies";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
 import { config } from "@/lib/config";
 import { TenantServiceClient } from "@/app/services/tenant.service";
 
@@ -145,27 +143,6 @@ export async function createTenant(name: string) {
     // If backend returned fresh tokens, update cookies
     if (result.tokens) {
       await setAuthCookiesInAction(result.tokens);
-    } else {
-      // If no fresh tokens from backend, force a token refresh to pick up updated tenantIds
-      // This is crucial for production where tokens might be cached
-      try {
-        const { refreshToken: currentRefreshToken } = await getAuthCookies();
-        const userData = await getUserDataFromJWT();
-
-        if (currentRefreshToken && userData?.email) {
-          const cognitoConfig = await getCognitoConfig();
-          const authClient = new CognitoAuthClient(cognitoConfig);
-          
-          const newTokens = await authClient.refreshTokens(currentRefreshToken, userData.email);
-          await setAuthCookiesInAction(newTokens);
-          
-          console.log("✅ Forced token refresh after tenant creation");
-        } else {
-          console.warn("⚠️ No refresh token or email available for token refresh");
-        }
-      } catch (refreshError) {
-        console.warn("⚠️ Token refresh failed:", refreshError);
-      }
     }
 
     return { success: true, tenant: result };

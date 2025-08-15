@@ -1,6 +1,5 @@
 import { getUserDataFromJWT } from "@/lib/auth-utils";
 import { TenantServiceClient } from "@/app/services";
-import { TokenDebugger } from "@/app/components/debug/TokenDebugger";
 import styles from "./page.module.css";
 
 // Force dynamic rendering since we use cookies
@@ -19,9 +18,6 @@ export default async function TenantsPage() {
         <h1>🏢 Organizations</h1>
         <p>Manage your organizations and their settings.</p>
       </div>
-
-      {/* Temporary debug component for production troubleshooting */}
-      <TokenDebugger />
 
       <div className={styles.tenantsList}>
         {userTenants.length === 0 ? (
