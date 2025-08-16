@@ -16,10 +16,10 @@ interface AuthenticatedRequest extends Request {
 export class FirebaseSessionGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
-    
+
     // Check for session cookie in cookies (browser requests)
     let sessionCookie = req.cookies?.["fb_session"];
-    
+
     // If not found in cookies, check Cookie header (server action requests)
     if (!sessionCookie) {
       const cookieHeader = req.headers.cookie;
@@ -41,20 +41,17 @@ export class FirebaseSessionGuard implements CanActivate {
     }
 
     try {
-      console.log("🔄 Verifying Firebase session cookie...");
-      
+
       // Import Firebase Admin dynamically to avoid circular dependencies
       const { getFirebaseAdminAuth } = await import("@keystone/auth");
       const adminAuth = getFirebaseAdminAuth();
-      
+
       // Verify the session cookie with revocation checks enabled
       const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-      
-      console.log("✅ Session cookie verified for user:", decoded.uid);
-      
+
       // Attach user info to request for use in controllers
       req.user = decoded as DecodedIdToken;
-      
+
       return true;
     } catch (error) {
       console.error("❌ Invalid session cookie:", error);
