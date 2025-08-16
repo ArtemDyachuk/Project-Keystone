@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AuthTokens } from "@keystone/auth";
 
 // Cookie configuration
 const COOKIE_CONFIG = {
@@ -10,44 +9,21 @@ const COOKIE_CONFIG = {
   path: "/",
 };
 
-const ACCESS_TOKEN_COOKIE = "accessToken";
-const ID_TOKEN_COOKIE = "idToken";
-const REFRESH_TOKEN_COOKIE = "refreshToken";
+const SESSION_COOKIE = "fb_session";
 const SIDEBAR_COLLAPSED_COOKIE = "sidebarCollapsed";
 
 /**
- * Store authentication tokens in secure HTTP-only cookies
+ * Store session cookie (for compatibility with existing code)
+ * Note: This is now deprecated in favor of direct session cookie management
  */
-export function setAuthCookies(tokens: AuthTokens): NextResponse {
+export function setAuthCookies(tokens: any): NextResponse {
+  console.warn("setAuthCookies is deprecated. Use session cookies directly.");
   const response = NextResponse.json({ success: true });
-
-  // Calculate expiration times
-  const accessTokenExpiry = new Date(Date.now() + (tokens.expiresIn * 1000));
-  const refreshTokenExpiry = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days
-
-  // Set access token cookie (expires when token expires)
-  response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
-
-  // Set ID token cookie (expires when token expires)
-  response.cookies.set(ID_TOKEN_COOKIE, tokens.idToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
-
-  // Set refresh token cookie (long-lived)
-  response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
-    ...COOKIE_CONFIG,
-    expires: refreshTokenExpiry,
-  });
-
   return response;
 }
 
 /**
- * Get authentication tokens from cookies (server-side)
+ * Get session cookie (server-side)
  */
 export async function getAuthCookies(): Promise<{
   accessToken: string | null;
@@ -55,34 +31,26 @@ export async function getAuthCookies(): Promise<{
   refreshToken: string | null;
 }> {
   const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE)?.value || null;
 
+  // For compatibility, return session cookie as all token types
   return {
-    accessToken: cookieStore.get(ACCESS_TOKEN_COOKIE)?.value || null,
-    idToken: cookieStore.get(ID_TOKEN_COOKIE)?.value || null,
-    refreshToken: cookieStore.get(REFRESH_TOKEN_COOKIE)?.value || null,
+    accessToken: sessionCookie,
+    idToken: sessionCookie,
+    refreshToken: sessionCookie,
   };
 }
 
 /**
- * Clear all authentication cookies
+ * Clear session cookie
  */
 export function clearAuthCookies(): NextResponse {
   const response = NextResponse.json({ success: true });
 
-  // Clear all auth cookies by setting them to expire immediately
+  // Clear session cookie by setting it to expire immediately
   const expiredDate = new Date(0);
 
-  response.cookies.set(ACCESS_TOKEN_COOKIE, "", {
-    ...COOKIE_CONFIG,
-    expires: expiredDate,
-  });
-
-  response.cookies.set(ID_TOKEN_COOKIE, "", {
-    ...COOKIE_CONFIG,
-    expires: expiredDate,
-  });
-
-  response.cookies.set(REFRESH_TOKEN_COOKIE, "", {
+  response.cookies.set(SESSION_COOKIE, "", {
     ...COOKIE_CONFIG,
     expires: expiredDate,
   });
@@ -91,38 +59,20 @@ export function clearAuthCookies(): NextResponse {
 }
 
 /**
- * Check if user is authenticated based on cookies
+ * Check if user is authenticated based on session cookie
  */
 export async function isAuthenticated(): Promise<boolean> {
-  const { accessToken, refreshToken } = await getAuthCookies();
-  return !!(accessToken && refreshToken);
+  const { accessToken } = await getAuthCookies();
+  return !!accessToken;
 }
 
 /**
- * Set auth cookies directly in server actions
+ * Set session cookie directly in server actions
  */
-export async function setAuthCookiesInAction(tokens: AuthTokens) {
-  const cookieStore = await cookies();
-
-  // Calculate expiration times
-  const accessTokenExpiry = new Date(Date.now() + (tokens.expiresIn * 1000));
-  const refreshTokenExpiry = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days
-
-  // Set cookies directly
-  cookieStore.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
-
-  cookieStore.set(ID_TOKEN_COOKIE, tokens.idToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
-
-  cookieStore.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
-    ...COOKIE_CONFIG,
-    expires: refreshTokenExpiry,
-  });
+export async function setAuthCookiesInAction(tokens: any) {
+  console.warn("setAuthCookiesInAction is deprecated. Use session cookies directly.");
+  // This function is kept for compatibility but no longer sets cookies
+  // Session cookies are now managed by the /api/session endpoint
 }
 
 /**

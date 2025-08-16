@@ -1,69 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Client-safe interfaces and functions for Edge Runtime
-interface UserData {
-  sub: string;
-  email?: string;
-  username?: string;
-  email_verified?: boolean;
-  firstName?: string;
-  lastName?: string;
-  tenantIds?: string[];
-  selectedTenantId?: string;
-  tenantRoles?: Record<string, string>;
-}
+// Note: UserData interface removed since we no longer decode JWT tokens in middleware
+// User data and tenant validation now happens on the backend
 
-/**
- * Decode JWT token without verification (client-safe)
- * Note: This does not verify the signature, use only for non-critical operations
- */
-function decodeJwtToken(token: string) {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      throw new Error("Invalid JWT format");
-    }
-
-    const payload = JSON.parse(atob(parts[1]));
-    return payload;
-  } catch (error) {
-    throw new Error(`JWT decode failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-/**
- * Extract user data from JWT token (client-safe)
- */
-function getUserDataFromJWT(token: string): UserData | null {
-  try {
-    const decoded = decodeJwtToken(token);
-
-    if (!decoded) {
-      return null;
-    }
-
-    // Parse custom attributes properly - Firebase custom claims are directly accessible
-    const decodedWithClaims = decoded as any;
-    const tenantIds = decodedWithClaims.tenantIds || [];
-    const selectedTenantId = decodedWithClaims.selectedTenantId;
-    const tenantRoles = decodedWithClaims.tenantRoles || {};
-
-    return {
-      sub: decoded.sub,
-      email: decoded.email,
-      username: decoded.username,
-      email_verified: decoded.email_verified,
-      firstName: decoded.given_name,
-      lastName: decoded.family_name,
-      tenantIds: tenantIds,
-      selectedTenantId: selectedTenantId,
-      tenantRoles: tenantRoles,
-    };
-  } catch (error) {
-    console.error("Failed to extract user data from JWT:", error);
-    return null;
-  }
-}
+// Note: JWT decoding functions removed since we now use session cookies
+// Detailed user data and tenant validation happens on the backend
 
 // Routes that don't require authentication
 // Route groups (auth) and (public) are organizational only - they don't appear in URLs
@@ -94,60 +35,25 @@ function isAuthPage(pathname: string): boolean {
 // Helper function to check if user is authenticated (client-safe)
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
   try {
-    // Check for auth cookies instead of Authorization header
-    const accessToken = request.cookies.get("accessToken")?.value;
-    const idToken = request.cookies.get("idToken")?.value;
+    // Check for session cookie instead of JWT tokens
+    const sessionCookie = request.cookies.get("fb_session")?.value;
     
-    if (!accessToken && !idToken) {
+    if (!sessionCookie) {
       return false;
     }
 
-    // Use ID token if available, otherwise fall back to access token
-    const token = idToken || accessToken;
-    
-    // Try to decode the JWT to check if it's valid
-    const userData = getUserDataFromJWT(token!);
-    return userData !== null;
+    // For now, just check if the session cookie exists
+    // In the future, we could add basic validation here
+    // Note: Full verification happens on the backend with Firebase Admin SDK
+    return true;
   } catch (error) {
     console.error("Authentication check error:", error);
     return false;
   }
 }
 
-// Helper function to validate tenant access
-async function validateTenantAccess(pathname: string, userData: UserData, request: NextRequest): Promise<NextResponse | null> {
-  // If user has no tenants, redirect to tenant creation (unless already there)
-  if (!userData?.tenantIds || userData.tenantIds.length === 0) {
-    if (!pathname.startsWith("/tenants/create")) {
-      return NextResponse.redirect(new URL("/tenants/create", request.url));
-    }
-    return null;
-  }
-
-  // User has tenants - validate access to specific tenant routes
-  const tenantIdMatch = pathname.match(/^\/tenants\/([^\/]+)(?:\/|$)/);
-  if (tenantIdMatch) {
-    const requestedTenantId = tenantIdMatch[1];
-
-    // Skip validation for special routes and allow tenant management pages
-    const allowedSpecialRoutes = ["create", "page"];
-    if (!allowedSpecialRoutes.includes(requestedTenantId)) {
-      // Validate that user has access to the specific tenant
-      if (!userData.tenantIds.includes(requestedTenantId)) {
-        // SECURITY: Log security violation but don't expose tenant IDs
-        console.warn(`🚨 Unauthorized tenant access attempt blocked`, {
-          userId: userData.sub,
-          requestedPath: pathname,
-          // Don't log the actual tenant ID for security
-        });
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-  }
-
-  // Allow users to create additional tenants regardless of existing tenant count
-  return null;
-}
+// Note: Tenant access validation removed from middleware
+// This will now be handled by the backend with Firebase Admin SDK
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -178,36 +84,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // TENANT VALIDATION: Only for protected routes that need tenant context
+  // Note: Since we're using session cookies, detailed tenant validation
+  // will happen on the backend with Firebase Admin SDK
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/tenants")) {
-    let userData: UserData | null;
-
-    try {
-      // Get user data from cookies instead of authorization header
-      const accessToken = request.cookies.get("accessToken")?.value;
-      const idToken = request.cookies.get("idToken")?.value;
-      
-      if (!accessToken && !idToken) {
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-
-      const token = idToken || accessToken;
-      userData = getUserDataFromJWT(token!);
-
-      // If we can't get user data but they're authenticated, something's wrong
-      if (!userData) {
-        console.error("Authenticated user but no JWT data available");
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-    } catch (error) {
-      console.error("Failed to get user data:", error);
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
-
-    if (tenantValidationResult) {
-      return tenantValidationResult;
-    }
+    // For now, just check if user is authenticated
+    // The backend will handle tenant-specific validation
+    // This prevents the middleware from blocking valid requests
+    return NextResponse.next();
   }
 
   return NextResponse.next();

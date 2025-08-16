@@ -1,5 +1,5 @@
 import { config } from "@/lib/config";
-import { getUserDataFromJWT } from "@/lib/auth/utils";
+import { getCurrentUser } from "@/app/actions/user.actions";
 import { TenantService, connectToDatabase } from "@keystone/database";
 import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth/cookies";
 
@@ -120,10 +120,37 @@ export class TenantServiceClient {
       await this.ensureConnection();
 
       // SECURITY: Validate user has access to this tenant
-      const userData = await getUserDataFromJWT();
+      const userData = await getCurrentUser();
+
+      // If user doesn't have tenant access, try to refresh claims from backend
       if (!userData?.tenantIds || !userData.tenantIds.includes(tenantId)) {
-        console.warn(`Unauthorized tenant access attempt blocked for user: ${userData?.username || 'unknown'}`);
-        return null; // Return null instead of throwing error to avoid information disclosure
+        console.warn(`User ${userData?.username || 'unknown'} doesn't have access to tenant ${tenantId}, attempting to refresh claims...`);
+
+        try {
+          // Try to get fresh claims from backend
+          const response = await fetch(`${config.apiBaseUrl}/api/tenants/user/me`, {
+            method: "GET",
+            headers: {
+              "Cookie": `fb_session=${await getAuthCookies().then(c => c.accessToken)}`,
+            },
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.tenants?.some((t: any) => t._id === tenantId)) {
+              console.log("✅ User access verified via backend, proceeding with tenant fetch");
+            } else {
+              console.warn(`❌ Backend confirms user has no access to tenant ${tenantId}`);
+              return null;
+            }
+          } else {
+            console.warn("❌ Failed to verify tenant access via backend");
+            return null;
+          }
+        } catch (refreshError) {
+          console.warn("❌ Failed to refresh claims:", refreshError);
+          return null;
+        }
       }
 
       const tenant = await TenantService.getTenantById(tenantId);

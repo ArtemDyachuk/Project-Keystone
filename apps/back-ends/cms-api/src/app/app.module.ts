@@ -3,9 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantController } from '../controllers/tenant.controller';
+import { UserController } from '../controllers/user.controller';
 import { DatabaseModule } from '../database/database.module';
-import { CognitoAdminService } from '../services/cognito-admin.service';
-import { TenantAccessGuard } from '../guards/tenant-access.guard';
+import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
 
 @Module({
   imports: [
@@ -14,7 +14,7 @@ import { TenantAccessGuard } from '../guards/tenant-access.guard';
     }),
     DatabaseModule
   ],
-  controllers: [AppController, TenantController],
-  providers: [AppService, CognitoAdminService, TenantAccessGuard],
+  controllers: [AppController, TenantController, UserController],
+  providers: [AppService, FirebaseSessionGuard],
 })
-export class AppModule {}
+export class AppModule { }

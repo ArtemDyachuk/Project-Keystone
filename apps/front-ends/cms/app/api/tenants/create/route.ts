@@ -1,47 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserDataFromJWT } from "@/lib/auth/utils";
-import { createTenantManagementService } from "@keystone/auth";
+import { config } from "@/lib/config";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user
-    const userData = await getUserDataFromJWT();
-    if (!userData) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    // Get the session cookie from the request
+    const sessionCookie = request.cookies.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "No session found" }, { status: 401 });
     }
 
-    const { name, domain } = await request.json();
+    const { name } = await request.json();
 
     if (!name) {
-      return NextResponse.json(
-        { error: "Tenant name is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Tenant name is required" }, { status: 400 });
     }
 
-    // Create tenant using Firebase service
-    const tenantService = createTenantManagementService();
-    const tenant = await tenantService.createTenant(
-      { name, domain },
-      userData.sub
-    );
+    console.log("🔄 Creating tenant via backend API:", name);
 
-    return NextResponse.json({
-      success: true,
-      tenant,
-      message: `Tenant "${name}" created successfully`
+    // Forward the request to the backend API with the session cookie
+    const response = await fetch(`${config.apiBaseUrl}/api/tenants`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cookie": `fb_session=${sessionCookie}`, // Pass session cookie to backend
+      },
+      body: JSON.stringify({ name: name.trim() }),
     });
 
+    if (!response.ok) {
+      let errorMessage = "Failed to create tenant";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      return NextResponse.json({ error: errorMessage }, { status: response.status });
+    }
+
+    const result = await response.json();
+
+    // Return the result from the backend
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Failed to create tenant:", error);
-    
+    console.error("❌ Create tenant error:", error);
     return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : "Failed to create tenant" 
-      },
+      { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

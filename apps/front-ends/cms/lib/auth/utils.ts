@@ -1,5 +1,4 @@
 import { getAuthCookies } from "./cookies";
-import { decodeJwtToken } from "@keystone/auth";
 
 export interface UserData {
   sub: string;
@@ -14,45 +13,54 @@ export interface UserData {
 }
 
 /**
- * Extract user data from JWT token (server-side)
+ * Extract user data from Firebase session cookie (server-side)
+ * This decodes the Firebase session cookie to get actual user information
  */
-export async function getUserDataFromJWT(): Promise<UserData | null> {
+export async function getUserDataFromSession(): Promise<UserData | null> {
   try {
-    const { idToken, accessToken } = await getAuthCookies();
+    const { accessToken } = await getAuthCookies();
 
-    if (!idToken && !accessToken) {
+    if (!accessToken) {
       return null;
     }
 
-    // Use ID token if available, otherwise fall back to access token
-    const token = idToken || accessToken;
-    const decoded = decodeJwtToken(token!);
-
-    if (!decoded) {
-      return null;
-    }
-
-    // Parse custom attributes properly - Firebase custom claims are directly accessible
-    const decodedWithClaims = decoded as any; // Cast to include custom claims
-    const tenantIds = decodedWithClaims.tenantIds || [];
-    const selectedTenantId = decodedWithClaims.selectedTenantId;
-    const tenantRoles = decodedWithClaims.tenantRoles || {};
-
+    // Import Firebase Admin to decode the session cookie
+    const { getFirebaseAdminAuth } = await import("@keystone/auth");
+    const adminAuth = getFirebaseAdminAuth();
+    
+    // Verify and decode the session cookie
+    const decodedUser = await adminAuth.verifySessionCookie(accessToken, true);
+    
+    // Extract custom claims for tenant information
+    const customClaims = decodedUser.customClaims as Record<string, any> || {};
+    const tenantIds = customClaims.tenantIds || [];
+    const selectedTenantId = customClaims.selectedTenantId;
+    const tenantRoles = customClaims.tenantRoles || {};
+    
     return {
-      sub: decoded.sub,
-      email: decoded.email,
-      username: decoded.username,
-      email_verified: decoded.email_verified,
-      firstName: decoded.given_name,      // Map given_name to firstName
-      lastName: decoded.family_name,      // Map family_name to lastName
-      tenantIds: tenantIds,
-      selectedTenantId: selectedTenantId,
-      tenantRoles: tenantRoles,
+      sub: decodedUser.uid,
+      email: decodedUser.email || undefined,
+      username: decodedUser.email || undefined,
+      email_verified: decodedUser.emailVerified || false,
+      firstName: customClaims.firstName || undefined,
+      lastName: customClaims.lastName || undefined,
+      tenantIds,
+      selectedTenantId,
+      tenantRoles,
     };
   } catch (error) {
-    console.error("Failed to extract user data from JWT:", error);
+    console.error("Failed to extract user data from session:", error);
     return null;
   }
+}
+
+/**
+ * Extract user data from session cookie (server-side)
+ * Note: This now works with Firebase session cookies instead of JWT tokens
+ * @deprecated Use getUserDataFromSession instead
+ */
+export async function getUserDataFromJWT(): Promise<UserData | null> {
+  return getUserDataFromSession();
 }
 
 /**

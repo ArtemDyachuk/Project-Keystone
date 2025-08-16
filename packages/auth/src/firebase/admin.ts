@@ -151,6 +151,7 @@ export async function updateUserClaims(uid: string, claims: Record<string, any>)
     const auth = getFirebaseAdminAuth();
     await auth.setCustomUserClaims(uid, claims);
   } catch (error) {
+    console.error("❌ updateUserClaims failed:", error);
     throw new Error(`Failed to update user claims: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
@@ -175,26 +176,42 @@ export async function addTenantAccessToUser(
   tenantId: string,
   role: string = "admin"
 ): Promise<void> {
-  const current = await getUserCustomClaims(uid);
+  try {
+    // Import the tenant management service
+    const { createTenantManagementService } = await import("@keystone/auth");
+    const tenantService = createTenantManagementService();
 
-  const tenantIds: string[] = Array.isArray(current.tenantIds) ? [...current.tenantIds] : [];
-  const tenantRoles: Record<string, string> = typeof current.tenantRoles === "object" && current.tenantRoles !== null
-    ? { ...current.tenantRoles }
-    : {};
+    // Add user to the tenant
+    await tenantService.addUserToTenant(uid, tenantId, role as "admin" | "user" | "viewer");
 
-  if (!tenantIds.includes(tenantId)) {
-    tenantIds.push(tenantId);
+    // Now also set custom claims for backward compatibility
+    const current = await getUserCustomClaims(uid);
+
+    const tenantIds: string[] = Array.isArray(current.tenantIds) ? [...current.tenantIds] : [];
+    const tenantRoles: Record<string, string> = typeof current.tenantRoles === "object" && current.tenantRoles !== null
+      ? { ...current.tenantRoles }
+      : {};
+
+    if (!tenantIds.includes(tenantId)) {
+      tenantIds.push(tenantId);
+    }
+    tenantRoles[tenantId] = role;
+
+    const selectedTenantId = current.selectedTenantId || tenantId;
+
+    const newClaims = {
+      ...current,
+      tenantIds,
+      tenantRoles,
+      selectedTenantId,
+    };
+
+    await updateUserClaims(uid, newClaims);
+
+  } catch (error) {
+    console.error("❌ Failed to add user to tenant:", error);
+    throw new Error(`Failed to add user to tenant: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
-  tenantRoles[tenantId] = role;
-
-  const selectedTenantId = current.selectedTenantId || tenantId;
-
-  await updateUserClaims(uid, {
-    ...current,
-    tenantIds,
-    tenantRoles,
-    selectedTenantId,
-  });
 }
 
 /**
@@ -203,12 +220,6 @@ export async function addTenantAccessToUser(
 export async function deleteFirebaseUser(uid: string) {
   try {
     const auth = getFirebaseAdminAuth();
-    const db = getFirebaseAdminFirestore();
-
-    // Delete user data from Firestore
-    await db.collection("users").doc(uid).delete();
-
-    // Delete user from Firebase Auth
     await auth.deleteUser(uid);
   } catch (error) {
     throw new Error(`Failed to delete Firebase user: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -222,34 +233,7 @@ export async function deleteFirebaseUser(uid: string) {
 export async function forceDeleteFirebaseUser(uid: string) {
   try {
     const auth = getFirebaseAdminAuth();
-    const db = getFirebaseAdminFirestore();
-
-    // Delete user data from Firestore first
-    try {
-      await db.collection("users").doc(uid).delete();
-      console.log(`✅ User data deleted from Firestore for ${uid}`);
-    } catch (firestoreError) {
-      console.log(`⚠️ Firestore deletion failed (may not exist): ${firestoreError}`);
-    }
-
-    // Delete user-tenant relationships
-    try {
-      const userTenantsSnapshot = await db
-        .collection("userTenants")
-        .where("userId", "==", uid)
-        .get();
-
-      const deletePromises = userTenantsSnapshot.docs.map(doc => doc.ref.delete());
-      await Promise.all(deletePromises);
-      console.log(`✅ User-tenant relationships deleted for ${uid}`);
-    } catch (relationshipError) {
-      console.log(`⚠️ User-tenant relationship deletion failed: ${relationshipError}`);
-    }
-
-    // Force delete user from Firebase Auth
     await auth.deleteUser(uid);
-    console.log(`✅ User ${uid} force-deleted from Firebase Auth`);
-
     return true;
   } catch (error) {
     console.error(`❌ Force delete failed for user ${uid}:`, error);
@@ -290,19 +274,19 @@ export async function checkUserExists(uid: string) {
 function sanitizeTenantName(name: string): string {
   // Remove special characters, keep only letters, digits, hyphens
   let sanitized = name.replace(/[^a-zA-Z0-9-]/g, "");
-  
+
   // Ensure it starts with a letter
   if (!/^[a-zA-Z]/.test(sanitized)) {
     sanitized = "Tenant" + sanitized;
   }
-  
+
   // Ensure length is between 4-20 characters
   if (sanitized.length < 4) {
     sanitized = sanitized + "Org";
   } else if (sanitized.length > 20) {
     sanitized = sanitized.substring(0, 20);
   }
-  
+
   return sanitized;
 }
 
@@ -329,17 +313,13 @@ export async function createFirebaseAuthTenant(tenantData: {
 
     // Sanitize the display name for Firebase Auth requirements
     const sanitizedName = sanitizeTenantName(tenantData.displayName);
-    
-    if (sanitizedName !== tenantData.displayName) {
-      console.log(`🔄 Tenant name sanitized: "${tenantData.displayName}" → "${sanitizedName}"`);
-    }
 
     // Create tenant in Firebase Auth using tenantManager
     const tenant = await tenantManager.createTenant({
       displayName: sanitizedName,
     });
 
-    console.log(`✅ Firebase Auth tenant created: ${tenant.tenantId} (${tenant.displayName})`);
+
 
     return {
       tenantId: tenant.tenantId,
@@ -390,18 +370,18 @@ export async function listFirebaseAuthTenants(): Promise<Array<{ tenantId: strin
 export async function deleteFirebaseAuthTenant(tenantId: string): Promise<void> {
   try {
     const auth = getFirebaseAdminAuth();
-    
+
     // Use tenantManager() for GIP multi-tenancy operations
     const tenantManager = (auth as any).tenantManager();
-    
+
     if (!tenantManager) {
       throw new Error('Firebase Auth tenant manager not available. Please enable Google Identity Platform multi-tenancy.');
     }
-    
+
     // Delete tenant in Firebase Auth using tenantManager
     await tenantManager.deleteTenant(tenantId);
-    
-    console.log(`✅ Firebase Auth tenant deleted: ${tenantId}`);
+
+
   } catch (error: any) {
     if (error.code === 'auth/operation-not-allowed') {
       throw new Error('Firebase Auth tenant deletion not enabled. Please enable Google Identity Platform multi-tenancy.');
@@ -419,14 +399,14 @@ export async function removeTenantAccessFromUser(
 ): Promise<void> {
   const current = await getUserCustomClaims(uid);
 
-  const tenantIds: string[] = Array.isArray(current.tenantIds) 
+  const tenantIds: string[] = Array.isArray(current.tenantIds)
     ? current.tenantIds.filter(id => id !== tenantId)
     : [];
-    
+
   const tenantRoles: Record<string, string> = typeof current.tenantRoles === "object" && current.tenantRoles !== null
     ? { ...current.tenantRoles }
     : {};
-    
+
   // Remove the tenant role
   delete tenantRoles[tenantId];
 
@@ -452,14 +432,83 @@ export async function removeTenantAccessFromUser(
 export async function forceRefreshUserToken(uid: string): Promise<void> {
   try {
     const auth = getFirebaseAdminAuth();
-    
+
     // Revoke all refresh tokens for the user
     // This will invalidate all existing ID tokens
     await auth.revokeRefreshTokens(uid);
-    
-    console.log(`✅ Refresh tokens revoked for user ${uid}`);
   } catch (error) {
     console.error(`❌ Failed to revoke refresh tokens for user ${uid}:`, error);
     throw new Error(`Failed to refresh user token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Add user to a Firebase Auth tenant (GIP multi-tenancy)
+ * Note: Firebase Auth tenants don't have built-in user management
+ * We use custom claims to track user-tenant relationships
+ */
+export async function addUserToFirebaseTenant(tenantId: string, userId: string, role: "admin" | "user" | "viewer" = "admin"): Promise<void> {
+  try {
+    const auth = getFirebaseAdminAuth();
+
+    // Verify the tenant exists first
+    const tenantManager = (auth as any).tenantManager();
+    if (!tenantManager) {
+      throw new Error('Firebase Auth tenant manager not available. Please enable Google Identity Platform multi-tenancy.');
+    }
+
+    try {
+      // Try to get the tenant to verify it exists
+      await tenantManager.getTenant(tenantId);
+    } catch (tenantError: any) {
+      if (tenantError.code === 'auth/tenant-not-found') {
+        throw new Error(`Firebase Auth tenant ${tenantId} not found`);
+      }
+      throw tenantError;
+    }
+
+    // Get current user to see existing custom claims
+    const userRecord = await auth.getUser(userId);
+    const currentClaims = userRecord.customClaims || {};
+
+    // Update custom claims with new tenant
+    const tenantIds = Array.isArray(currentClaims.tenantIds) ? [...currentClaims.tenantIds] : [];
+    const tenantRoles = typeof currentClaims.tenantRoles === "object" && currentClaims.tenantRoles !== null
+      ? { ...currentClaims.tenantRoles }
+      : {};
+
+    if (!tenantIds.includes(tenantId)) {
+      tenantIds.push(tenantId);
+    }
+
+    tenantRoles[tenantId] = role;
+    const selectedTenantId = currentClaims.selectedTenantId || tenantId;
+
+    const newClaims = {
+      ...currentClaims,
+      tenantIds,
+      tenantRoles,
+      selectedTenantId,
+    };
+
+    // Update the user's custom claims
+    await auth.setCustomUserClaims(userId, newClaims);
+
+  } catch (error: any) {
+    console.error(`❌ Failed to add user to Firebase Auth tenant:`, error);
+
+    if (error.code === 'auth/operation-not-allowed') {
+      throw new Error('Firebase Auth tenant user management not enabled. Please enable Google Identity Platform multi-tenancy.');
+    }
+
+    if (error.code === 'auth/user-not-found') {
+      throw new Error(`User ${userId} not found in Firebase Auth`);
+    }
+
+    if (error.code === 'auth/tenant-not-found') {
+      throw new Error(`Firebase Auth tenant ${tenantId} not found`);
+    }
+
+    throw new Error(`Failed to add user to Firebase Auth tenant: ${error.message || 'Unknown error'}`);
   }
 }

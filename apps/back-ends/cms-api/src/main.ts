@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   // Simple environment validation - only check critical vars
@@ -12,6 +13,9 @@ async function bootstrap() {
 }
 
   const app = await NestFactory.create(AppModule);
+
+  // Enable cookie parsing for session cookies
+  app.use(cookieParser());
 
   // Basic security headers
   app.use(helmet());

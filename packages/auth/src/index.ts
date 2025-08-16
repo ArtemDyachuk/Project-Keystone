@@ -1,45 +1,40 @@
 // Firebase Configuration
 export { getFirebaseConfig, initializeFirebase, getFirebaseAuth, clearFirebaseCache } from "./firebase/config";
 
-// Firebase Admin SDK
 export {
+  // Firebase Admin SDK
   initializeFirebaseAdmin,
   getFirebaseAdminAuth,
   getFirebaseAdminFirestore,
   verifyFirebaseToken,
-  createFirebaseUser,
   getFirebaseUser,
+  createFirebaseUser,
   updateUserClaims,
   getUserCustomClaims,
   addTenantAccessToUser,
-  deleteFirebaseUser,
+  removeTenantAccessFromUser,
   forceDeleteFirebaseUser,
   checkUserExists,
+  
+  // Firebase Auth Tenant Management (GIP)
   createFirebaseAuthTenant,
   listFirebaseAuthTenants,
   deleteFirebaseAuthTenant,
-  removeTenantAccessFromUser,
-  forceRefreshUserToken,
-  decodeJwtToken
+  addUserToFirebaseTenant,
+  
+  // JWT Utilities
+  isTokenExpired,
+  decodeJwtToken,
 } from "./firebase/admin";
 
-// Firebase Auth Client
 export {
-  FirebaseAuthClient,
+  // Firebase Client SDK
   createFirebaseAuthClient,
-  type FirebaseAuthTokens,
-  type SignUpParams,
-  type SignInParams,
-  type ResetPasswordParams,
-  type ConfirmResetPasswordParams
 } from "./firebase/client";
 
-// Firebase Tenant Management
 export {
-  TenantManagementService,
+  // Tenant Management Service
   createTenantManagementService,
-  type Tenant,
-  type UserTenantAccess
 } from "./firebase/tenant-management";
 
 // Types

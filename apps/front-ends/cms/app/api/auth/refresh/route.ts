@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createFirebaseAuthClient } from "@keystone/auth";
+import { setAuthCookies } from "@/lib/auth/cookies";
 
 export async function POST(request: NextRequest) {
   try {
-    const { refreshToken } = await request.json();
+    // Try to get refresh token from request body first, then fall back to cookies
+    let refreshToken: string | undefined;
+    
+    try {
+      const body = await request.json();
+      refreshToken = body.refreshToken;
+    } catch {
+      // No JSON body, that's fine
+    }
+
+    // If no refresh token in body, get it from HTTP-only cookies
+    if (!refreshToken) {
+      refreshToken = request.cookies.get("refreshToken")?.value;
+    }
 
     if (!refreshToken) {
       return NextResponse.json(
@@ -24,11 +38,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ 
+    // Set the new tokens as HTTP-only cookies
+    const response = setAuthCookies(newTokens);
+    response.headers.set("Content-Type", "application/json");
+
+    // Return success response with cookies set
+    const responseBody = JSON.stringify({ 
       success: true,
-      message: "Tokens refreshed successfully",
+      message: "Tokens refreshed successfully and cookies updated",
       tokens: newTokens
     });
+
+    // Create a new response with the body and cookies
+    const finalResponse = new NextResponse(responseBody, {
+      status: 200,
+      headers: response.headers,
+    });
+
+    return finalResponse;
   } catch (error) {
     console.error("Token refresh error:", error);
     return NextResponse.json(

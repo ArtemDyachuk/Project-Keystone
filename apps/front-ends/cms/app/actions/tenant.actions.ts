@@ -1,230 +1,92 @@
 "use server";
 
-import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth/cookies";
-import {
-  createFirebaseAuthTenant,
-  addTenantAccessToUser,
-  forceRefreshUserToken,
-  deleteFirebaseAuthTenant,
-  removeTenantAccessFromUser,
-  createTenantManagementService,
-  decodeJwtToken
-} from "@keystone/auth";
 import { config } from "@/lib/config";
 import { TenantServiceClient } from "@/app/services/tenant.service";
+import { cookies } from "next/headers";
 
 /**
- * Server action to update user's selected tenant
- * This runs on the server and has access to HTTP-only cookies
- */
-export async function updateSelectedTenant(tenantId: string) {
-  try {
-    // Get tokens from HTTP-only cookies
-    const { accessToken, refreshToken } = await getAuthCookies();
-
-    if (!accessToken) {
-      throw new Error("No access token found. Please log in again.");
-    }
-
-    // Call backend CMS API to update tenant and get fresh tokens
-    const response = await fetch(`${config.apiBaseUrl}/api/tenants/user/selected`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        tenantId,
-        refreshToken: refreshToken || undefined
-      }),
-    });
-
-    if (!response.ok) {
-      let errorMessage = "Failed to update selected tenant";
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } catch (parseError) {
-        // If response is not JSON (e.g., HTML error page), use status text
-        errorMessage = `Server error: ${response.status} ${response.statusText}`;
-        console.error("Failed to parse error response as JSON:", parseError);
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
-
-    // If backend returned fresh tokens, update cookies
-    if (result.tokens) {
-      await setAuthCookiesInAction(result.tokens);
-
-      return {
-        success: true,
-        message: result.message,
-        tokensRefreshed: true
-      };
-    } else {
-      return {
-        success: true,
-        message: result.message,
-        tokensRefreshed: false,
-        refreshError: result.refreshError || "Backend did not return fresh tokens"
-      };
-    }
-  } catch (error) {
-    console.error("❌ Server action error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
-    };
-  }
-}
-
-/**
- * Server action to update tenant and redirect to dashboard
- * This ensures fresh data is loaded with updated tenant context
- * Always redirects to dashboard since switching tenants affects the entire workspace
- */
-export async function updateSelectedTenantAndRedirect(tenantId: string) {
-  try {
-    // Get tokens from HTTP-only cookies
-    const { accessToken, refreshToken } = await getAuthCookies();
-
-    if (!accessToken) {
-      throw new Error("No access token found. Please log in again.");
-    }
-
-    // Call backend CMS API to update tenant and get fresh tokens
-    const response = await fetch(`${config.apiBaseUrl}/api/tenants/user/selected`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        tenantId,
-        refreshToken: refreshToken || undefined
-      }),
-    });
-
-    if (!response.ok) {
-      let errorMessage = "Failed to update selected tenant";
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } catch (parseError) {
-        // If response is not JSON (e.g., HTML error page), use status text
-        errorMessage = `Server error: ${response.status} ${response.statusText}`;
-        console.error("Failed to parse error response as JSON:", parseError);
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
-
-    // If backend returned fresh tokens, update cookies
-    if (result.tokens) {
-      await setAuthCookiesInAction(result.tokens);
-    }
-
-    return { success: true, message: "Tenant updated successfully" };
-  } catch (error) {
-    console.error("❌ Server action error:", error);
-    throw error;
-  }
-}
-
-/**
- * Server action to create a new tenant using MongoDB and Firebase Auth
+ * Server action to create a new tenant using the backend API
  */
 export async function createTenant(name: string) {
   try {
-    const { accessToken } = await getAuthCookies();
+    console.info("🔄 Creating tenant:", name);
 
-    if (!accessToken) {
-      throw new Error("No access token found. Please log in again.");
+    // Get the session cookie from the server
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      throw new Error("No session found. Please log in again.");
     }
 
-    // Get user ID from JWT token
-    const decoded = decodeJwtToken((accessToken ?? "") as string);
-    if (!decoded || !decoded.sub) {
-      throw new Error("Invalid access token");
-    }
+    // Determine the API base URL
+    const apiBaseUrl = config.apiBaseUrl;
 
-    // Create tenant in MongoDB using shared database service
-    const tenant = await TenantServiceClient.createTenantInDatabase(name);
-
-    // Try to create Firebase Auth tenant (GIP multi-tenancy)
-    let firebaseTenantId: string | null = null;
+    // Call backend CMS API directly with the session cookie
+    let response;
     try {
-      console.log("🔄 Attempting to create Firebase Auth tenant...");
-
-      const firebaseTenant = await createFirebaseAuthTenant({
-        displayName: name.trim(),
-        allowPasswordSignUp: true,
-        allowEmailLinkSignIn: false,
+      response = await fetch(`${apiBaseUrl}/api/tenants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": `fb_session=${sessionCookie}`, // Pass session cookie manually
+        },
+        body: JSON.stringify({ name: name.trim() }),
       });
-      firebaseTenantId = firebaseTenant.tenantId;
-      console.log("✅ Firebase Auth tenant created:", firebaseTenantId);
 
-      // Update MongoDB tenant with Firebase tenant ID
-      if (firebaseTenantId) {
-        try {
-          // Import TenantService directly for database operations
-          const { TenantService, connectToDatabase } = await import("@keystone/database");
-          await connectToDatabase();
+    } catch (fetchError) {
+      console.error("❌ Failed to call backend API:", fetchError);
 
-          // Update tenant directly in database
-          await TenantService.updateTenant(tenant._id, {
-            firebaseTenantId: firebaseTenantId
-          });
-
-          console.log("✅ Firebase tenant ID saved to MongoDB:", firebaseTenantId);
-        } catch (updateError) {
-          console.warn("⚠️ Failed to save Firebase tenant ID to MongoDB:", updateError);
-          // Don't fail the whole operation - tenant exists in MongoDB
-        }
-      }
-    } catch (firebaseError) {
-      console.error("❌ Firebase Auth tenant creation failed:", firebaseError);
-      console.warn("⚠️ This usually means GIP multi-tenancy is not enabled");
-      // Continue without Firebase Auth tenant - MongoDB tenant still exists
-    }
-
-    // Update Firebase Custom Claims to include new tenant access
-    try {
-      console.log("🔄 Updating Firebase Custom Claims for tenant:", tenant._id);
-
-
-      await addTenantAccessToUser(decoded.sub, tenant._id, "admin");
-
-      console.log("✅ Firebase Custom Claims updated for new tenant");
-
-      // Force refresh the user's token to include new tenant data
       try {
+        // For server actions, we need to use the full URL
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+        response = await fetch(`${baseUrl}/api/tenants/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: name.trim() }),
+        });
 
-        await forceRefreshUserToken(decoded.sub);
-        console.log("✅ User token refreshed with new tenant data");
-
-        // Force user to re-authenticate by invalidating their session
-        // This ensures they get a fresh token with updated claims
-        console.log("🔄 User will need to re-authenticate to get updated claims");
-      } catch (refreshError) {
-        console.warn("⚠️ Token refresh failed (user will need to re-login):", refreshError);
+        console.log("✅ Local API route response status:", response.status);
+      } catch (localError) {
+        console.error("❌ Both backend API and local API route failed:", localError);
+        throw new Error("Failed to create tenant - all API endpoints unavailable");
       }
-    } catch (firebaseError) {
-      console.error("❌ Failed to update Firebase claims:", firebaseError);
-      // Don't fail the whole operation - tenant exists in MongoDB
     }
+
+    if (!response.ok) {
+      let errorMessage = "Failed to create tenant";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        console.error("Failed to parse error response as JSON:", parseError);
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+
+    console.log("✅ Tenant created successfully.");
+
+    // The backend now handles Firebase tenant creation and database updates
+    // No need to duplicate this logic in the frontend
+
+    // Revalidate paths that use tenant data to force fresh data loading
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/", "layout"); // Revalidate all layouts
+    revalidatePath("/tenants"); // Revalidate tenants page
+    revalidatePath("/dashboard"); // Revalidate dashboard
+    revalidatePath("/tenants/create"); // Revalidate create page
 
     return {
       success: true,
-      tenant,
-      firebaseTenantId, // Include Firebase tenant ID if created
-      message: firebaseTenantId
-        ? `Tenant created in MongoDB and Firebase Auth (${firebaseTenantId})`
-        : "Tenant created in MongoDB (Firebase Auth tenant creation failed)",
-      requiresReauth: true // Signal that user needs to re-authenticate
+      tenant: result,
+      firebaseTenantId: result.firebaseTenantId || null, // Get from backend result
+      message: result.message || "Tenant created successfully",
+      requiresReauth: result.requiresReauth || false
     };
   } catch (error) {
     console.error("❌ Create tenant error:", error);
@@ -272,41 +134,175 @@ export async function updateTenant(tenantId: string, updateData: Record<string, 
  */
 export async function getUserTenants() {
   try {
-    // Import Firebase tenant service directly
+    // Get the session cookie from the server
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
 
-    const tenantService = createTenantManagementService();
-
-    // Get user ID from JWT token
-    const { accessToken } = await getAuthCookies();
-
-    const decoded = decodeJwtToken((accessToken ?? "") as string);
-
-    if (!decoded || !decoded.sub) {
-      console.error("No valid user ID found");
+    if (!sessionCookie) {
+      console.error("No session found when fetching user tenants");
       return [];
     }
 
-    // Get tenants directly using Firebase service
-    const userId = decoded.sub;
-    if (!userId) {
-      console.error("No valid user ID found");
+    // Get user ID from session cookie (this will be verified by the backend)
+    // Pass the session cookie in the request headers
+    const response = await fetch("/api/tenants/user/me", {
+      headers: {
+        "Cookie": `fb_session=${sessionCookie}`, // Pass session cookie manually
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch user tenants from backend");
       return [];
     }
 
-    const userTenants = await tenantService.getUserTenants(userId as string);
+    const result = await response.json();
 
-    // Convert Firebase tenant format to match your existing format
-    return userTenants.map((userTenant) => ({
-      _id: userTenant.tenant.id,
-      name: userTenant.tenant.name,
-      domain: userTenant.tenant.domain,
-      createdAt: userTenant.tenant.createdAt,
-      updatedAt: userTenant.tenant.updatedAt,
-      role: userTenant.role,
+    // Convert the backend response to match your existing format
+    return result.tenants.map((tenant: any) => ({
+      _id: tenant._id,
+      name: tenant.name,
+      domain: tenant.domain,
+      createdAt: tenant.createdAt,
+      updatedAt: tenant.updatedAt,
+      role: "admin", // Default role for now
     }));
   } catch (error) {
     console.error("❌ Get user tenants error:", error);
     return [];
+  }
+}
+
+/**
+ * Server action to get fresh user data and tenants for layout
+ * This ensures consistent data between layout and pages using the service layer
+ */
+export async function getUserDataAndTenants() {
+  try {
+    // Import the user actions service and tenant service
+    const { getCurrentUser } = await import("@/app/actions/user.actions");
+    const { TenantServiceClient } = await import("@/app/services/tenant.service");
+
+    // Get fresh user data (includes updated custom claims from Firebase)
+    const userData = await getCurrentUser();
+
+    if (!userData) {
+      return {
+        userData: null,
+        userTenants: [],
+        selectedTenant: null
+      };
+    }
+
+    // Get user's tenants using the service layer
+    let userTenants: any[] = [];
+
+    if (userData.tenantIds && userData.tenantIds.length > 0) {
+      try {
+        // Use TenantServiceClient to get tenant details
+        userTenants = await TenantServiceClient.getTenantsByIds(userData.tenantIds);
+      } catch (error) {
+        console.warn("Failed to get tenants via service, falling back to API call:", error);
+
+        // Fallback: use the existing getUserTenants function which calls the API
+        userTenants = await getUserTenants();
+      }
+    }
+
+    // Find selected tenant with robust comparison
+    let selectedTenant = userTenants.find(tenant => {
+      const tenantId = String(tenant._id);
+      const selectedId = String(userData?.selectedTenantId);
+      return tenantId === selectedId;
+    }) || null;
+
+    // Fallback: if no tenant is selected or selected tenant doesn't exist, use the first available
+    if (!selectedTenant && userTenants.length > 0) {
+      selectedTenant = userTenants[0];
+    }
+
+    return {
+      userData,
+      userTenants,
+      selectedTenant
+    };
+  } catch (error) {
+    console.error("❌ Get user data and tenants error:", error);
+    return {
+      userData: null,
+      userTenants: [],
+      selectedTenant: null
+    };
+  }
+}
+
+/**
+ * Server action to update user's selected tenant
+ * This updates the Firebase custom claims to set the new selected tenant
+ */
+export async function updateSelectedTenant(tenantId: string) {
+  try {
+    if (!tenantId) {
+      throw new Error("Tenant ID is required");
+    }
+
+    // Get the session cookie from the server
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      throw new Error("No session found. Please log in again.");
+    }
+
+    // Determine the API base URL
+    let apiBaseUrl = config.apiBaseUrl;
+    if (!apiBaseUrl || apiBaseUrl === "undefined") {
+      apiBaseUrl = "http://localhost:3001";
+    }
+
+    console.log("🔄 Updating selected tenant to:", tenantId);
+
+    // Call backend API to update selected tenant
+    const response = await fetch(`${apiBaseUrl}/api/user/selected-tenant`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Cookie": `fb_session=${sessionCookie}`,
+      },
+      body: JSON.stringify({ selectedTenantId: tenantId }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Failed to update selected tenant";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+
+    console.log("✅ Selected tenant updated successfully:", result);
+
+    // Revalidate paths that use tenant data to force fresh data loading
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/", "layout"); // Revalidate all layouts
+    revalidatePath("/dashboard"); // Revalidate dashboard
+
+    return {
+      success: true,
+      selectedTenantId: tenantId,
+      message: result.message || "Selected tenant updated successfully"
+    };
+  } catch (error) {
+    console.error("❌ Update selected tenant error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
   }
 }
 
@@ -320,64 +316,30 @@ export async function deleteTenant(tenantId: string) {
       throw new Error("Tenant ID is required");
     }
 
-    // Get user ID from JWT token
-    const { accessToken } = await getAuthCookies();
-    const decoded = decodeJwtToken((accessToken ?? "") as string);
-
-    if (!decoded || !decoded.sub) {
-      throw new Error("No valid user ID found");
-    }
-
-    // First, get tenant info to find Firebase tenant ID
-    const { TenantService, connectToDatabase } = await import("@keystone/database");
-    await connectToDatabase();
-
-    const tenant = await TenantService.getTenantById(tenantId);
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
-
-    // Delete Firebase Auth tenant if it exists
-    if (tenant.firebaseTenantId) {
-      try {
-        console.log("🔄 Deleting Firebase Auth tenant:", tenant.firebaseTenantId);
-
-        await deleteFirebaseAuthTenant(tenant.firebaseTenantId);
-        console.log("✅ Firebase Auth tenant deleted");
-      } catch (firebaseError) {
-        console.warn("⚠️ Failed to delete Firebase Auth tenant:", firebaseError);
-        // Continue with MongoDB deletion
-      }
-    }
-
-    // Remove tenant from user's custom claims
+    // Delete tenant via backend API (which handles session cookies and custom claims)
     try {
-      console.log("🔄 Removing tenant from user custom claims");
+      // Get the session cookie from the server
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get("fb_session")?.value;
 
-      await removeTenantAccessFromUser(decoded.sub, tenantId);
-      console.log("✅ Tenant removed from custom claims");
-
-      // Force refresh the user's token to include updated claims
-      try {
-
-        await forceRefreshUserToken(decoded.sub);
-        console.log("✅ User token refreshed after tenant removal");
-      } catch (refreshError) {
-        console.warn("⚠️ Token refresh failed (user will need to re-login):", refreshError);
+      if (!sessionCookie) {
+        throw new Error("No session found. Please log in again.");
       }
-    } catch (claimsError) {
-      console.warn("⚠️ Failed to update custom claims:", claimsError);
-      // Continue with MongoDB deletion
-    }
 
-    // Delete from MongoDB directly (bypass API access control)
-    try {
-      console.log("🔄 Deleting tenant from MongoDB:", tenantId);
-      await TenantService.deleteTenant(tenantId);
-      console.log("✅ Tenant deleted from MongoDB");
-    } catch (dbError) {
-      console.error("❌ Failed to delete tenant from MongoDB:", dbError);
-      throw new Error("Failed to delete organization from database");
+      // Use the backend API URL instead of relative URL
+      const response = await fetch(`${config.apiBaseUrl}/api/tenants/${tenantId}`, {
+        method: "DELETE",
+        headers: {
+          "Cookie": `fb_session=${sessionCookie}`, // Pass session cookie manually
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete tenant: ${response.status} ${response.statusText}`);
+      }
+    } catch (apiError) {
+      console.error("❌ Failed to delete tenant via API:", apiError);
+      throw new Error("Failed to delete organization");
     }
 
     // Revalidate the tenants list page

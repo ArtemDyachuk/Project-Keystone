@@ -1,8 +1,13 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { TenantService, ITenant } from '@keystone/database';
-import { CognitoAdminService } from '../services/cognito-admin.service';
-import { decodeJwtToken } from '@keystone/auth';
-import { TenantAccessGuard } from '../guards/tenant-access.guard';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { TenantService, ITenant } from "@keystone/database";
+import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
+import type { Request } from 'express';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+
+// Extend Request to include user property from Firebase session guard
+interface AuthenticatedRequest extends Request {
+  user: DecodedIdToken; // Firebase decoded user object
+}
 
 // DTOs for request validation
 export class CreateTenantDto {
@@ -13,52 +18,33 @@ export class UpdateTenantDto {
   name?: string;
 }
 
+export class RefreshTokenDto {
+  refreshToken!: string;
+}
+
 @Controller('tenants')
 export class TenantController {
-  constructor(
-    private readonly cognitoAdminService: CognitoAdminService
-  ) { }
+  constructor() { }
 
   /**
    * Get all tenants (filtered by user)
    * GET /tenants
    */
   @Get()
-  async getAllTenants(@Headers('authorization') authHeader: string): Promise<ITenant[]> {
+  @UseGuards(FirebaseSessionGuard)
+  async getAllTenants(@Req() req: AuthenticatedRequest): Promise<ITenant[]> {
     try {
-      if (!authHeader) {
-        throw new UnauthorizedException("Authorization header required");
-      }
-
-      const userInfo = this.extractUserFromJWT(authHeader);
-      const userPoolId = process.env.COGNITO_USER_POOL_ID;
-
-      if (!userPoolId) {
-        // If Cognito not configured, return empty array for security
-        return [];
-      }
-
-      try {
-        // Get user's tenant info from Cognito
-        const tenantInfo = await this.cognitoAdminService.getUserTenantInfo(
-          userPoolId,
-          userInfo.username
-        );
-
-        // Fetch full tenant details from database using the new method
-        if (tenantInfo.tenantIds.length > 0) {
-          return await TenantService.getTenantsByIds(tenantInfo.tenantIds);
-        }
-
-        return [];
-      } catch (cognitoError) {
-        console.warn('Cognito integration failed:', cognitoError);
-        // Return empty array for security if Cognito fails
-        return [];
-      }
+      const userInfo = req.user;
+      const { getFirebaseAdminAuth } = await import("@keystone/auth");
+      const adminAuth = getFirebaseAdminAuth();
+      const fresh = await adminAuth.getUser(userInfo.uid);
+      const claims = (fresh.customClaims as Record<string, any>) || {};
+      const tenantIds: string[] = Array.isArray(claims.tenantIds) ? claims.tenantIds : [];
+      if (tenantIds.length === 0) return [];
+      return await TenantService.getTenantsByIds(tenantIds);
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch tenants: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to fetch tenants: ${error instanceof Error ? error.message : "Unknown error"}`,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
@@ -69,7 +55,7 @@ export class TenantController {
    * GET /tenants/:id
    */
   @Get(':id')
-  @UseGuards(TenantAccessGuard)
+  @UseGuards(FirebaseSessionGuard)
   async getTenantById(@Param('id') id: string): Promise<ITenant> {
     try {
       const tenant = await TenantService.getTenantById(id);
@@ -98,50 +84,110 @@ export class TenantController {
    * POST /tenants
    */
   @Post()
-  async createTenant(@Body() createTenantDto: CreateTenantDto & { refreshToken?: string }, @Headers('authorization') authHeader: string): Promise<any> {
+  @UseGuards(FirebaseSessionGuard)
+  async createTenant(@Body() createTenantDto: CreateTenantDto, @Req() req: AuthenticatedRequest): Promise<ITenant & { message?: string; requiresReauth?: boolean; firebaseError?: string; sessionCookie?: string }> {
     try {
       // 1. Create tenant in database
       const tenant = await TenantService.createTenant(createTenantDto.name);
 
-      // 2. Extract user info from JWT token
-      const userInfo = this.extractUserFromJWT(authHeader);
-      const { refreshToken } = createTenantDto;
+      // 2. User info is already verified and attached by FirebaseSessionGuard
+      const userInfo = req.user;
 
-      // 3. Update Cognito user with new tenant (only if configured)
-      const userPoolId = process.env.COGNITO_USER_POOL_ID;
+      // 3. Try to create Firebase Auth tenant (GIP multi-tenancy)
+      let firebaseTenantId: string | null = null;
+      try {
+        // First, create the tenant in Firebase Auth (Google Cloud)
+        const { createFirebaseAuthTenant } = await import("@keystone/auth");
+        const firebaseTenant = await createFirebaseAuthTenant({
+          displayName: createTenantDto.name.trim(),
+          allowPasswordSignUp: true,
+          allowEmailLinkSignIn: false,
+        });
 
-      if (userPoolId) {
+        firebaseTenantId = firebaseTenant.tenantId;
+
+        // Now ensure the creator exists in THIS tenant and assign role in tenant context
         try {
-          await this.cognitoAdminService.addUserTenant(
-            userPoolId,
-            userInfo.username,
-            tenant._id!
-          );
-          
-          // If refresh token provided, get fresh tokens with updated attributes
-          if (refreshToken && userInfo.username) {
-            try {
-              const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
-              
-              return { 
-                ...tenant,
-                tokens: newTokens 
-              };
-            } catch (refreshError) {
-              console.warn("Failed to refresh tokens after tenant creation:", refreshError);
-              return { 
-                ...tenant,
-                tokens: null,
-                refreshError: "Failed to refresh tokens"
-              };
-            }
+          const { getFirebaseAdminAuth } = await import("@keystone/auth");
+          const adminAuth = getFirebaseAdminAuth();
+          const tenantManager = (adminAuth as any).tenantManager?.();
+          if (!tenantManager) {
+            throw new Error("Firebase Auth tenant manager not available. Enable GIP multi-tenancy.");
           }
-        } catch {
-          // Continue without Cognito integration
+          const tenantAuth = tenantManager.authForTenant(firebaseTenantId);
+
+          // Ensure user exists in tenant by email
+          const creatorEmail = userInfo.email;
+          if (!creatorEmail) {
+            throw new Error("Creator email not present on session token");
+          }
+
+          let tenantUser;
+          try {
+            tenantUser = await tenantAuth.getUserByEmail(creatorEmail);
+          } catch {
+            tenantUser = await tenantAuth.createUser({ email: creatorEmail, emailVerified: true });
+          }
+
+          // Assign owner/admin role inside tenant context
+          await tenantAuth.setCustomUserClaims(tenantUser.uid, { role: "owner" });
+
+          // Also update project-level custom claims with MongoDB tenant ID list for global listing
+          const freshUser = await adminAuth.getUser(userInfo.uid);
+          const currentClaims = (freshUser.customClaims as Record<string, any>) || {};
+          const claimTenantIds: string[] = Array.isArray(currentClaims.tenantIds)
+            ? [...currentClaims.tenantIds]
+            : [];
+          const claimTenantRoles: Record<string, string> =
+            typeof currentClaims.tenantRoles === "object" && currentClaims.tenantRoles !== null
+              ? { ...currentClaims.tenantRoles }
+              : {};
+
+          // Use MongoDB tenant _id in global claims so we can fetch from MongoDB
+          const mongoTenantId = tenant._id as string;
+          if (!claimTenantIds.includes(mongoTenantId)) {
+            claimTenantIds.push(mongoTenantId);
+          }
+          claimTenantRoles[mongoTenantId] = "owner";
+          const selectedTenantId = currentClaims.selectedTenantId || mongoTenantId;
+
+          await adminAuth.setCustomUserClaims(userInfo.uid, {
+            ...currentClaims,
+            tenantIds: claimTenantIds,
+            tenantRoles: claimTenantRoles,
+            selectedTenantId,
+          });
+        } catch (userAssignmentError) {
+          console.error("❌ Failed to ensure creator/assign role in tenant:", userAssignmentError);
         }
+
+        // Update MongoDB tenant with Firebase tenant ID
+        if (firebaseTenantId) {
+          try {
+            const updatedTenant = await TenantService.updateTenant(tenant._id!, {
+              firebaseTenantId: firebaseTenantId
+            });
+            if (updatedTenant) {
+              // Update the tenant object to include the Firebase tenant ID
+              tenant.firebaseTenantId = firebaseTenantId;
+            }
+          } catch (updateError) {
+            console.warn("⚠️ Failed to save Firebase tenant ID to MongoDB:", updateError);
+            // Don't fail the whole operation - tenant exists in MongoDB
+          }
+        }
+      } catch (firebaseError) {
+        console.error("❌ Firebase Auth tenant creation failed:", firebaseError);
+        // Continue without Firebase Auth tenant - MongoDB tenant still exists
       }
 
-      return { ...tenant, tokens: null };
+      // 4. Respond success
+      return {
+        ...tenant,
+        message: "Tenant created successfully. You are the owner.",
+        requiresReauth: true, // Signal that session refresh is needed
+        firebaseTenantId: firebaseTenantId || undefined,
+      };
     } catch (error) {
       console.error('❌ Tenant creation failed:', error);
       throw new HttpException(
@@ -152,52 +198,52 @@ export class TenantController {
   }
 
   /**
-   * Get user's tenants from Cognito
+   * Get user's tenants from Firebase
    * GET /tenants/user/me
    */
   @Get('user/me')
-  async getUserTenants(@Headers('authorization') authHeader: string): Promise<{
+  @UseGuards(FirebaseSessionGuard)
+  async getUserTenants(@Req() req: AuthenticatedRequest): Promise<{
     tenants: ITenant[];
     selectedTenantId: string | null;
   }> {
     try {
-      const userInfo = this.extractUserFromJWT(authHeader);
+      // User info is already verified and attached by FirebaseSessionGuard
+      const userInfo = req.user;
 
-      // Get user's tenant info from Cognito (only if configured)
-      const userPoolId = process.env.COGNITO_USER_POOL_ID;
-      let tenantInfo: { tenantIds: string[]; selectedTenantId: string | null } = { tenantIds: [], selectedTenantId: null };
-
-      if (userPoolId) {
+      // If custom claims are missing, try to get them directly from Firebase
+      if (!userInfo.customClaims) {
         try {
-          tenantInfo = await this.cognitoAdminService.getUserTenantInfo(
-            userPoolId,
-            userInfo.username
-          );
-        } catch (cognitoError) {
-          console.warn('Cognito integration failed:', cognitoError);
-          // Return empty tenant list if Cognito fails
+          const { getFirebaseAdminAuth } = await import("@keystone/auth");
+          const adminAuth = getFirebaseAdminAuth();
+          const userRecord = await adminAuth.getUser(userInfo.uid);
+
+          // Update the userInfo with fresh custom claims
+          userInfo.customClaims = userRecord.customClaims;
+        } catch (firebaseError) {
+          console.warn("⚠️ Failed to get fresh custom claims:", firebaseError);
         }
-      } else {
-        console.warn('COGNITO_USER_POOL_ID not set, returning empty tenant list');
       }
 
-      // Fetch full tenant details from database
+      // Read tenant IDs from fresh Admin SDK custom claims
+      const { getFirebaseAdminAuth } = await import("@keystone/auth");
+      const adminAuth = getFirebaseAdminAuth();
+      const fresh = await adminAuth.getUser(userInfo.uid);
+      const claims = (fresh.customClaims as Record<string, any>) || {};
+      const tenantIds: string[] = Array.isArray(claims.tenantIds) ? claims.tenantIds : [];
+      const selectedTenantId: string | null = claims.selectedTenantId || null;
+
       const tenants: ITenant[] = [];
-      for (const tenantId of tenantInfo.tenantIds) {
+      for (const tenantId of tenantIds) {
         try {
           const tenant = await TenantService.getTenantById(tenantId);
-          if (tenant) {
-            tenants.push(tenant);
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch tenant ${tenantId}:`, error);
+          if (tenant) tenants.push(tenant);
+        } catch (e) {
+          console.warn(`Failed to fetch tenant ${tenantId}:`, e);
         }
       }
 
-      return {
-        tenants,
-        selectedTenantId: tenantInfo.selectedTenantId
-      };
+      return { tenants, selectedTenantId };
     } catch (error) {
       throw new HttpException(
         `Failed to fetch user tenants: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -211,7 +257,7 @@ export class TenantController {
    * PUT /tenants/:id
    */
   @Put(':id')
-  @UseGuards(TenantAccessGuard)
+  @UseGuards(FirebaseSessionGuard)
   async updateTenant(
     @Param('id') id: string,
     @Body() updateTenantDto: UpdateTenantDto
@@ -243,85 +289,77 @@ export class TenantController {
    * DELETE /tenants/:id
    */
   @Delete(':id')
-  @UseGuards(TenantAccessGuard)
+  @UseGuards(FirebaseSessionGuard)
   async deleteTenant(
     @Param('id') id: string,
-    @Headers('authorization') authHeader: string,
-    @Body() body: { refreshToken?: string }
-  ): Promise<{ message: string; tokens?: any; refreshError?: string }> {
+    @Req() _req: AuthenticatedRequest
+  ): Promise<{ message: string }> {
     try {
-      // 1. Delete tenant from database
-      const deleted = await TenantService.deleteTenant(id);
-
-      if (!deleted) {
+      // 1. Get tenant info before deletion to get Firebase tenant ID
+      const tenant = await TenantService.getTenantById(id);
+      if (!tenant) {
         throw new HttpException(
           `Tenant with ID "${id}" not found`,
           HttpStatus.NOT_FOUND
         );
       }
 
-      // 2. Remove tenant from Cognito user attributes (if configured)
-      const userPoolId = process.env.COGNITO_USER_POOL_ID;
-
-      if (userPoolId) {
+      // 2. Delete Firebase Auth tenant if it exists
+      if (tenant.firebaseTenantId) {
         try {
-          const userInfo = this.extractUserFromJWT(authHeader);
-
-          // Get current user attributes
-          const attributes = await this.cognitoAdminService.getUserAttributes(userPoolId, userInfo.username);
-          const currentTenantIds = attributes["custom:tenantIds"]?.split(",").filter(Boolean) || [];
-          const currentSelectedTenantId = attributes["custom:selectedTenantId"];
-
-          // Remove the deleted tenant
-          const updatedTenantIds = currentTenantIds.filter((tenantId: string) => tenantId !== id);
-
-          // Update selected tenant if it was the deleted one
-          let newSelectedTenantId = currentSelectedTenantId;
-          if (currentSelectedTenantId === id) {
-            newSelectedTenantId = updatedTenantIds.length > 0 ? updatedTenantIds[0] : "";
-          }
-
-          // Update Cognito user attributes
-          if (updatedTenantIds.length > 0) {
-            await this.cognitoAdminService.updateUserTenants(
-              userPoolId,
-              userInfo.username,
-              updatedTenantIds,
-              newSelectedTenantId
-            );
-          } else {
-            // If no tenants left, clear the attributes
-            await this.cognitoAdminService.updateUserTenants(
-              userPoolId,
-              userInfo.username,
-              [],
-              ""
-            );
-          }
-
-          // Refresh tokens if provided
-          if (body.refreshToken && userInfo.username) {
-            try {
-              const newTokens = await this.cognitoAdminService.refreshUserTokens(body.refreshToken, userInfo.username);
-              return { 
-                message: `Tenant with ID "${id}" deleted successfully`, 
-                tokens: newTokens 
-              };
-            } catch (refreshError) {
-              console.warn("Failed to refresh tokens after tenant deletion:", refreshError);
-              return { 
-                message: `Tenant with ID "${id}" deleted successfully`, 
-                tokens: null, 
-                refreshError: "Failed to refresh tokens" 
-              };
-            }
-          }
-        } catch {
-          // Continue without Cognito integration if it fails
+          const { deleteFirebaseAuthTenant } = await import("@keystone/auth");
+          await deleteFirebaseAuthTenant(tenant.firebaseTenantId);
+        } catch (firebaseError) {
+          console.warn("⚠️ Failed to delete Firebase Auth tenant:", firebaseError);
+          // Continue - tenant will still be deleted from database
         }
       }
 
-      return { message: `Tenant with ID "${id}" deleted successfully`, tokens: null };
+      // 3. Remove tenant from all users' custom claims
+      try {
+        const { getFirebaseAdminAuth } = await import("@keystone/auth");
+        const adminAuth = getFirebaseAdminAuth();
+
+        // Get all users and remove this tenant from their claims
+        const users = await adminAuth.listUsers();
+
+        for (const user of users.users) {
+          if (user.customClaims?.tenantIds?.includes(id)) {
+            const currentClaims = user.customClaims || {};
+            const newTenantIds = currentClaims.tenantIds.filter((tid: string) => tid !== id);
+            const newTenantRoles = { ...currentClaims.tenantRoles };
+            delete newTenantRoles[id];
+
+            // Update selectedTenantId if it was this tenant
+            let newSelectedTenantId = currentClaims.selectedTenantId;
+            if (newSelectedTenantId === id) {
+              newSelectedTenantId = newTenantIds.length > 0 ? newTenantIds[0] : null;
+            }
+
+            await adminAuth.setCustomUserClaims(user.uid, {
+              ...currentClaims,
+              tenantIds: newTenantIds,
+              tenantRoles: newTenantRoles,
+              selectedTenantId: newSelectedTenantId,
+            });
+          }
+        }
+      } catch (claimsError) {
+        console.warn("⚠️ Failed to update user claims:", claimsError);
+        // Continue - tenant will still be deleted from database
+      }
+
+      // 4. Delete tenant from database
+      const deleted = await TenantService.deleteTenant(id);
+
+      if (!deleted) {
+        throw new HttpException(
+          `Failed to delete tenant from database`,
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      return { message: `Tenant with ID "${id}" deleted successfully` };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -350,193 +388,7 @@ export class TenantController {
     }
   }
 
-  /**
-   * Update user's selected tenant and return fresh tokens
-   * PUT /tenants/user/selected
-   */
-  @Put("user/selected")
-  async updateUserSelectedTenant(
-    @Body() body: { tenantId: string; refreshToken?: string },
-    @Headers("authorization") authHeader?: string,
-  ) {
-    try {
-      if (!authHeader) {
-        throw new UnauthorizedException("Authorization header required");
-      }
 
-      const userInfo = this.extractUserFromJWT(authHeader);
-      const { tenantId, refreshToken } = body;
 
-      // Update Cognito user's selectedTenantId
-      if (process.env.COGNITO_USER_POOL_ID) {
-        await this.cognitoAdminService.updateSelectedTenant(process.env.COGNITO_USER_POOL_ID, userInfo.username, tenantId);
 
-        // If refresh token provided, get fresh tokens with updated attributes
-        if (refreshToken && userInfo.username) {
-          try {
-            const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
-
-            return {
-              message: "Selected tenant updated successfully",
-              tokens: newTokens
-            };
-          } catch (refreshError) {
-            console.warn("Failed to refresh tokens, but tenant was updated:", refreshError);
-            return {
-              message: "Selected tenant updated successfully",
-              tokens: null,
-              refreshError: "Failed to refresh tokens"
-            };
-          }
-        }
-      }
-
-      return { message: "Selected tenant updated successfully", tokens: null };
-    } catch (error) {
-      console.error("Error updating selected tenant:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Refresh user tokens with updated attributes
-   * POST /tenants/user/refresh-tokens
-   */
-  @Post("user/refresh-tokens")
-  async refreshUserTokens(
-    @Body() body: { refreshToken: string },
-    @Headers("authorization") authHeader?: string,
-  ) {
-    try {
-      if (!authHeader) {
-        throw new UnauthorizedException("Authorization header required");
-      }
-
-      const userInfo = this.extractUserFromJWT(authHeader);
-      const { refreshToken } = body;
-
-      if (!refreshToken) {
-        throw new UnauthorizedException("Refresh token required");
-      }
-
-      if (process.env.COGNITO_USER_POOL_ID) {
-        try {
-          const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
-
-          return {
-            message: "Tokens refreshed successfully",
-            tokens: newTokens
-          };
-        } catch (refreshError) {
-          console.warn("Failed to refresh tokens:", refreshError);
-          return {
-            message: "Failed to refresh tokens",
-            tokens: null,
-            error: "Token refresh failed"
-          };
-        }
-      }
-
-      return { message: "Cognito not configured", tokens: null };
-    } catch (error) {
-      console.error("Error refreshing tokens:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get user attributes from Cognito
-   * GET /tenants/user/attributes
-   */
-  @Get("user/attributes")
-  async getUserAttributes(@Headers("authorization") authHeader?: string) {
-    try {
-      if (!authHeader) {
-        throw new UnauthorizedException("Authorization header required");
-      }
-
-      const userInfo = this.extractUserFromJWT(authHeader);
-      const userPoolId = process.env.COGNITO_USER_POOL_ID;
-
-      if (!userPoolId) {
-        throw new HttpException(
-          "Cognito not configured",
-          HttpStatus.INTERNAL_SERVER_ERROR
-        );
-      }
-
-      // Get user attributes from Cognito
-      const attributes = await this.cognitoAdminService.getUserAttributes(userPoolId, userInfo.username);
-
-      return {
-        success: true,
-        attributes: attributes
-      };
-    } catch (error) {
-      console.error("❌ Error fetching user attributes:", error);
-      throw new HttpException(
-        `Failed to fetch user attributes: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        HttpStatus.BAD_REQUEST
-      );
-    }
-  }
-
-  /**
-   * Extract user information from JWT token
-   * Uses the @keystone/auth package for proper JWT decoding
-   */
-  private extractUserFromJWT(authHeader: string): { username: string; sub: string } {
-    try {
-      // Validate authorization header format
-      if (!authHeader || typeof authHeader !== 'string') {
-        throw new Error('Invalid authorization header format');
-      }
-
-      // Remove 'Bearer ' prefix and validate
-      const bearerPrefix = 'Bearer ';
-      if (!authHeader.startsWith(bearerPrefix)) {
-        throw new Error('Authorization header must start with "Bearer "');
-      }
-
-      const token = authHeader.slice(bearerPrefix.length).trim();
-
-      if (!token) {
-        throw new Error('No token provided in authorization header');
-      }
-
-      // Validate token format (JWT should have 3 parts separated by dots)
-      const tokenParts = token.split('.');
-      if (tokenParts.length !== 3) {
-        throw new Error('Invalid JWT format: token must have 3 parts');
-      }
-
-      // Decode JWT using the auth package
-      const decoded = decodeJwtToken(token);
-
-      // Validate decoded token has required fields
-      if (!decoded || typeof decoded !== 'object') {
-        throw new Error('Invalid token: failed to decode payload');
-      }
-
-      // Extract user information from decoded token
-      const username = decoded.username || decoded.email || decoded.sub;
-      const sub = decoded.sub;
-
-      if (!username || !sub) {
-        throw new Error('Invalid token: missing required user information (username/sub)');
-      }
-
-      return {
-        username: String(username),
-        sub: String(sub)
-      };
-    } catch (error) {
-      console.error('Error extracting user from JWT:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        authHeaderLength: authHeader?.length,
-        authHeaderPrefix: authHeader?.substring(0, 10) + '...'
-      });
-      throw new UnauthorizedException(`Invalid authorization header: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 }

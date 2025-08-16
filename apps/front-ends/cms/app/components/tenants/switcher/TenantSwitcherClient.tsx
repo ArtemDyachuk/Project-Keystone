@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Tenant } from "../types";
-import { updateSelectedTenantAndRedirect } from "@/app/actions/tenant.actions";
+
 import { FullPageLoader } from "@/app/components/loaders";
 import { useRouter } from "next/navigation";
+import { updateSelectedTenant } from "@/app/actions/tenant.actions";
 import styles from "./TenantSwitcher.module.css";
 
 interface TenantSwitcherClientProps {
@@ -40,20 +41,27 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
     try {
       setIsUpdating(true);
 
-      const result = await updateSelectedTenantAndRedirect(tenant._id!);
+      console.log("🔄 Switching to tenant:", tenant.name);
 
-      if (result?.success) {
-        // Clear loading state before navigation
-        setIsUpdating(false);
-        setIsOpen(false);
+      // Update selected tenant in Firebase custom claims
+      const result = await updateSelectedTenant(tenant._id);
 
+      if (result.success) {
+        console.log("✅ Successfully switched to tenant:", tenant.name);
+        
         // Navigate to dashboard with fresh tenant context
         router.push("/dashboard");
+        router.refresh(); // Force a refresh to get updated data
       } else {
-        throw new Error("Server action did not complete successfully");
+        console.error("❌ Failed to switch tenant:", result.error);
+        alert(result.error || "Failed to switch organization");
       }
+
+      setIsUpdating(false);
+      setIsOpen(false);
     } catch (error) {
-      console.error("Failed to update selected tenant:", error);
+      console.error("Failed to switch tenant:", error);
+      alert("Failed to switch organization");
       setIsUpdating(false);
       setIsOpen(false);
     }

@@ -25,30 +25,62 @@ export function TenantCreate({ userData }: TenantCreateProps) {
 
     try {
       const result = await createTenant(name);
-      
+
       if (result.success && result.tenant) {
         // Store new tenant info using utility function
         setCurrentTenant(result.tenant._id, result.tenant.name);
 
         if (result.requiresReauth) {
-          // Show re-authentication message
-          toast.success("🎉 Organization created successfully!", {
-            description: `Welcome to ${result.tenant.name || name}! Please sign out and sign back in to access your new organization.`,
-            duration: 6000,
-          });
-          
-          // Redirect to dashboard (user will see they need to re-auth)
-          router.push("/dashboard");
+          // Try to refresh the session automatically
+          try {
+            const refreshResponse = await fetch("/api/auth/refresh-session", {
+              method: "POST",
+            });
+
+            if (refreshResponse.ok) {
+              const refreshResult = await refreshResponse.json();
+
+              if (refreshResult.requiresReauth) {
+                // Session refresh requires re-authentication
+                toast.success("🎉 Organization created successfully!", {
+                  duration: 6000,
+                });
+                router.push("/tenants");
+              } else {
+                // Session was refreshed successfully
+                toast.success("🎉 Organization created successfully!", {
+                  description: `Welcome to ${result.tenant.name || name}! Session refreshed automatically.`,
+                  duration: 4000,
+                });
+                router.push("/tenants");
+              }
+            } else {
+              // Fallback to manual re-auth message
+              toast.success("🎉 Organization created successfully!", {
+                duration: 6000,
+              });
+              router.push("/tenants");
+            }
+          } catch (refreshError) {
+            console.warn("Failed to refresh session automatically:", refreshError);
+            // Fallback to manual re-auth message
+            toast.success("🎉 Organization created successfully!", {
+              duration: 6000,
+            });
+            router.push("/tenants");
+          }
         } else {
-          // Show success toast
+          // No re-auth required, proceed normally
+          console.log("✅ Tenant created - session cookies updated with fresh claims");
+
+          // Redirect to tenants page to see the new tenant
+          router.push("/tenants");
+
+          // Show success message
           toast.success("🎉 Organization created successfully!", {
-            description: `Welcome to ${result.tenant.name || name}! You're all set up.`,
+            description: `Welcome to ${result.tenant.name || name}! Redirecting to your organizations...`,
             duration: 4000,
           });
-
-          // Refresh router to update navigation with fresh token data, then navigate
-          router.refresh();
-          router.push("/dashboard");
         }
       } else {
         throw new Error(result.error || "Failed to create organization");
@@ -92,9 +124,9 @@ export function TenantCreate({ userData }: TenantCreateProps) {
         </div>
 
         <div className={styles.actions}>
-          <button 
-            type="submit" 
-            disabled={loading || !name.trim()} 
+          <button
+            type="submit"
+            disabled={loading || !name.trim()}
             className={styles.submitButton}
           >
             {loading ? "Creating..." : "Create Organization"}

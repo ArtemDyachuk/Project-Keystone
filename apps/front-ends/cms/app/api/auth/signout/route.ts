@@ -13,26 +13,10 @@ async function handleSignout(request: NextRequest) {
     // Create redirect response
     const redirectResponse = NextResponse.redirect(new URL("/", request.url));
 
-    // Clear all authentication cookies in the redirect response
+    // Clear the session cookie in the redirect response
     const expiredDate = new Date(0);
 
-    redirectResponse.cookies.set("accessToken", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: expiredDate,
-    });
-
-    redirectResponse.cookies.set("idToken", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: expiredDate,
-    });
-
-    redirectResponse.cookies.set("refreshToken", "", {
+    redirectResponse.cookies.set("fb_session", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

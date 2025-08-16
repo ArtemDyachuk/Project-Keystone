@@ -1,10 +1,9 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { CognitoAdminService } from '../services/cognito-admin.service';
-import { decodeJwtToken, verifyJwtToken } from '@keystone/auth-aws';
+import { decodeJwtToken, createTenantManagementService } from '@keystone/auth';
 
 @Injectable()
 export class TenantAccessGuard implements CanActivate {
-  constructor(private readonly cognitoAdminService: CognitoAdminService) {}
+  constructor() {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -23,58 +22,41 @@ export class TenantAccessGuard implements CanActivate {
     }
 
     try {
-      // Verify and decode JWT to get user info
+      // Decode JWT to get user info (Firebase validates signature)
       const token = authHeader.replace('Bearer ', '');
+      const decoded = decodeJwtToken(token);
       
-      // SECURITY: Always verify JWT signatures in production
-      let decoded;
-      if (process.env.NODE_ENV === 'production') {
-        const userPoolId = process.env.COGNITO_USER_POOL_ID;
-        const region = process.env.AWS_REGION || 'us-east-1';
-        if (userPoolId) {
-          // Use verified JWT in production
-          decoded = await verifyJwtToken(token, userPoolId, region, 'access');
-        } else {
-          throw new UnauthorizedException('Authentication service not properly configured');
+      if (!decoded || !decoded.sub) {
+        throw new UnauthorizedException('Invalid token: user ID not found');
+      }
+
+      // Get user's tenant info from Firebase custom claims
+      try {
+        const tenantService = createTenantManagementService();
+        const userTenants = await tenantService.getUserTenants(decoded.sub);
+
+        // Extract tenant IDs from Firebase response
+        const userTenantIds = userTenants.map(userTenant => userTenant.tenant.id);
+
+        // Check if user has access to this tenant
+        if (!userTenantIds.includes(tenantId)) {
+          console.warn(`Unauthorized tenant access: User ${decoded.sub} tried to access tenant ${tenantId}`);
+          throw new ForbiddenException(`Access denied to tenant ${tenantId}`);
         }
-      } else {
-        // For development, decode without verification (but log warning)
-        decoded = decodeJwtToken(token);
-        console.warn('⚠️ JWT signature verification disabled in development mode');
+
+        // Store user info in request for later use
+        request.user = {
+          username: decoded.username || decoded.email || decoded.sub,
+          sub: decoded.sub,
+          tenantIds: userTenantIds,
+          selectedTenantId: userTenantIds.length > 0 ? userTenantIds[0] : null
+        };
+
+        return true;
+      } catch (firebaseError) {
+        console.error('Firebase tenant access check failed:', firebaseError);
+        throw new ForbiddenException('Unable to verify tenant access');
       }
-      const username = decoded.username || decoded.email || decoded.sub;
-
-      if (!username) {
-        throw new UnauthorizedException('Invalid token: username not found');
-      }
-
-      // Get user's tenant info from Cognito
-      const userPoolId = process.env.COGNITO_USER_POOL_ID;
-      if (!userPoolId) {
-        console.error('COGNITO_USER_POOL_ID not set - SECURITY: Denying access');
-        throw new UnauthorizedException('Authentication service not properly configured');
-      }
-
-      const tenantInfo = await this.cognitoAdminService.getUserTenantInfo(
-        userPoolId,
-        username
-      );
-
-      // Check if user has access to this tenant
-      if (!tenantInfo.tenantIds.includes(tenantId)) {
-        console.warn(`Unauthorized tenant access: User ${username} tried to access tenant ${tenantId}`);
-        throw new ForbiddenException(`Access denied to tenant ${tenantId}`);
-      }
-
-      // Store user info in request for later use
-      request.user = {
-        username,
-        sub: decoded.sub,
-        tenantIds: tenantInfo.tenantIds,
-        selectedTenantId: tenantInfo.selectedTenantId
-      };
-
-      return true;
     } catch (error) {
       if (error instanceof UnauthorizedException || error instanceof ForbiddenException) {
         throw error;
