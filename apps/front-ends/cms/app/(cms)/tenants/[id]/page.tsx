@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { TenantManagement } from "@/components/tenants";
 import { TenantServiceClient } from "@/app/services";
+import { getCurrentUser } from "@/app/actions/user.actions";
 
 // Force dynamic rendering since TenantManagement uses server actions with cookies
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,6 @@ export default async function TenantPage({ params }: TenantPageProps) {
 
     if (!tenant) {
       // Check if this is an access issue or if tenant doesn't exist
-      const { getCurrentUser } = await import("@/app/actions/user.actions");
       const userData = await getCurrentUser();
 
       if (userData && userData.tenantIds && userData.tenantIds.length > 0) {

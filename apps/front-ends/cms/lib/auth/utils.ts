@@ -1,4 +1,4 @@
-import { getAuthCookies } from "./cookies";
+import { getSessionCookie } from "./cookies";
 
 export interface UserData {
   sub: string;
@@ -18,25 +18,25 @@ export interface UserData {
  */
 export async function getUserDataFromSession(): Promise<UserData | null> {
   try {
-    const { accessToken } = await getAuthCookies();
+    const sessionCookie = await getSessionCookie();
 
-    if (!accessToken) {
+    if (!sessionCookie) {
       return null;
     }
 
     // Import Firebase Admin to decode the session cookie
     const { getFirebaseAdminAuth } = await import("@keystone/auth");
     const adminAuth = getFirebaseAdminAuth();
-    
+
     // Verify and decode the session cookie
-    const decodedUser = await adminAuth.verifySessionCookie(accessToken, true);
-    
+    const decodedUser = await adminAuth.verifySessionCookie(sessionCookie, true);
+
     // Extract custom claims for tenant information
     const customClaims = decodedUser.customClaims as Record<string, any> || {};
     const tenantIds = customClaims.tenantIds || [];
     const selectedTenantId = customClaims.selectedTenantId;
     const tenantRoles = customClaims.tenantRoles || {};
-    
+
     return {
       sub: decodedUser.uid,
       email: decodedUser.email || undefined,

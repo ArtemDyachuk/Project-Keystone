@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createFirebaseAuthClient } from "@keystone/auth";
-import { setAuthCookies } from "@/lib/auth/cookies";
 
 // Helper function to get user-friendly error messages
 function getFirebaseErrorMessage(error: any): string {
@@ -42,12 +41,6 @@ export async function POST(request: NextRequest) {
     });
 
     const user = userCredential.user;
-
-    // Get tokens for the new user
-    const tokens = await authClient.getTokens(user);
-
-    // Set authentication cookies
-    await setAuthCookies(tokens);
 
     console.log("✅ User signed up successfully:", user.email);
 

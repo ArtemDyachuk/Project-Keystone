@@ -1,7 +1,7 @@
 import { config } from "@/lib/config";
 import { getCurrentUser } from "@/app/actions/user.actions";
 import { TenantService, connectToDatabase } from "@keystone/database";
-import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth/cookies";
+import { getSessionCookie } from "@/lib/auth/cookies";
 
 export interface SerializedTenant {
   _id: string;
@@ -131,7 +131,7 @@ export class TenantServiceClient {
           const response = await fetch(`${config.apiBaseUrl}/api/tenants/user/me`, {
             method: "GET",
             headers: {
-              "Cookie": `fb_session=${await getAuthCookies().then(c => c.accessToken)}`,
+              "Cookie": `fb_session=${await getSessionCookie()}`,
             },
           });
 
@@ -175,9 +175,9 @@ export class TenantServiceClient {
   static async updateTenant(tenantId: string, updates: Record<string, any>): Promise<SerializedTenant | null> {
     try {
       // Get tokens from HTTP-only cookies
-      const { accessToken, refreshToken } = await getAuthCookies();
+      const sessionCookie = await getSessionCookie();
 
-      if (!accessToken) {
+      if (!sessionCookie) {
         throw new Error("No access token found. Please log in again.");
       }
 
@@ -186,11 +186,11 @@ export class TenantServiceClient {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${sessionCookie}`,
         },
         body: JSON.stringify({
           ...updates,
-          refreshToken: refreshToken || undefined
+          refreshToken: sessionCookie || undefined
         }),
       });
 
@@ -200,11 +200,6 @@ export class TenantServiceClient {
       }
 
       const result = await response.json();
-
-      // If backend returned fresh tokens, update cookies
-      if (result.tokens) {
-        await setAuthCookiesInAction(result.tokens);
-      }
 
       // Convert the result to our serialized format
       return this.serializeTenant(result);
@@ -222,9 +217,9 @@ export class TenantServiceClient {
   static async deleteTenant(tenantId: string): Promise<boolean> {
     try {
       // Get tokens from HTTP-only cookies
-      const { accessToken, refreshToken } = await getAuthCookies();
+      const sessionCookie = await getSessionCookie();
 
-      if (!accessToken) {
+      if (!sessionCookie) {
         throw new Error("No access token found. Please log in again.");
       }
 
@@ -232,22 +227,15 @@ export class TenantServiceClient {
       const response = await fetch(`${config.apiBaseUrl}/api/tenants/${tenantId}`, {
         method: "DELETE",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${sessionCookie}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ refreshToken: refreshToken || undefined }),
+        body: JSON.stringify({ refreshToken: sessionCookie || undefined }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to delete organization");
-      }
-
-      const result = await response.json();
-
-      // If backend returned fresh tokens, update cookies
-      if (result.tokens) {
-        await setAuthCookiesInAction(result.tokens);
       }
 
       return true;
