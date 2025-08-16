@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "../../../../../../../packages/auth/dist/firebase";
+import { createFirebaseAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {

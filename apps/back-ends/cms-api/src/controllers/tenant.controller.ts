@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { TenantService, ITenant } from '@keystone/database';
 import { CognitoAdminService } from '../services/cognito-admin.service';
-import { decodeJwtToken } from '../../../../../packages/auth/dist/firebase';
+import { decodeJwtToken } from '@keystone/auth';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 
 // DTOs for request validation
