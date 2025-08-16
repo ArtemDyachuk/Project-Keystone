@@ -94,18 +94,22 @@ function isAuthPage(pathname: string): boolean {
 // Helper function to check if user is authenticated (client-safe)
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Check for auth cookies instead of Authorization header
+    const accessToken = request.cookies.get("accessToken")?.value;
+    const idToken = request.cookies.get("idToken")?.value;
+    
+    if (!accessToken && !idToken) {
       return false;
     }
 
-    const token = authHeader.substring(7); // Remove "Bearer " prefix
+    // Use ID token if available, otherwise fall back to access token
+    const token = idToken || accessToken;
     
     // Try to decode the JWT to check if it's valid
-    const userData = getUserDataFromJWT(token);
+    const userData = getUserDataFromJWT(token!);
     return userData !== null;
-  } catch {
+  } catch (error) {
+    console.error("Authentication check error:", error);
     return false;
   }
 }
@@ -131,7 +135,7 @@ async function validateTenantAccess(pathname: string, userData: UserData, reques
       // Validate that user has access to the specific tenant
       if (!userData.tenantIds.includes(requestedTenantId)) {
         // SECURITY: Log security violation but don't expose tenant IDs
-        console.warn(`Unauthorized tenant access attempt blocked`, {
+        console.warn(`🚨 Unauthorized tenant access attempt blocked`, {
           userId: userData.sub,
           requestedPath: pathname,
           // Don't log the actual tenant ID for security
@@ -178,14 +182,16 @@ export async function middleware(request: NextRequest) {
     let userData: UserData | null;
 
     try {
-      // Get user data from the authorization header
-      const authHeader = request.headers.get("authorization");
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      // Get user data from cookies instead of authorization header
+      const accessToken = request.cookies.get("accessToken")?.value;
+      const idToken = request.cookies.get("idToken")?.value;
+      
+      if (!accessToken && !idToken) {
         return NextResponse.redirect(new URL("/login", request.url));
       }
 
-      const token = authHeader.substring(7);
-      userData = getUserDataFromJWT(token);
+      const token = idToken || accessToken;
+      userData = getUserDataFromJWT(token!);
 
       // If we can't get user data but they're authenticated, something's wrong
       if (!userData) {

@@ -36,7 +36,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
         router.push(redirectUrl);
       } else {
         const data = await response.json();
-        
+
         // Handle Firebase-specific errors
         if (data.error?.includes("email-not-verified")) {
           setError("Please verify your email address before signing in. Check your inbox for the verification link.");

@@ -48,10 +48,10 @@ export class TenantServiceClient {
   static async createTenantInDatabase(name: string): Promise<SerializedTenant> {
     try {
       await this.ensureConnection();
-      
+
       // Create new tenant using the database service
       const newTenant = await TenantService.createTenant(name.trim());
-      
+
       return this.serializeTenant(newTenant);
     } catch (error) {
       console.error("Failed to create tenant in database:", error);
@@ -66,10 +66,10 @@ export class TenantServiceClient {
   static async syncFirebaseTenantToDatabase(firebaseTenant: any): Promise<SerializedTenant> {
     try {
       await this.ensureConnection();
-      
+
       // Check if tenant already exists in database
       const existingTenant = await TenantService.getTenantById(firebaseTenant.id);
-      
+
       if (existingTenant) {
         // Update existing tenant
         const updatedTenant = await TenantService.updateTenant(existingTenant._id!, {
@@ -77,11 +77,11 @@ export class TenantServiceClient {
           firebaseTenantId: firebaseTenant.id,
           updatedAt: new Date(),
         });
-        
+
         if (!updatedTenant) {
           throw new Error("Failed to update tenant");
         }
-        
+
         return this.serializeTenant(updatedTenant);
       } else {
         // Create new tenant in database

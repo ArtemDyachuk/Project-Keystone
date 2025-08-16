@@ -23,7 +23,7 @@ export function TenantDeleteButton({ tenant }: TenantDeleteButtonProps) {
     try {
       // Call server action which will handle deletion
       const result = await deleteTenant(tenant._id!);
-      
+
       if (result?.success && result.redirectTo) {
         // Navigate to the redirect location
         window.location.href = result.redirectTo;
@@ -43,7 +43,7 @@ export function TenantDeleteButton({ tenant }: TenantDeleteButtonProps) {
     <div className={styles.dangerZone}>
       <h3>Danger Zone</h3>
       <p>Permanently delete this organization and all associated data.</p>
-      
+
       <button
         onClick={handleDelete}
         disabled={isDeleting}

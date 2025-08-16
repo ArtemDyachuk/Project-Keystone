@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ 
+      accessToken, // Include access token for client-side API calls
       user: {
         email: userData.email,
         firstName: userData.firstName,
