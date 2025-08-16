@@ -41,6 +41,58 @@ export class TenantServiceClient {
   }
 
   /**
+   * Create a new tenant in the database
+   * This is the main method for creating tenants in MongoDB
+   */
+  static async createTenantInDatabase(name: string): Promise<SerializedTenant> {
+    try {
+      await this.ensureConnection();
+      
+      // Create new tenant using the database service
+      const newTenant = await TenantService.createTenant(name.trim());
+      
+      return this.serializeTenant(newTenant);
+    } catch (error) {
+      console.error("Failed to create tenant in database:", error);
+      throw new Error(`Failed to create tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Sync Firebase tenant to existing database
+   * This ensures backward compatibility with existing components
+   */
+  static async syncFirebaseTenantToDatabase(firebaseTenant: any): Promise<SerializedTenant> {
+    try {
+      await this.ensureConnection();
+      
+      // Check if tenant already exists in database
+      const existingTenant = await TenantService.getTenantById(firebaseTenant.id);
+      
+      if (existingTenant) {
+        // Update existing tenant
+        const updatedTenant = await TenantService.updateTenant(firebaseTenant.id, {
+          name: firebaseTenant.name,
+          updatedAt: new Date(),
+        });
+        return this.serializeTenant(updatedTenant);
+      } else {
+        // Create new tenant in database
+        const newTenant = await TenantService.createTenant({
+          _id: firebaseTenant.id,
+          name: firebaseTenant.name,
+          createdAt: firebaseTenant.createdAt,
+          updatedAt: firebaseTenant.updatedAt,
+        });
+        return this.serializeTenant(newTenant);
+      }
+    } catch (error) {
+      console.error("Failed to sync Firebase tenant to database:", error);
+      throw new Error(`Failed to sync tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Get tenants by their IDs
    * @param tenantIds Array of tenant IDs to fetch
    * @returns Promise<Tenant[]> Array of tenant objects

@@ -16,6 +16,8 @@
     "@keystone/auth": "file:../../../packages/auth",
     "@keystone/database": "file:../../../packages/database",
     "@keystone/ui": "file:../../../packages/ui",
+    "firebase": "^12.1.0",
+    "firebase-admin": "^13.4.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

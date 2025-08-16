@@ -10,6 +10,7 @@ export interface UserData {
   lastName?: string;   // Cleaner than family_name
   tenantIds?: string[];  // Array of tenant IDs
   selectedTenantId?: string;  // Single selected tenant ID
+  tenantRoles?: Record<string, string>; // Firebase custom claims
 }
 
 /**
@@ -73,4 +74,33 @@ export function getUserDisplayName(userData: UserData): string {
   }
 
   return "User";
+}
+
+/**
+ * Check if user has access to a specific tenant
+ */
+export function hasTenantAccess(userData: UserData, tenantId: string): boolean {
+  return userData.tenantIds?.includes(tenantId) || false;
+}
+
+/**
+ * Get user's role in a specific tenant
+ */
+export function getUserTenantRole(userData: UserData, tenantId: string): string | null {
+  return userData.tenantRoles?.[tenantId] || null;
+}
+
+/**
+ * Check if user is admin of a specific tenant
+ */
+export function isTenantAdmin(userData: UserData, tenantId: string): boolean {
+  const role = getUserTenantRole(userData, tenantId);
+  return role === "admin";
+}
+
+/**
+ * Get user's selected tenant
+ */
+export function getSelectedTenant(userData: UserData): string | null {
+  return userData.selectedTenantId || userData.tenantIds?.[0] || null;
 }

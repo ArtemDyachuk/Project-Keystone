@@ -1,1 +1,1 @@
-export { updateSelectedTenantAndRedirect, createTenant, updateTenant, deleteTenant } from "./tenant.actions";
+export { updateSelectedTenantAndRedirect, createTenant, updateTenant, deleteTenant, getUserTenants } from "./tenant.actions";

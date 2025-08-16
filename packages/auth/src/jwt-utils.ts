@@ -33,6 +33,70 @@ export async function verifyJwtToken(
 }
 
 /**
+ * Verify and decode a Google ID token
+ */
+export async function verifyGoogleIdToken(
+  token: string,
+  clientId: string
+): Promise<DecodedToken> {
+  try {
+    // Google's JWKS endpoint
+    const jwksUrl = "https://www.googleapis.com/oauth2/v3/certs";
+    const JWKS = createRemoteJWKSet(new URL(jwksUrl));
+
+    // Verify the JWT
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: ["https://accounts.google.com", "accounts.google.com"],
+      audience: clientId,
+    });
+
+    // Convert Google token format to our DecodedToken format
+    return {
+      sub: payload.sub as string,
+      email: payload.email as string,
+      email_verified: payload.email_verified as boolean,
+      given_name: payload.given_name as string,
+      family_name: payload.family_name as string,
+      aud: payload.aud as string,
+      exp: payload.exp as number,
+      iat: payload.iat as number,
+      iss: payload.iss as string,
+      // Google tokens don't have these Cognito-specific fields
+      token_use: "id",
+      username: payload.email as string,
+    } as DecodedToken;
+  } catch (error) {
+    throw new Error(`Google JWT verification failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Universal JWT token verification that works with both Cognito and Google tokens
+ */
+export async function verifyUniversalJwtToken(
+  token: string,
+  options: {
+    provider: "cognito" | "google";
+    userPoolId?: string;
+    region?: string;
+    clientId?: string;
+    tokenUse?: "access" | "id";
+  }
+): Promise<DecodedToken> {
+  if (options.provider === "google") {
+    if (!options.clientId) {
+      throw new Error("clientId is required for Google token verification");
+    }
+    return verifyGoogleIdToken(token, options.clientId);
+  } else {
+    if (!options.userPoolId || !options.region) {
+      throw new Error("userPoolId and region are required for Cognito token verification");
+    }
+    return verifyJwtToken(token, options.userPoolId, options.region, options.tokenUse);
+  }
+}
+
+/**
  * Decode JWT token without verification (for development/debugging only)
  */
 export function decodeJwtToken(token: string): DecodedToken {

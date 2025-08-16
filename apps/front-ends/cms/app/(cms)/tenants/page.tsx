@@ -1,5 +1,5 @@
 import { getUserDataFromJWT } from "@/lib/auth-utils";
-import { TenantServiceClient } from "@/app/services";
+import { getUserTenants } from "@/app/actions";
 import styles from "./page.module.css";
 
 // Force dynamic rendering since we use cookies
@@ -9,8 +9,8 @@ export default async function TenantsPage() {
   // Get user data from JWT
   const userData = await getUserDataFromJWT();
   
-  // Get user's tenants from database
-  const userTenants = await TenantServiceClient.getTenantsByIds(userData?.tenantIds || []);
+  // Get user's tenants from Firebase
+  const userTenants = await getUserTenants();
 
   return (
     <div className={styles.container}>
@@ -29,7 +29,7 @@ export default async function TenantsPage() {
           </div>
         ) : (
           <div className={styles.tenantsGrid}>
-            {userTenants.map((tenant) => (
+            {userTenants.map((tenant: any) => (
               <div key={tenant._id || 'unknown'} className={styles.tenantCard}>
                 <div className={styles.tenantInfo}>
                   <h3 className={styles.tenantName}>{tenant.name}</h3>
@@ -37,6 +37,9 @@ export default async function TenantsPage() {
                   <p className={styles.tenantCreated}>
                     Created: {tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString() : 'Unknown'}
                   </p>
+                  {tenant.role && (
+                    <p className={styles.tenantRole}>Role: {tenant.role}</p>
+                  )}
                 </div>
                 <div className={styles.tenantActions}>
                   <a

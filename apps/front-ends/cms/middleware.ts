@@ -10,7 +10,9 @@ const PUBLIC_ROUTES = [
   "/signup", // Actually accessible at /signup (from (auth) folder)
   "/forgot-password", // Actually accessible at /forgot-password (from (auth) folder)
   "/reset-password", // Actually accessible at /reset-password (from (auth) folder)
-  "/ui-test" // From (public) folder
+  "/ui-test", // From (public) folder
+  "/firebase-auth-test", // Firebase auth test page
+  "/firebase-multi-tenant-test" // Firebase multi-tenancy test page
 ];
 
 // Helper function to check if path is a public route

@@ -1,4 +1,4 @@
-import { LoginForm } from "../../components/authentication";
+import { FirebaseLoginForm } from "../../components/authentication/FirebaseLoginForm";
 
 export default async function LoginPage({
   searchParams,
@@ -8,5 +8,5 @@ export default async function LoginPage({
   const params = await searchParams;
   const redirectUrl = params.redirect || "/dashboard";
 
-  return <LoginForm redirectUrl={redirectUrl} />;
+  return <FirebaseLoginForm redirectUrl={redirectUrl} />;
 }

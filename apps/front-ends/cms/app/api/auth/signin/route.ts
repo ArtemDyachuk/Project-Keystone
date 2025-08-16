@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebaseAuth } from "../../../../lib/firebase-config";
 import { setAuthCookies } from "../../../../lib/auth-cookies";
 
 export async function POST(request: NextRequest) {
@@ -13,13 +14,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const config = await getCognitoConfig();
-    const authClient = new CognitoAuthClient(config);
+    // Sign in with Firebase Auth
+    const auth = getFirebaseAuth();
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-    const tokens = await authClient.signIn({
-      email,
-      password,
-    });
+    // Get Firebase ID token
+    const idToken = await user.getIdToken();
+    const idTokenResult = await user.getIdTokenResult();
+
+    // Convert to our AuthTokens format
+    const tokens = {
+      accessToken: idToken, // Firebase uses ID token as access token
+      idToken: idToken,
+      refreshToken: user.refreshToken,
+      expiresIn: Math.floor((new Date(idTokenResult.expirationTime).getTime() - Date.now()) / 1000),
+    };
 
     // Set auth cookies and return response
     return setAuthCookies(tokens);

@@ -10,6 +10,8 @@ export { CognitoAuthClient } from "./cognito-client";
 // JWT Utilities
 export {
   verifyJwtToken,
+  verifyGoogleIdToken,
+  verifyUniversalJwtToken,
   decodeJwtToken,
   isTokenExpired,
   getTokenExpiration,
