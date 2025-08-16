@@ -1,5 +1,5 @@
 import { PublicNavigation } from '../components/navigation';
-import { getUserDataFromJWT } from "@/lib/auth/utils";
+import { getCurrentUser } from "@/app/actions/user.actions";
 
 export default async function PublicLayout({
   children,
@@ -7,7 +7,7 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   // Fetch user data server-side
-  const userData = await getUserDataFromJWT();
+  const userData = await getCurrentUser();
 
   return (
     <>

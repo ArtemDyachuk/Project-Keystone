@@ -5,7 +5,7 @@
 
 describe("🔐 FRONTEND AUTH UTILITIES - Client-Side Security", () => {
   
-  // Mock getUserDataFromJWT functionality
+  // Mock getUserDataFromJWT functionality - no longer needed since we're using getCurrentUser
   const mockGetUserDataFromJWT = (tokenPayload: any) => {
     if (!tokenPayload || typeof tokenPayload !== 'object' || Object.keys(tokenPayload).length === 0) {
       return null;

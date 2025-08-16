@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { setCurrentTenant } from "@/lib/tenants";
 import { createTenant } from "@/app/actions";
-import { UserData } from "@/lib/auth/utils";
+import { UserData } from "@/app/actions/user.actions";
 import styles from "./TenantCreate.module.css";
 
 interface TenantCreateProps {
