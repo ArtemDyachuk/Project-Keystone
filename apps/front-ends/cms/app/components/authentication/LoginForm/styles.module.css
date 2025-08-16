@@ -1,4 +1,4 @@
-/* Form-specific styles - layout handled by AuthForm component */
+/* Firebase Login Form Styles */
 
 .form {
   display: flex;
@@ -30,15 +30,6 @@
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid #fecaca;
-  font-size: 0.9rem;
-}
-
-.success {
-  background: #f0fdf4;
-  color: #16a34a;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: 1px solid #bbf7d0;
   font-size: 0.9rem;
 }
 
@@ -81,11 +72,11 @@
 }
 
 @media (max-width: 480px) {
-  .card {
-    padding: 2rem;
+  .form {
+    gap: 1rem;
   }
   
-  .title {
-    font-size: 1.75rem;
+  .field label {
+    font-size: 0.85rem;
   }
 }

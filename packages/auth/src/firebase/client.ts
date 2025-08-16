@@ -11,7 +11,7 @@ import {
   UserCredential,
   Auth
 } from "firebase/auth";
-import { getFirebaseAuth } from "./firebase-config";
+import { getFirebaseAuth } from "./config";
 
 export interface FirebaseAuthTokens {
   accessToken: string;
@@ -200,6 +200,46 @@ export class FirebaseAuthClient {
         resolve(user);
       });
     });
+  }
+
+  /**
+   * Resend email verification
+   */
+  async resendVerificationEmail(): Promise<void> {
+    try {
+      const user = this.auth.currentUser;
+      if (!user) {
+        throw new Error("No authenticated user");
+      }
+
+      await sendEmailVerification(user);
+    } catch (error) {
+      throw new Error(`Failed to resend verification email: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+
+  /**
+   * Check if user's email is verified
+   */
+  isEmailVerified(): boolean {
+    const user = this.auth.currentUser;
+    return user?.emailVerified || false;
+  }
+
+  /**
+   * Get user's display name
+   */
+  getDisplayName(): string | null {
+    const user = this.auth.currentUser;
+    return user?.displayName || null;
+  }
+
+  /**
+   * Get user's email
+   */
+  getEmail(): string | null {
+    const user = this.auth.currentUser;
+    return user?.email || null;
   }
 }
 

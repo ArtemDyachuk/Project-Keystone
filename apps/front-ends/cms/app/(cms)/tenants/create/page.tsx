@@ -1,5 +1,5 @@
 import { TenantCreate } from "@/components/tenants";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
+import { getUserDataFromJWT } from "@/lib/auth/utils";
 import { redirect } from "next/navigation";
 
 // Force dynamic rendering since we use cookies and server actions

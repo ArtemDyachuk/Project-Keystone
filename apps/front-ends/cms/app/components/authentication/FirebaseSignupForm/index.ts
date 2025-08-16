@@ -1,1 +1,0 @@
-export { FirebaseSignupForm } from "./FirebaseSignupForm";

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { getFirebaseAuth } from "../../../../lib/firebase-config";
-import { setAuthCookies } from "../../../../lib/auth-cookies";
+import { createFirebaseAuthClient } from "@keystone/auth";
+import { setAuthCookies } from "@/lib/auth/cookies";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Sign in with Firebase Auth
-    const auth = getFirebaseAuth();
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const auth = createFirebaseAuthClient();
+    const userCredential = await auth.signIn({ email, password });
     const user = userCredential.user;
 
     // Get Firebase ID token

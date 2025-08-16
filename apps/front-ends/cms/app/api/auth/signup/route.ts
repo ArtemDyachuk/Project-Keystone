@@ -1,68 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
-import { getFirebaseAuth } from "../../../../lib/firebase-config";
-import { getFirebaseAdminFirestore, getFirebaseAdminAuth } from "../../../../lib/firebase-admin";
+import { createFirebaseAuthClient } from "@keystone/auth";
+import { setAuthCookies } from "@/lib/auth/cookies";
+
+// Helper function to get user-friendly error messages
+function getFirebaseErrorMessage(error: any): string {
+  if (error?.code) {
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        return "An account with this email already exists. Please try signing in instead.";
+      case "auth/invalid-email":
+        return "Please enter a valid email address.";
+      case "auth/weak-password":
+        return "Password is too weak. Please choose a stronger password (at least 6 characters).";
+      case "auth/operation-not-allowed":
+        return "Email/password sign up is not enabled. Please contact support.";
+      default:
+        return error.message || "An error occurred during sign up.";
+    }
+  }
+  return error.message || "An error occurred during sign up.";
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, firstName, lastName, password } = await request.json();
+    const { email, password, firstName, lastName } = await request.json();
 
-    if (!email || !firstName || !lastName || !password) {
+    if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
         { success: false, error: "All fields are required" },
         { status: 400 }
       );
     }
 
-    // Create user with Firebase Auth
-    const auth = getFirebaseAuth();
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    // Update user profile
-    await updateProfile(user, {
-      displayName: `${firstName} ${lastName}`.trim(),
+    // Create user with Firebase Auth using the client
+    const authClient = createFirebaseAuthClient();
+    const userCredential = await authClient.signUp({
+      email,
+      password,
+      firstName,
+      lastName,
     });
 
-    // Send email verification using Firebase's built-in system
-    await sendEmailVerification(user);
+    const user = userCredential.user;
 
-    // Store additional user data in Firestore
-    try {
-      const db = getFirebaseAdminFirestore();
-      await db.collection("users").doc(user.uid).set({
-        email,
-        firstName,
-        lastName,
-        createdAt: new Date(),
-        tenantIds: [],
-        selectedTenantId: null,
-        emailVerified: false,
-      });
+    // Get tokens for the new user
+    const tokens = await authClient.getTokens(user);
 
-      // Set initial Firebase Custom Claims (empty tenant access)
-      const adminAuth = getFirebaseAdminAuth();
-      await adminAuth.setCustomUserClaims(user.uid, {
-        tenantIds: [],
-        tenantRoles: {},
-        selectedTenantId: null,
-      });
+    // Set authentication cookies
+    await setAuthCookies(tokens);
 
-      console.log("✅ User data stored and custom claims set");
-    } catch (firestoreError) {
-      console.error("Failed to store user data in Firestore:", firestoreError);
-      // Continue anyway - user is created in Auth
-    }
+    console.log("✅ User signed up successfully:", user.email);
 
     return NextResponse.json({
       success: true,
-      userSub: user.uid,
-      username: user.email,
-      message: "User created successfully. Please check your email for verification."
+      message: "Account created successfully! Please check your email to verify your account.",
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+      },
     });
   } catch (error) {
+    console.error("Signup error:", error);
+
+    const errorMessage = getFirebaseErrorMessage(error);
+
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Signup failed" },
+      { success: false, error: errorMessage },
       { status: 400 }
     );
   }

@@ -1,48 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CognitoAuthClient, getCognitoConfig } from "@keystone/auth";
-import { setAuthCookiesInAction } from "@/lib/auth-cookies";
+import { createFirebaseAuthClient } from "../../../../../../../packages/auth/dist/firebase";
 
 export async function POST(request: NextRequest) {
   try {
-    const { refreshToken, email } = await request.json();
+    const { refreshToken } = await request.json();
 
-    if (!refreshToken || !email) {
+    if (!refreshToken) {
       return NextResponse.json(
-        { error: "Refresh token and email are required" },
+        { success: false, error: "Refresh token is required" },
         { status: 400 }
       );
     }
 
-    // Get Cognito configuration
-    const config = await getCognitoConfig();
-    
-    // Create Cognito client
-    const authClient = new CognitoAuthClient(config);
+    const authClient = createFirebaseAuthClient();
 
-    // Refresh the tokens
-    const newTokens = await authClient.refreshTokens(refreshToken, email);
+    // Refresh tokens using Firebase
+    const newTokens = await authClient.refreshTokens();
 
-    // Set new tokens in cookies
-    await setAuthCookiesInAction(newTokens);
+    if (!newTokens) {
+      return NextResponse.json(
+        { success: false, error: "No authenticated user found" },
+        { status: 401 }
+      );
+    }
 
-    // Return both tokens for middleware usage
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
-      accessToken: newTokens.accessToken,
-      idToken: newTokens.idToken,
-      expiresIn: newTokens.expiresIn,
+      message: "Tokens refreshed successfully",
+      tokens: newTokens
     });
-
   } catch (error) {
-    console.error("Error refreshing tokens:", error);
-    
-    // If refresh fails, return 401 to trigger login redirect
+    console.error("Token refresh error:", error);
     return NextResponse.json(
-      { 
-        error: "Failed to refresh tokens. Please log in again.",
-        details: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 401 }
+      { success: false, error: error instanceof Error ? error.message : "Failed to refresh tokens" },
+      { status: 400 }
     );
   }
 }

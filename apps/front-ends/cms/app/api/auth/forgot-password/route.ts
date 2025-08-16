@@ -1,34 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCognitoConfig, CognitoAuthClient, generateResetToken } from "@keystone/auth";
+import { createFirebaseAuthClient } from "../../../../../../../packages/auth/dist/firebase";
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
-
-    const config = await getCognitoConfig();
-    const authClient = new CognitoAuthClient(config);
-
-    // Step 1: Trigger Cognito forgot password (sends 6-digit code via email)
-    await authClient.forgotPassword({ email });
-
-    // Step 2: Generate our custom JWT reset token
-    const resetToken = generateResetToken(email);
     
-    // Step 3: Create the reset link using current request's host
-    const protocol = request.headers.get("x-forwarded-proto") || "http";
-    const host = request.headers.get("host") || request.headers.get("x-forwarded-host") || "localhost:3000";
-    const baseUrl = `${protocol}://${host}`;
-    const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
+    if (!email) {
+      return NextResponse.json(
+        { success: false, error: "Email is required" },
+        { status: 400 }
+      );
+    }
 
-    // In a real app, you'd send a custom email with the reset link
-    // For now, we'll return both the link and mention the 6-digit code
-    console.log("🔗 Password Reset Link:", resetLink);
-    console.log("📧 User will also receive a 6-digit code via AWS Cognito email");
+    const authClient = createFirebaseAuthClient();
+    await authClient.forgotPassword({ email });
+    
+    // Firebase sends the reset email automatically, but we can also provide a custom link
+    console.log("📧 Password reset email sent via Firebase to:", email);
 
     return NextResponse.json({ 
       success: true,
-      message: "Password reset initiated successfully",
-      resetLink, // In development, we'll show this to the user
+      message: "Password reset email sent successfully. Please check your email for the reset link.",
+      note: "Firebase automatically sends a reset link to your email address."
     });
   } catch (error) {
     console.error("Forgot password error:", error);

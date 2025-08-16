@@ -1,6 +1,6 @@
 "use server";
 
-import { setSidebarState } from "../../lib/auth-cookies";
+import { setSidebarState } from "@/lib/auth/cookies";
 
 /**
  * Server action to toggle sidebar collapsed state

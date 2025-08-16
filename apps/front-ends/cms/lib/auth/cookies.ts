@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AuthTokens } from "@keystone/auth";
+import { AuthTokens } from "../../../../../packages/auth/dist/firebase";
 
 // Cookie configuration
 const COOKIE_CONFIG = {

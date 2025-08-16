@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthCookies } from "@/lib/auth-cookies";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
+import { getAuthCookies } from "@/lib/auth/cookies";
+import { getUserDataFromJWT } from "@/lib/auth/utils";
 
 export async function GET(request: NextRequest) {
   try {

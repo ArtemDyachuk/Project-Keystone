@@ -1,45 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
+import { createFirebaseAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, confirmationCode, newPassword } = await request.json();
+    const { oobCode, newPassword } = await request.json();
 
-    const config = await getCognitoConfig();
-    const authClient = new CognitoAuthClient(config);
+    if (!oobCode || !newPassword) {
+      return NextResponse.json(
+        { success: false, error: "Reset code and new password are required" },
+        { status: 400 }
+      );
+    }
 
-    await authClient.confirmForgotPassword({
-      email,
-      confirmationCode,
-      newPassword,
-    });
+    const authClient = createFirebaseAuthClient();
+
+    // Confirm password reset using Firebase
+    await authClient.confirmPasswordReset({ oobCode, newPassword });
 
     return NextResponse.json({ 
       success: true,
-      message: "Password reset successfully"
+      message: "Password reset successfully. You can now sign in with your new password."
     });
   } catch (error) {
     console.error("Confirm reset password error:", error);
-    
-    // Handle specific Cognito errors with user-friendly messages
-    let errorMessage = "Failed to reset password";
-    
-    if (error instanceof Error) {
-      if (error.message.includes("CodeMismatchException")) {
-        errorMessage = "Invalid verification code. Please check the code from your email.";
-      } else if (error.message.includes("ExpiredCodeException")) {
-        errorMessage = "Verification code has expired. Please request a new one.";
-      } else if (error.message.includes("UserNotFoundException")) {
-        errorMessage = "User not found. Please check your email address.";
-      } else if (error.message.includes("InvalidPasswordException")) {
-        errorMessage = "Password does not meet requirements.";
-      } else {
-        errorMessage = error.message;
-      }
-    }
-
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { success: false, error: error instanceof Error ? error.message : "Failed to reset password" },
       { status: 400 }
     );
   }

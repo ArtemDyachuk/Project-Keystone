@@ -21,22 +21,15 @@ export function TenantDeleteButton({ tenant }: TenantDeleteButtonProps) {
     setIsDeleting(true);
 
     try {
-      // Show optimistic success toast
-      toast.success("🗑️ Organization deleted successfully!", {
-        description: `"${tenant.name}" has been permanently deleted.`,
-        duration: 4000,
-      });
-
-      // Call server action which will handle deletion and redirect
-      await deleteTenant(tenant._id!);
-    } catch (error) {
-      // Check if this is a Next.js redirect error (which is expected)
-      if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-        // This is expected - the redirect is working, don't show error
-        return;
+      // Call server action which will handle deletion
+      const result = await deleteTenant(tenant._id!);
+      
+      if (result?.success && result.redirectTo) {
+        // Navigate to the redirect location
+        window.location.href = result.redirectTo;
       }
-
-      // Only show error for actual failures
+    } catch (error) {
+      // Show error for actual failures
       const errorMessage = error instanceof Error ? error.message : "Failed to delete organization";
       toast.error("❌ Failed to delete organization", {
         description: errorMessage,

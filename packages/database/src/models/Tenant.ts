@@ -3,6 +3,7 @@ import { mongoose } from "../types";
 export interface ITenant {
   _id?: string;
   name: string;
+  firebaseTenantId?: string; // Firebase Auth tenant ID
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -13,6 +14,11 @@ const tenantSchema = new mongoose.Schema<ITenant>({
     required: true,
     trim: true,
     maxlength: 100
+  },
+  firebaseTenantId: {
+    type: String,
+    required: false,
+    trim: true
   }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt

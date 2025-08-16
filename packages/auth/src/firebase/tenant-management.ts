@@ -1,5 +1,5 @@
-import { getFirebaseAdminAuth } from "./firebase-admin";
-import { getFirebaseAdminFirestore } from "./firebase-admin";
+import { getFirebaseAdminAuth } from "./admin";
+import { getFirebaseAdminFirestore } from "./admin";
 
 export interface Tenant {
   id: string;
@@ -73,6 +73,14 @@ export class TenantManagementService {
       console.log(`🔄 Updating Firebase Custom Claims for user ${userId} in tenant ${tenantId}`);
 
       // Create user-tenant relationship in Firestore (for access control only)
+      await this.db.collection("userTenants").doc(`${userId}_${tenantId}`).set({
+        userId,
+        tenantId,
+        role,
+        grantedAt: new Date(),
+      });
+
+      // Update user's Firebase Custom Claims
       await this.db.collection("userTenants").doc(`${userId}_${tenantId}`).set({
         userId,
         tenantId,

@@ -11,7 +11,7 @@
     "test": "turbo test --filter=@keystone/cms --filter=@keystone/cms-api",
     "test:security": "turbo test --filter='*security*'",
     "clean": "turbo clean && rm -rf node_modules",
-    "setup:cognito": "cd packages/auth && npm run setup:cognito"
+    "setup:cognito": "cd packages/auth-aws && npm run setup:cognito"
   },
   "private": true,
   "packageManager": "npm@10.9.3",

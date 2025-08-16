@@ -1,7 +1,7 @@
 import { Sidebar, CMSNavigation } from "@/app/components/navigation";
 import { Footer } from "@/app/components/navigation/Footer/Footer";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
+import { getUserDataFromJWT } from "@/lib/auth/utils";
 import { TenantServiceClient } from "@/app/services";
 import styles from "./styles.module.css";
 

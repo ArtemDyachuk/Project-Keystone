@@ -7,9 +7,9 @@ import helmet from 'helmet';
 async function bootstrap() {
   // Simple environment validation - only check critical vars
   if (!process.env.MONGODB_URI) {
-    Logger.error('MONGODB_URI is required');
-    process.exit(1);
-  }
+  Logger.error('MONGODB_URI is required');
+  process.exit(1);
+}
 
   const app = await NestFactory.create(AppModule);
 

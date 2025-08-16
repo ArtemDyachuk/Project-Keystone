@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { CognitoAdminService } from '../services/cognito-admin.service';
-import { decodeJwtToken, verifyJwtToken } from '@keystone/auth';
+import { decodeJwtToken, verifyJwtToken } from '@keystone/auth-aws';
 
 @Injectable()
 export class TenantAccessGuard implements CanActivate {

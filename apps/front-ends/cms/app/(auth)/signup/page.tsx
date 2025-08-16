@@ -1,5 +1,5 @@
-import { FirebaseSignupForm } from "../../components/authentication/FirebaseSignupForm";
+import { SignupForm } from "../../components/authentication/SignupForm";
 
 export default function SignupPage() {
-  return <FirebaseSignupForm redirectUrl="/dashboard" />;
+  return <SignupForm redirectUrl="/dashboard" />;
 }

@@ -5,7 +5,7 @@ import {
   AdminGetUserCommand,
   type AttributeType,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
+import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth-aws";
 
 @Injectable()
 export class CognitoAdminService {

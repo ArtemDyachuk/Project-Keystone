@@ -1,5 +1,5 @@
 import { PublicNavigation } from '../components/navigation';
-import { getUserDataFromJWT } from '@/lib/auth-utils';
+import { getUserDataFromJWT } from "@/lib/auth/utils";
 
 export default async function PublicLayout({
   children,

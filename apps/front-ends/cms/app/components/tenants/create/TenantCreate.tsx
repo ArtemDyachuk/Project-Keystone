@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { setCurrentTenant } from "@/lib/tenants";
 import { createTenant } from "@/app/actions";
-import { UserData } from "@/lib/auth-utils";
+import { UserData } from "@/lib/auth/utils";
 import styles from "./TenantCreate.module.css";
 
 interface TenantCreateProps {
@@ -30,15 +30,26 @@ export function TenantCreate({ userData }: TenantCreateProps) {
         // Store new tenant info using utility function
         setCurrentTenant(result.tenant._id, result.tenant.name);
 
-        // Show success toast
-        toast.success("🎉 Organization created successfully!", {
-          description: `Welcome to ${result.tenant.name || name}! You're all set up.`,
-          duration: 4000,
-        });
+        if (result.requiresReauth) {
+          // Show re-authentication message
+          toast.success("🎉 Organization created successfully!", {
+            description: `Welcome to ${result.tenant.name || name}! Please sign out and sign back in to access your new organization.`,
+            duration: 6000,
+          });
+          
+          // Redirect to dashboard (user will see they need to re-auth)
+          router.push("/dashboard");
+        } else {
+          // Show success toast
+          toast.success("🎉 Organization created successfully!", {
+            description: `Welcome to ${result.tenant.name || name}! You're all set up.`,
+            duration: 4000,
+          });
 
-        // Refresh router to update navigation with fresh token data, then navigate
-        router.refresh();
-        router.push("/dashboard");
+          // Refresh router to update navigation with fresh token data, then navigate
+          router.refresh();
+          router.push("/dashboard");
+        }
       } else {
         throw new Error(result.error || "Failed to create organization");
       }

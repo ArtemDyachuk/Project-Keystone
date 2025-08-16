@@ -1,4 +1,4 @@
-import { getSidebarState } from "@/lib/auth-cookies";
+import { getSidebarState } from "@/lib/auth/cookies";
 import { SidebarClient } from "./SidebarClient";
 
 interface SidebarProps {

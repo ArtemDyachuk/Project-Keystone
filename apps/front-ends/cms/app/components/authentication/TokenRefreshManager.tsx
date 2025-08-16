@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { isTokenExpired } from "@keystone/auth";
+
+// Client-safe function for checking token expiration
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return true;
+    }
+
+    const payload = JSON.parse(atob(parts[1]));
+    const currentTime = Math.floor(Date.now() / 1000);
+    return payload.exp < currentTime;
+  } catch {
+    return true; // If we can't decode, assume expired
+  }
+}
 
 interface TokenRefreshManagerProps {
   children: React.ReactNode;

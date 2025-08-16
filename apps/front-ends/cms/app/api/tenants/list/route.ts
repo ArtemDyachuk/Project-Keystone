@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTenantManagementService } from "../../../../lib/tenant-management";
-import { getUserDataFromJWT } from "../../../../lib/auth-utils";
+import { getUserDataFromJWT } from "@/lib/auth/utils";
+import { createTenantManagementService } from "@keystone/auth";
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,12 +1,12 @@
-import { TenantService, connectToDatabase } from "@keystone/database";
-import { ITenant } from "@keystone/database";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
 import { config } from "@/lib/config";
-import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth-cookies";
+import { getUserDataFromJWT } from "@/lib/auth/utils";
+import { TenantService, connectToDatabase } from "@keystone/database";
+import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth/cookies";
 
 export interface SerializedTenant {
   _id: string;
   name: string;
+  firebaseTenantId?: string; // Firebase Auth tenant ID
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -31,10 +31,11 @@ export class TenantServiceClient {
   /**
    * Convert MongoDB object to plain object for React serialization
    */
-  private static serializeTenant(tenant: ITenant): SerializedTenant {
+  private static serializeTenant(tenant: any): SerializedTenant {
     return {
       _id: tenant._id?.toString() || "",
       name: tenant.name,
+      firebaseTenantId: tenant.firebaseTenantId,
       createdAt: tenant.createdAt,
       updatedAt: tenant.updatedAt,
     };
@@ -71,19 +72,20 @@ export class TenantServiceClient {
       
       if (existingTenant) {
         // Update existing tenant
-        const updatedTenant = await TenantService.updateTenant(firebaseTenant.id, {
+        const updatedTenant = await TenantService.updateTenant(existingTenant._id!, {
           name: firebaseTenant.name,
+          firebaseTenantId: firebaseTenant.id,
           updatedAt: new Date(),
         });
+        
+        if (!updatedTenant) {
+          throw new Error("Failed to update tenant");
+        }
+        
         return this.serializeTenant(updatedTenant);
       } else {
         // Create new tenant in database
-        const newTenant = await TenantService.createTenant({
-          _id: firebaseTenant.id,
-          name: firebaseTenant.name,
-          createdAt: firebaseTenant.createdAt,
-          updatedAt: firebaseTenant.updatedAt,
-        });
+        const newTenant = await TenantService.createTenant(firebaseTenant.name);
         return this.serializeTenant(newTenant);
       }
     } catch (error) {
