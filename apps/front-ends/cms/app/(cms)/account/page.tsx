@@ -42,5 +42,5 @@ export default async function AccountPage() {
     );
   }
 
-  return <AccountClient initialUser={user} />;
+  return <AccountClient />;
 }

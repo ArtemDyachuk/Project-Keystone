@@ -102,7 +102,8 @@ export function AccountTotpModal({ onClose, mfaStatus, onMfaStatusChange }: Acco
          // Use explicit RFC-compliant otpauth URI to avoid parser quirks
          const account = encodeURIComponent(currentUser.email || "user");
          const issuer = encodeURIComponent("Keystone CMS");
-         const totpUri = `otpauth://totp/${issuer}:${account}?secret=${secret.secretKey}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+         const totpUri =
+            `otpauth://totp/${account}?secret=${secret.secretKey}&issuer=${issuer}`;
 
          const dataUrl = await QRCode.toDataURL(totpUri, {
             width: 280,
