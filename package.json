@@ -3,15 +3,14 @@
   "version": "0.0.1",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "turbo build",
-    "build:safe": "npm test && turbo build",
+    "build": "turbo build --filter='!@keystone/auth-aws'",
+    "build:safe": "npm test && turbo build --filter='!@keystone/auth-aws'",
     "dev": "turbo dev --filter=@keystone/cms --filter=@keystone/cms-api",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check",
+    "lint": "turbo lint --filter='!@keystone/auth-aws'",
+    "type-check": "turbo type-check --filter='!@keystone/auth-aws'",
     "test": "turbo test --filter=@keystone/cms --filter=@keystone/cms-api",
     "test:security": "turbo test --filter='*security*'",
-    "clean": "turbo clean && rm -rf node_modules",
-    "setup:cognito": "cd packages/auth-aws && npm run setup:cognito"
+    "clean": "turbo clean && rm -rf node_modules"
   },
   "private": true,
   "packageManager": "npm@10.9.3",

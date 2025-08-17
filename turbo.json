@@ -12,7 +12,10 @@
     "COGNITO_CLIENT_SECRET",
     "COGNITO_DOMAIN",
     "AWS_ACCESS_KEY_ID",
-    "AWS_SECRET_ACCESS_KEY"
+    "AWS_SECRET_ACCESS_KEY",
+    "FIREBASE_PROJECT_ID",
+    "FIREBASE_CLIENT_EMAIL", 
+    "FIREBASE_PRIVATE_KEY"
   ],
   "tasks": {
     "build": {
@@ -23,6 +26,11 @@
         "dist/**",
         ".next/**",
         "!.next/cache/**"
+      ],
+      "env": [
+        "FIREBASE_PROJECT_ID",
+        "FIREBASE_CLIENT_EMAIL", 
+        "FIREBASE_PRIVATE_KEY"
       ]
     },
     "build:safe": {

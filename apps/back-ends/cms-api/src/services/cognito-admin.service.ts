@@ -5,7 +5,7 @@ import {
   AdminGetUserCommand,
   type AttributeType,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth-aws";
+
 
 @Injectable()
 export class CognitoAdminService {
@@ -137,28 +137,5 @@ export class CognitoAdminService {
     );
   }
 
-  /**
-   * Refresh user tokens using Cognito refresh token
-   * Returns fresh tokens with updated user attributes
-   */
-  async refreshUserTokens(
-    refreshToken: string,
-    username: string
-  ): Promise<{ accessToken: string; idToken: string; refreshToken: string }> {
-    try {
-      const cognitoConfig = await getCognitoConfig();
-      const cognitoClient = new CognitoAuthClient(cognitoConfig);
 
-      const newTokens = await cognitoClient.refreshTokens(refreshToken, username);
-
-      return {
-        accessToken: newTokens.accessToken,
-        idToken: newTokens.idToken,
-        refreshToken: newTokens.refreshToken
-      };
-    } catch (error) {
-      console.error("Failed to refresh tokens in CognitoAdminService:", error);
-      throw new Error(`Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 }

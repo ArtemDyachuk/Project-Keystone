@@ -1,13 +1,22 @@
 {
-  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "composite": true,
     "baseUrl": ".",
     "jsx": "preserve",
     "noEmit": true,
+    "skipLibCheck": true,
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "incremental": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
     "plugins": [
       {
         "name": "next"
@@ -20,10 +29,10 @@
       "@/app/*": ["./app/*"],
       "@/services/*": ["./app/services/*"],
       "@/actions/*": ["./app/actions/*"],
-      "@/context/*": ["./app/context/*"]
+      "@/context/*": ["./app/context/*"],
+      "@keystone/*": ["../../../packages/*/dist"]
     },
-    "outDir": "dist",
-    "rootDir": "."
+    "outDir": "dist"
   },
   "include": [
     "../../../apps/front-ends/cms/.next/types/**/*.ts",
@@ -52,6 +61,7 @@
     ".next",
     "eslint.config.js",
     "eslint.config.cjs",
-    "eslint.config.mjs"
+    "eslint.config.mjs",
+    "../../../packages/*/dist/**/*"
   ]
 }
