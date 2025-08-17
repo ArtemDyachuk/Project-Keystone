@@ -1,199 +1,178 @@
 "use client";
 
-import { useState } from "react";
-import { AccountEditForm } from "./AccountEditForm";
-import type { UserData } from "@/app/actions/user.actions";
+import { useState, useEffect, useMemo } from "react";
+import { getAuth, multiFactor, onAuthStateChanged, User } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+import { AccountTotpModal } from "./AccountTotpModal";
 import styles from "./page.module.css";
 
-interface AccountClientProps {
-  initialUser: UserData;
-}
+export function AccountClient() {
+   const [currentUser, setCurrentUser] = useState<User | null>(null);
+   const [isLoading, setIsLoading] = useState(true);
+   const [showTotpModal, setShowTotpModal] = useState(false);
+   const [mfaStatus, setMfaStatus] = useState<{
+      enrolled: boolean;
+      factors: Array<{ uid: string; displayName: string }>;
+   }>({ enrolled: false, factors: [] });
 
-export function AccountClient({ initialUser }: AccountClientProps) {
-  const [user, setUser] = useState(initialUser);
-  const [isEditing, setIsEditing] = useState(false);
+   const auth = useMemo(() => {
+      // Get Firebase config from environment variables
+      const config = {
+         apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+         authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      };
+      
+      // Initialize Firebase if not already done
+      if (!config.apiKey || !config.authDomain || !config.projectId) {
+         throw new Error("Missing Firebase configuration");
+      }
+      
+      try {
+         return getAuth();
+      } catch {
+         // If getAuth fails, initialize the app first
+         initializeApp(config);
+         return getAuth();
+      }
+   }, []);
 
-  const displayName = user.firstName && user.lastName 
-    ? `${user.firstName} ${user.lastName}`
-    : user.username || user.email || "Unknown User";
+   useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+         setCurrentUser(user);
+         setIsLoading(false);
+      });
 
-  const userInitials = getUserInitials(user);
+      return () => unsubscribe();
+   }, [auth]);
 
-  const handleUserUpdated = (updatedUser: UserData) => {
-    setUser(updatedUser);
-    setIsEditing(false);
-  };
+   useEffect(() => {
+      if (!currentUser) return;
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-  };
+      async function checkMfaStatus() {
+         try {
+            if (!currentUser) return;
+            
+            const multiFactorUser = multiFactor(currentUser);
+            const enrolledFactors = multiFactorUser.enrolledFactors;
+            
+            setMfaStatus({
+               enrolled: enrolledFactors.length > 0,
+               factors: enrolledFactors.map(factor => ({
+                  uid: factor.uid,
+                  displayName: factor.displayName || "Unknown"
+               }))
+            });
+         } catch (error) {
+            console.error("Failed to check MFA status:", error);
+            setMfaStatus({ enrolled: false, factors: [] });
+         }
+      }
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>My Account</h1>
-      </div>
+      checkMfaStatus();
+   }, [currentUser]);
 
-      {isEditing && (
-        <AccountEditForm 
-          user={user}
-          onUserUpdated={handleUserUpdated}
-          onCancel={handleCancelEdit}
-        />
-      )}
+   if (isLoading) {
+      return <div>Loading account information...</div>;
+   }
 
-      <div className={styles.userProfile}>
-        <div className={styles.profileHeader}>
-          <div className={styles.userAvatar}>
-            {userInitials}
-          </div>
-          <div className={styles.userBasicInfo}>
-            <h2 className={styles.userName}>{displayName}</h2>
-            <p className={styles.userEmail}>{user.email}</p>
-            <div className={styles.verificationStatus}>
-              <span className={`${styles.statusBadge} ${user.email_verified ? styles.verified : styles.unverified}`}>
-                {user.email_verified ? "✅ Email Verified" : "❌ Email Not Verified"}
-              </span>
-            </div>
-          </div>
-        </div>
+   if (!currentUser) {
+      return <div>Please log in to view your account.</div>;
+   }
 
-        <div className={styles.detailsGrid}>
-          <div className={styles.detailCard}>
-            <h3 className={styles.cardTitle}>Account Information</h3>
-            <div className={styles.cardContent}>
-              <div className={styles.detailRow}>
-                <span className={styles.label}>User ID:</span>
-                <span className={styles.value}>{user.sub}</span>
-              </div>
-              
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Username:</span>
-                <span className={styles.value}>{user.username || "Not set"}</span>
-              </div>
-
-              <div className={styles.detailRow}>
-                <span className={styles.label}>First Name:</span>
-                <span className={styles.value}>{user.firstName || "Not set"}</span>
-              </div>
-
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Last Name:</span>
-                <span className={styles.value}>{user.lastName || "Not set"}</span>
-              </div>
-
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Email:</span>
-                <span className={styles.value}>{user.email}</span>
-              </div>
-
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Email Verified:</span>
-                <span className={`${styles.value} ${user.email_verified ? styles.verified : styles.unverified}`}>
-                  {user.email_verified ? "Yes" : "No"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.detailCard}>
-            <h3 className={styles.cardTitle}>Tenant Access</h3>
-            <div className={styles.cardContent}>
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Selected Tenant:</span>
-                <span className={styles.value}>
-                  {user.selectedTenantId || "None selected"}
-                </span>
-              </div>
-
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Total Tenants:</span>
-                <span className={styles.value}>
-                  {user.tenantIds?.length || 0}
-                </span>
-              </div>
-
-              <div className={styles.detailRow}>
-                <span className={styles.label}>Current Roles:</span>
-                <span className={styles.value}>
-                  {user.selectedTenantId && user.tenantRoles?.[user.selectedTenantId] 
-                    ? (Array.isArray(user.tenantRoles[user.selectedTenantId]) 
-                        ? (user.tenantRoles[user.selectedTenantId] as string[]).join(", ")
-                        : user.tenantRoles[user.selectedTenantId] as string
-                      )
-                    : "No roles assigned"
-                  }
-                </span>
-              </div>
-
-              {user.tenantIds && user.tenantIds.length > 0 && (
-                <div className={styles.detailColumn}>
-                  <span className={styles.label}>Tenant IDs:</span>
-                  <div className={styles.tenantList}>
-                    {user.tenantIds.map((tenantId) => (
-                      <div key={tenantId} className={styles.tenantItem}>
-                        <span className={styles.tenantId}>{tenantId}</span>
-                        {user.tenantRoles?.[tenantId] && (
-                          <span className={styles.tenantRole}>
-                            {user.tenantRoles[tenantId]}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+   return (
+      <>
+         <div className={styles.container}>
+            <h1 className={styles.title}>Account Settings</h1>
+            
+            <div className={styles.section}>
+               <h2 className={styles.sectionTitle}>Profile Information</h2>
+               <div className={styles.infoGrid}>
+                  <div className={styles.infoItem}>
+                     <label>Email</label>
+                     <span>{currentUser.email}</span>
                   </div>
-                </div>
-              )}
+                  <div className={styles.infoItem}>
+                     <label>Email Verified</label>
+                     <span>{currentUser.emailVerified ? "✅ Yes" : "❌ No"}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                     <label>Account Created</label>
+                     <span>{currentUser.metadata.creationTime ? new Date(currentUser.metadata.creationTime).toLocaleDateString() : "Unknown"}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                     <label>Last Sign In</label>
+                     <span>{currentUser.metadata.lastSignInTime ? new Date(currentUser.metadata.lastSignInTime).toLocaleDateString() : "Unknown"}</span>
+                  </div>
+               </div>
             </div>
-          </div>
 
-          {user.tenantRoles && Object.keys(user.tenantRoles).length > 0 && (
-            <div className={styles.detailCard}>
-              <h3 className={styles.cardTitle}>Roles</h3>
-              <div className={styles.cardContent}>
-                <div className={styles.rolesGrid}>
-                  {Object.entries(user.tenantRoles).map(([tenantId, roles]) => (
-                    <div key={tenantId} className={styles.roleItem}>
-                      <div className={styles.roleTenant}>{tenantId}</div>
-                      <div className={styles.roleValue}>
-                        {Array.isArray(roles) 
-                          ? (roles as string[]).join(", ")
-                          : roles as string
-                        }
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className={styles.section}>
+               <h2 className={styles.sectionTitle}>Security</h2>
+               <div className={styles.securityGrid}>
+                  <div className={styles.securityItem}>
+                     <div className={styles.securityInfo}>
+                        <h3>Multi-Factor Authentication</h3>
+                        <p>
+                           {mfaStatus.enrolled 
+                              ? `✅ Enabled (${mfaStatus.factors.length} factor${mfaStatus.factors.length > 1 ? 's' : ''})`
+                              : "❌ Not enabled"
+                           }
+                        </p>
+                        {mfaStatus.enrolled && mfaStatus.factors.length > 0 && (
+                           <div className={styles.mfaFactors}>
+                              {mfaStatus.factors.map(factor => (
+                                 <div key={factor.uid} className={styles.mfaFactor}>
+                                    <span>🔐 {factor.displayName}</span>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
+                     </div>
+                     <button
+                        onClick={() => setShowTotpModal(true)}
+                        className={styles.actionButton}
+                     >
+                        {mfaStatus.enrolled ? "Manage MFA" : "Set up TOTP"}
+                     </button>
+                  </div>
+               </div>
             </div>
-          )}
-        </div>
 
-        <div className={styles.actions}>
-          <button 
-            onClick={() => setIsEditing(true)}
-            className={`${styles.button} ${styles.primary}`}
-            disabled={isEditing}
-          >
-            Edit Account
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+            <div className={styles.section}>
+               <h2 className={styles.sectionTitle}>Tenant Access</h2>
+               <div className={styles.infoGrid}>
+                  <div className={styles.infoItem}>
+                     <label>Selected Tenant</label>
+                     <span>Tenant_owner</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                     <label>Total Tenants</label>
+                     <span>1</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                     <label>Current Roles</label>
+                     <span>Owner</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                     <label>Tenant IDs</label>
+                     <span>a0e650d1c30745</span>
+                  </div>
+               </div>
+            </div>
 
-function getUserInitials(user: UserData): string {
-  if (user.firstName && user.lastName) {
-    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
-  }
-  
-  if (user.email) {
-    return user.email.charAt(0).toUpperCase();
-  }
-  
-  if (user.username) {
-    return user.username.charAt(0).toUpperCase();
-  }
-  
-  return "?";
+            <div className={styles.actions}>
+               <button className={styles.editButton}>Edit Account</button>
+            </div>
+         </div>
+
+         {showTotpModal && (
+            <AccountTotpModal
+               onClose={() => setShowTotpModal(false)}
+               mfaStatus={mfaStatus}
+               onMfaStatusChange={setMfaStatus}
+            />
+         )}
+      </>
+   );
 }

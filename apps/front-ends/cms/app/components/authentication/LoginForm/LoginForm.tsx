@@ -6,6 +6,7 @@ import styles from "./styles.module.css";
 import Link from "next/link";
 import { Button, Input } from "@keystone/ui";
 import { AuthForm } from "../AuthForm";
+import { MfaTotpModal } from "./MfaTotpModal";
 
 interface LoginFormProps {
   redirectUrl: string;
@@ -16,6 +17,7 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showMfaModal, setShowMfaModal] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +46,10 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
           setError("No account found with this email. Please sign up first.");
         } else if (data.error?.includes("wrong-password")) {
           setError("Incorrect password. Please try again.");
+        } else if (data.error?.includes("multi-factor-auth-required")) {
+          // Trigger client-side MFA resolution
+          setShowMfaModal(true);
+          setError("");
         } else {
           setError(data.error || "Login failed");
         }
@@ -56,62 +62,77 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   };
 
   return (
-    <AuthForm title="Sign In" subtitle="Welcome back to Keystone CMS">
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.field}>
-          <label htmlFor="email">Email</label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            required
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="password">Password</label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
-          />
-        </div>
-
-        {error && (
-          <div className={styles.error}>
-            ❌ {error}
+    <>
+      <AuthForm title="Sign In" subtitle="Welcome back to Keystone CMS">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <label htmlFor="email">Email</label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
           </div>
-        )}
 
-        <Button type="submit" className={styles.submitButton} disabled={isLoading}>
-          {isLoading ? "Signing In..." : "Sign In"}
-        </Button>
+          <div className={styles.field}>
+            <label htmlFor="password">Password</label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+          </div>
 
-        <div className={styles.forgotPassword}>
-          <Link href="/forgot-password" className={styles.forgotLink}>
-            Forgot password?
-          </Link>
+          {error && (
+            <div className={styles.error}>
+              ❌ {error}
+            </div>
+          )}
+
+          <Button type="submit" className={styles.submitButton} disabled={isLoading}>
+            {isLoading ? "Signing In..." : "Sign In"}
+          </Button>
+
+          <div className={styles.forgotPassword}>
+            <Link href="/forgot-password" className={styles.forgotLink}>
+              Forgot password?
+            </Link>
+          </div>
+        </form>
+
+        <div className={styles.links}>
+          <p>
+            Don't have an account?{" "}
+            <Link href="/signup" className={styles.link}>
+              Sign up here
+            </Link>
+          </p>
+          <p>
+            <Link href="/" className={styles.link}>
+              ← Back to home
+            </Link>
+          </p>
         </div>
-      </form>
+      </AuthForm>
 
-      <div className={styles.links}>
-        <p>
-          Don't have an account?{" "}
-          <Link href="/signup" className={styles.link}>
-            Sign up here
-          </Link>
-        </p>
-        <p>
-          <Link href="/" className={styles.link}>
-            ← Back to home
-          </Link>
-        </p>
-      </div>
-    </AuthForm>
+      {showMfaModal && (
+        <MfaTotpModal
+          email={email}
+          password={password}
+          redirectUrl={redirectUrl}
+          onClose={() => setShowMfaModal(false)}
+          onSuccess={() => {
+            setShowMfaModal(false);
+            router.push(redirectUrl);
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -48,15 +48,18 @@ export async function POST(request: NextRequest) {
     console.log("✅ Session cookie set in browser");
 
     // Return success response
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Signed in successfully",
       userId: user.uid,
       sessionCookieLength: sessionCookie.length
     });
   } catch (error) {
     console.error("❌ Signin error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Login failed";
+    const rawMessage = error instanceof Error ? error.message : "Login failed";
+    const errorMessage = rawMessage.includes("auth/multi-factor-auth-required")
+      ? "auth/multi-factor-auth-required"
+      : rawMessage;
     return NextResponse.json(
       { error: errorMessage },
       { status: 400 }
