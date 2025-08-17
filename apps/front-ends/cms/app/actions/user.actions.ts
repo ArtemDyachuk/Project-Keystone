@@ -260,6 +260,48 @@ export async function getAvailableRoles(): Promise<RoleDefinition[]> {
 }
 
 /**
+ * Update current user's own account details (firstName, lastName)
+ * This makes a server-side request to the backend to update the current user's profile
+ */
+export async function updateMyAccount(updateData: UpdateUserDetailsData): Promise<UserData> {
+  try {
+    // Get the session cookie
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      throw new Error("No session cookie found");
+    }
+
+    // Make request to backend API with session cookie to update current user
+    let apiBaseUrl = config.apiBaseUrl;
+    if (!apiBaseUrl || apiBaseUrl === "undefined") {
+      apiBaseUrl = "http://localhost:3001";
+    }
+
+    const response = await fetch(`${apiBaseUrl}/api/user/me`, {
+      method: "PUT",
+      headers: {
+        "Cookie": `fb_session=${sessionCookie}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to update account:", response.status);
+      throw new Error(`Failed to update account: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.user;
+  } catch (error) {
+    console.error("Failed to update account:", error);
+    throw error;
+  }
+}
+
+/**
  * Update user's role in the current tenant
  * This makes a server-side request to the backend which verifies permissions
  */

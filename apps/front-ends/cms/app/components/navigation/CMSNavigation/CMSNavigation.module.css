@@ -29,8 +29,22 @@
   gap: 1rem;
 }
 
-.userInfo {
+.accountLink {
   color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease-in-out;
+  font-size: 0.875rem;
+}
+
+.accountLink:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--text-primary);
+}
+
+.userInfo {
+  color: inherit;
   font-size: 0.875rem;
 }
 

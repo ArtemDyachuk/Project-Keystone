@@ -89,6 +89,71 @@ export class UserController {
   }
 
   /**
+   * Update current user's own account details (firstName, lastName)
+   * PUT /user/me
+   */
+  @Put('me')
+  @UseGuards(FirebaseSessionGuard)
+  async updateMyAccount(
+    @Body() updateUserDetailsDto: UpdateUserDetailsDto,
+    @Req() req: AuthenticatedRequest
+  ): Promise<{ message: string; user: UserData }> {
+    try {
+      const userInfo = req.user;
+      const { firstName, lastName } = updateUserDetailsDto;
+
+      // Get Firebase Admin Auth
+      const { getFirebaseAdminAuth } = await import("@keystone/auth");
+      const adminAuth = getFirebaseAdminAuth();
+
+      // Get current user's claims
+      const currentUser = await adminAuth.getUser(userInfo.uid);
+      const currentClaims = (currentUser.customClaims as FirebaseCustomClaims) || {};
+
+      // Update custom claims with new user details
+      const updatedClaims = {
+        ...currentClaims,
+      };
+
+      if (firstName !== undefined) {
+        updatedClaims.firstName = firstName;
+      }
+
+      if (lastName !== undefined) {
+        updatedClaims.lastName = lastName;
+      }
+
+      await adminAuth.setCustomUserClaims(userInfo.uid, updatedClaims);
+
+      // Get updated user data to return
+      const updatedUser = await adminAuth.getUser(userInfo.uid);
+      const updatedUserClaims = (updatedUser.customClaims as FirebaseCustomClaims) || {};
+
+      const userData: UserData = {
+        sub: updatedUser.uid,
+        email: updatedUser.email || undefined,
+        username: updatedUser.email || undefined,
+        email_verified: updatedUser.emailVerified || false,
+        firstName: updatedUserClaims.firstName || undefined,
+        lastName: updatedUserClaims.lastName || undefined,
+        tenantIds: updatedUserClaims.tenantIds || [],
+        selectedTenantId: updatedUserClaims.selectedTenantId,
+        tenantRoles: updatedUserClaims.tenantRoles || {},
+      };
+
+      console.log(`✅ Updated account details for user ${userInfo.uid}`);
+      
+      return {
+        message: "Account updated successfully",
+        user: userData,
+      };
+    } catch (error) {
+      console.error("Failed to update account:", error);
+      throw new Error(`Failed to update account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Update user's selected tenant in Firebase custom claims
    * PUT /user/selected-tenant
    */
@@ -237,9 +302,12 @@ export class UserController {
       let targetUser;
       try {
         targetUser = await adminAuth.getUser(userId);
-      } catch (firebaseError: any) {
-        if (firebaseError.errorInfo?.code === 'auth/user-not-found') {
-          throw new Error(`User with ID ${userId} not found. The user may have been deleted or the ID is invalid.`);
+      } catch (firebaseError: unknown) {
+        if (firebaseError && typeof firebaseError === 'object' && 'errorInfo' in firebaseError) {
+          const error = firebaseError as { errorInfo?: { code?: string } };
+          if (error.errorInfo?.code === 'auth/user-not-found') {
+            throw new Error(`User with ID ${userId} not found. The user may have been deleted or the ID is invalid.`);
+          }
         }
         throw firebaseError;
       }
