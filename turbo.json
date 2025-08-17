@@ -4,7 +4,7 @@
   "globalEnv": [
     "NODE_ENV",
     "MONGODB_URI",
-    "LOGTAIL_URL", 
+    "LOGTAIL_URL",
     "LOGTAIL_SOURCE_TOKEN",
     "AWS_REGION",
     "COGNITO_USER_POOL_ID",
@@ -14,7 +14,7 @@
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
     "FIREBASE_PROJECT_ID",
-    "FIREBASE_CLIENT_EMAIL", 
+    "FIREBASE_CLIENT_EMAIL",
     "FIREBASE_PRIVATE_KEY"
   ],
   "tasks": {
@@ -29,7 +29,7 @@
       ],
       "env": [
         "FIREBASE_PROJECT_ID",
-        "FIREBASE_CLIENT_EMAIL", 
+        "FIREBASE_CLIENT_EMAIL",
         "FIREBASE_PRIVATE_KEY"
       ]
     },
