@@ -1,16 +1,12 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
 import { Button } from "@keystone/ui";
 import styles from "./PublicNavigation.module.css";
-import type { UserData } from "@/app/actions/user.actions";
+import { getCurrentUser } from "@/app/actions/user.actions";
 
-interface PublicNavigationProps {
-  user: UserData | null;
-}
 
-export function PublicNavigation({ user }: PublicNavigationProps) {
+export async function PublicNavigation() {
+  const currentUser = await getCurrentUser();
 
   return (
     <nav className={styles.navbar}>
@@ -20,10 +16,10 @@ export function PublicNavigation({ user }: PublicNavigationProps) {
         </Link>
 
         <div className={styles.authSection}>
-          {user ? (
+          {currentUser ? (
             <div className={styles.userSection}>
               <span className={styles.welcome}>
-                Welcome, {user.firstName || user.email?.split("@")[0] || "User"}!
+                Welcome, {currentUser.firstName || currentUser.email?.split("@")[0] || "User"}!
               </span>
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">

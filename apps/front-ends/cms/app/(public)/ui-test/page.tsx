@@ -4,6 +4,8 @@ import styles from './page.module.css';
 import { Button, Card, Input } from "@keystone/ui";
 import { useState } from "react";
 
+// This page is a client component for UI testing
+
 export default function UITestPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -32,7 +34,7 @@ export default function UITestPage() {
         <h1 className={styles.title}>
           🎨 Shared UI Components Test
         </h1>
-        
+
         <div className={styles.grid}>
           {/* Buttons Demo */}
           <Card title="Buttons" subtitle="Different button variants and sizes">
@@ -100,14 +102,14 @@ export default function UITestPage() {
                   This is a default card with small padding.
                 </p>
               </Card>
-              
+
               <Card variant="outlined" padding="md">
                 <h4 className={styles.cardTitle}>Outlined Card</h4>
                 <p className={styles.cardDescription}>
                   This is an outlined card with medium padding.
                 </p>
               </Card>
-              
+
               <Card variant="elevated" padding="lg">
                 <h4 className={styles.cardTitle}>Elevated Card</h4>
                 <p className={styles.cardDescription}>
