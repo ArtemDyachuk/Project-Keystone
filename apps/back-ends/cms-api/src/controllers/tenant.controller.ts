@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req } from '@nestjs/common';
 import { TenantService, ITenant } from "@keystone/database";
 import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
+import { assignUserRole, ROLES } from "@keystone/auth";
 import type { Request } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
@@ -132,31 +133,9 @@ export class TenantController {
           // Assign owner/admin role inside tenant context
           await tenantAuth.setCustomUserClaims(tenantUser.uid, { role: "owner" });
 
-          // Also update project-level custom claims with MongoDB tenant ID list for global listing
-          const freshUser = await adminAuth.getUser(userInfo.uid);
-          const currentClaims = (freshUser.customClaims as Record<string, any>) || {};
-          const claimTenantIds: string[] = Array.isArray(currentClaims.tenantIds)
-            ? [...currentClaims.tenantIds]
-            : [];
-          const claimTenantRoles: Record<string, string> =
-            typeof currentClaims.tenantRoles === "object" && currentClaims.tenantRoles !== null
-              ? { ...currentClaims.tenantRoles }
-              : {};
-
-          // Use MongoDB tenant _id in global claims so we can fetch from MongoDB
+          // Use new RBAC system to assign tenant_owner role
           const mongoTenantId = tenant._id as string;
-          if (!claimTenantIds.includes(mongoTenantId)) {
-            claimTenantIds.push(mongoTenantId);
-          }
-          claimTenantRoles[mongoTenantId] = "owner";
-          const selectedTenantId = currentClaims.selectedTenantId || mongoTenantId;
-
-          await adminAuth.setCustomUserClaims(userInfo.uid, {
-            ...currentClaims,
-            tenantIds: claimTenantIds,
-            tenantRoles: claimTenantRoles,
-            selectedTenantId,
-          });
+          await assignUserRole(userInfo.uid, mongoTenantId, ROLES.TENANT_OWNER, "system");
         } catch (userAssignmentError) {
           console.error("❌ Failed to ensure creator/assign role in tenant:", userAssignmentError);
         }

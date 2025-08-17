@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantController } from '../controllers/tenant.controller';
 import { UserController } from '../controllers/user.controller';
+import { RolesController } from '../controllers/roles.controller';
 import { DatabaseModule } from '../database/database.module';
 import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
 
@@ -14,7 +15,7 @@ import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
     }),
     DatabaseModule
   ],
-  controllers: [AppController, TenantController, UserController],
+  controllers: [AppController, TenantController, UserController, RolesController],
   providers: [AppService, FirebaseSessionGuard],
 })
 export class AppModule { }

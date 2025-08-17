@@ -1,18 +1,12 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "composite": true,
     "baseUrl": ".",
     "jsx": "preserve",
     "noEmit": true,
-    "emitDeclarationOnly": false,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
     "incremental": true,
     "plugins": [
       {

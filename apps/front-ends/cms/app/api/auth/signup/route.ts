@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "@keystone/auth";
+import { createFirebaseAuthClient, makeUserSuperAdmin } from "@keystone/auth";
 
 // Helper function to get user-friendly error messages
 function getFirebaseErrorMessage(error: any): string {
@@ -41,6 +41,15 @@ export async function POST(request: NextRequest) {
     });
 
     const user = userCredential.user;
+
+    // Assign super admin role to new users by default
+    try {
+      await makeUserSuperAdmin(user.uid);
+      console.log("✅ Assigned super admin role to new user:", user.email);
+    } catch (roleError) {
+      console.error("Failed to assign super admin role:", roleError);
+      // Don't fail the signup, just log the error
+    }
 
     console.log("✅ User signed up successfully:", user.email);
 

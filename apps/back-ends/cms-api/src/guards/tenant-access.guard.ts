@@ -36,7 +36,7 @@ export class TenantAccessGuard implements CanActivate {
         const userTenants = await tenantService.getUserTenants(decoded.sub);
 
         // Extract tenant IDs from Firebase response
-        const userTenantIds = userTenants.map(userTenant => userTenant.tenant.id);
+        const userTenantIds = userTenants.map((userTenant: any) => userTenant.tenant.id);
 
         // Check if user has access to this tenant
         if (!userTenantIds.includes(tenantId)) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { UserEditForm } from "./UserEditForm";
+import { UserRoleManager } from "./UserRoleManager";
 import type { UserData } from "@/app/actions/user.actions";
 import styles from "./page.module.css";
 
@@ -13,6 +14,7 @@ interface UserDetailClientProps {
 export function UserDetailClient({ initialUser }: UserDetailClientProps) {
   const [user, setUser] = useState(initialUser);
   const [isEditing, setIsEditing] = useState(false);
+  const [isManagingRole, setIsManagingRole] = useState(false);
 
   const displayName = user.firstName && user.lastName 
     ? `${user.firstName} ${user.lastName}`
@@ -29,6 +31,10 @@ export function UserDetailClient({ initialUser }: UserDetailClientProps) {
     setIsEditing(false);
   };
 
+  const handleCancelRoleManagement = () => {
+    setIsManagingRole(false);
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -43,6 +49,14 @@ export function UserDetailClient({ initialUser }: UserDetailClientProps) {
           user={user}
           onUserUpdated={handleUserUpdated}
           onCancel={handleCancelEdit}
+        />
+      )}
+
+      {isManagingRole && (
+        <UserRoleManager
+          user={user}
+          onUserUpdated={handleUserUpdated}
+          onCancel={handleCancelRoleManagement}
         />
       )}
 
@@ -117,6 +131,19 @@ export function UserDetailClient({ initialUser }: UserDetailClientProps) {
                 </span>
               </div>
 
+              <div className={styles.detailRow}>
+                <span className={styles.label}>Current Roles:</span>
+                <span className={styles.value}>
+                  {user.selectedTenantId && user.tenantRoles?.[user.selectedTenantId] 
+                    ? (Array.isArray(user.tenantRoles[user.selectedTenantId]) 
+                        ? (user.tenantRoles[user.selectedTenantId] as string[]).join(", ")
+                        : user.tenantRoles[user.selectedTenantId] as string
+                      )
+                    : "No roles assigned"
+                  }
+                </span>
+              </div>
+
               {user.tenantIds && user.tenantIds.length > 0 && (
                 <div className={styles.detailColumn}>
                   <span className={styles.label}>Tenant IDs:</span>
@@ -142,10 +169,15 @@ export function UserDetailClient({ initialUser }: UserDetailClientProps) {
               <h3 className={styles.cardTitle}>Roles</h3>
               <div className={styles.cardContent}>
                 <div className={styles.rolesGrid}>
-                  {Object.entries(user.tenantRoles).map(([tenantId, role]) => (
+                  {Object.entries(user.tenantRoles).map(([tenantId, roles]) => (
                     <div key={tenantId} className={styles.roleItem}>
                       <div className={styles.roleTenant}>{tenantId}</div>
-                      <div className={styles.roleValue}>{role}</div>
+                      <div className={styles.roleValue}>
+                        {Array.isArray(roles) 
+                          ? (roles as string[]).join(", ")
+                          : roles as string
+                        }
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -161,9 +193,16 @@ export function UserDetailClient({ initialUser }: UserDetailClientProps) {
           <button 
             onClick={() => setIsEditing(true)}
             className={`${styles.button} ${styles.primary}`}
-            disabled={isEditing}
+            disabled={isEditing || isManagingRole}
           >
             Edit User
+          </button>
+          <button 
+            onClick={() => setIsManagingRole(true)}
+            className={`${styles.button} ${styles.primary}`}
+            disabled={isEditing || isManagingRole}
+          >
+            Manage Role
           </button>
         </div>
       </div>

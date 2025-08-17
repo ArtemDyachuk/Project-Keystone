@@ -37,6 +37,9 @@ export {
   createTenantManagementService,
 } from "./firebase/tenant-management";
 
+// RBAC System
+export * from "./rbac";
+
 // Types
 export interface FirebaseConfig {
   apiKey: string;

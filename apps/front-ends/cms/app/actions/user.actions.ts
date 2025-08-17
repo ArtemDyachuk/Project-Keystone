@@ -12,12 +12,24 @@ export interface UserData {
   lastName?: string;
   tenantIds?: string[];
   selectedTenantId?: string;
-  tenantRoles?: Record<string, string>;
+  tenantRoles?: Record<string, string | string[]>; // Support both single and multiple roles
 }
 
 export interface UpdateUserDetailsData {
   firstName?: string;
   lastName?: string;
+}
+
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  isSystemRole?: boolean;
+}
+
+export interface UpdateUserRoleData {
+  role: string;
 }
 
 /**
@@ -203,6 +215,88 @@ export async function updateUserDetails(userId: string, updateData: UpdateUserDe
     return result.user;
   } catch (error) {
     console.error("Failed to update user details:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get available roles for role assignment
+ * This makes a server-side request to the backend which checks permissions
+ */
+export async function getAvailableRoles(): Promise<RoleDefinition[]> {
+  try {
+    // Get the session cookie
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      throw new Error("No session cookie found");
+    }
+
+    // Make request to backend API with session cookie
+    let apiBaseUrl = config.apiBaseUrl;
+    if (!apiBaseUrl || apiBaseUrl === "undefined") {
+      apiBaseUrl = "http://localhost:3001";
+    }
+
+    const response = await fetch(`${apiBaseUrl}/api/roles`, {
+      method: "GET",
+      headers: {
+        "Cookie": `fb_session=${sessionCookie}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch available roles:", response.status);
+      throw new Error(`Failed to fetch available roles: ${response.status}`);
+    }
+
+    const roles = await response.json();
+    return roles;
+  } catch (error) {
+    console.error("Failed to get available roles:", error);
+    throw error;
+  }
+}
+
+/**
+ * Update user's role in the current tenant
+ * This makes a server-side request to the backend which verifies permissions
+ */
+export async function updateUserRole(userId: string, updateData: UpdateUserRoleData): Promise<UserData> {
+  try {
+    // Get the session cookie
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      throw new Error("No session cookie found");
+    }
+
+    // Make request to backend API with session cookie
+    let apiBaseUrl = config.apiBaseUrl;
+    if (!apiBaseUrl || apiBaseUrl === "undefined") {
+      apiBaseUrl = "http://localhost:3001";
+    }
+
+    const response = await fetch(`${apiBaseUrl}/api/roles/user/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Cookie": `fb_session=${sessionCookie}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to update user role:", response.status);
+      throw new Error(`Failed to update user role: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.user;
+  } catch (error) {
+    console.error("Failed to update user role:", error);
     throw error;
   }
 }

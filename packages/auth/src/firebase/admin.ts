@@ -178,7 +178,7 @@ export async function addTenantAccessToUser(
 ): Promise<void> {
   try {
     // Import the tenant management service
-    const { createTenantManagementService } = await import("@keystone/auth");
+    const { createTenantManagementService } = await import("./tenant-management");
     const tenantService = createTenantManagementService();
 
     // Add user to the tenant

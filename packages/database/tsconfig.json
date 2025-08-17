@@ -1,18 +1,12 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": false,
     "types": ["node"],
-    "lib": ["es2022", "dom"],
-    "target": "es2022",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "skipLibCheck": true,
-    "strict": true
+    "module": "commonjs",
+    "moduleResolution": "node"
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]

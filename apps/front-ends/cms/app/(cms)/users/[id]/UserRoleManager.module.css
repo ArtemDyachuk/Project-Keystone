@@ -1,0 +1,295 @@
+.roleManager {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary, #111827);
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+}
+
+.error {
+  background: var(--error-bg, #fef2f2);
+  border: 1px solid var(--error-border, #fecaca);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.error p {
+  margin: 0;
+  color: var(--error-text, #dc2626);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.currentRole {
+  background: var(--surface-secondary, #f8fafc);
+  border: 1px solid var(--border-light, #f1f5f9);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.currentRoleDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roleName {
+  font-weight: 600;
+  color: var(--primary-color, #3b82f6);
+  font-size: 1rem;
+}
+
+.roleDescription {
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.noRole {
+  color: var(--text-secondary, #6b7280);
+  font-style: italic;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+  font-size: 0.875rem;
+}
+
+.rolesGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.roleCard {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.roleCard:hover {
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.roleCheckbox {
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary-color, #3b82f6);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.roleInfo {
+  flex: 1;
+}
+
+.rolePermissions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light, #f1f5f9);
+}
+
+.rolePreview {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--primary-light, #dbeafe);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.previewHeader {
+  color: var(--primary-color, #3b82f6);
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.previewDescription {
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.previewPermissions {
+  border-top: 1px solid var(--border-light, #f1f5f9);
+  padding-top: 12px;
+}
+
+.permissionsLabel {
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+  font-size: 0.875rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.permissionsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permission {
+  background: var(--surface-secondary, #f8fafc);
+  color: var(--text-secondary, #6b7280);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light, #f1f5f9);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-width: 100px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cancel {
+  background: var(--surface-secondary, #f8fafc);
+  color: var(--text-secondary, #6b7280);
+  border-color: var(--border-color, #e5e7eb);
+}
+
+.cancel:hover:not(:disabled) {
+  background: var(--surface, #ffffff);
+  color: var(--text-primary, #111827);
+  border-color: var(--border-color, #d1d5db);
+}
+
+.save {
+  background: var(--primary-color, #3b82f6);
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.save:hover:not(:disabled) {
+  background: var(--primary-dark, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.save:disabled {
+  background: var(--surface-secondary, #f8fafc);
+  color: var(--text-secondary, #6b7280);
+  box-shadow: none;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .roleManager {
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --surface: #1e293b;
+    --surface-secondary: #0f172a;
+    --border-color: #334155;
+    --border-light: #1e293b;
+    --primary-color: #60a5fa;
+    --primary-dark: #3b82f6;
+    --primary-light: #1e3a8a;
+    --error-bg: #1f2937;
+    --error-border: #dc2626;
+    --error-text: #ef4444;
+  }
+
+  .roleManager {
+    background: var(--surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .currentRole,
+  .rolePreview,
+  .roleCard {
+    background: var(--surface-secondary);
+  }
+
+  .rolePreview {
+    border-color: var(--primary-light);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .roleManager {
+    padding: 20px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  .permissionsList {
+    flex-direction: column;
+  }
+
+  .currentRoleDisplay {
+    gap: 4px;
+  }
+}

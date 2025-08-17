@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "@keystone/ui";
 import styles from "./PublicNavigation.module.css";
-import { UserData } from "@/lib/auth/utils";
+import type { UserData } from "@/app/actions/user.actions";
 
 interface PublicNavigationProps {
   user: UserData | null;

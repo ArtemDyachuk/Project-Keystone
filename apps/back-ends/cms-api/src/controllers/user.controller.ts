@@ -1,5 +1,6 @@
 import { Controller, Get, Put, UseGuards, Req, Body, Param } from '@nestjs/common';
 import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
+// RBAC endpoints moved to RolesController; keep only dynamic admin imports where needed
 import type { Request } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
@@ -17,7 +18,7 @@ export interface UserData {
   lastName?: string;
   tenantIds?: string[];
   selectedTenantId?: string;
-  tenantRoles?: Record<string, string>;
+  tenantRoles?: Record<string, string | string[]>; // Support both single and multiple roles
 }
 
 // Firebase Custom Claims interface
@@ -40,6 +41,9 @@ export class UpdateUserDetailsDto {
   firstName?: string;
   lastName?: string;
 }
+
+// DTO for updating user role
+// Roles DTO moved to RolesController
 
 @Controller('user')
 export class UserController {
@@ -195,6 +199,8 @@ export class UserController {
     }
   }
 
+  
+
   /**
    * Get user by ID (must be in same tenant)
    * GET /user/:id
@@ -227,8 +233,17 @@ export class UserController {
         throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
       }
 
-      // Get the target user
-      const targetUser = await adminAuth.getUser(userId);
+      // Get the target user with better error handling
+      let targetUser;
+      try {
+        targetUser = await adminAuth.getUser(userId);
+      } catch (firebaseError: any) {
+        if (firebaseError.errorInfo?.code === 'auth/user-not-found') {
+          throw new Error(`User with ID ${userId} not found. The user may have been deleted or the ID is invalid.`);
+        }
+        throw firebaseError;
+      }
+
       const targetUserClaims = (targetUser.customClaims as FirebaseCustomClaims) || {};
       const targetUserTenantIds: string[] = Array.isArray(targetUserClaims.tenantIds) ? targetUserClaims.tenantIds : [];
 
@@ -344,4 +359,5 @@ export class UserController {
       throw new Error(`Failed to update user details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
 }
