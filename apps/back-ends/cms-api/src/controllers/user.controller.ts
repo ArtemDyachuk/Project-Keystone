@@ -35,6 +35,12 @@ export class UpdateSelectedTenantDto {
   selectedTenantId!: string; // Using definite assignment assertion since this will be validated
 }
 
+// DTO for updating user details
+export class UpdateUserDetailsDto {
+  firstName?: string;
+  lastName?: string;
+}
+
 @Controller('user')
 export class UserController {
   constructor() { }
@@ -249,6 +255,93 @@ export class UserController {
     } catch (error) {
       console.error("Failed to get user by ID:", error);
       throw new Error(`Failed to get user by ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Update user details (firstName, lastName) for a user in the same tenant
+   * PUT /user/:id
+   */
+  @Put(':id')
+  @UseGuards(FirebaseSessionGuard)
+  async updateUserDetails(
+    @Param('id') userId: string,
+    @Body() updateUserDetailsDto: UpdateUserDetailsDto,
+    @Req() req: AuthenticatedRequest
+  ): Promise<{ message: string; user: UserData }> {
+    try {
+      const userInfo = req.user;
+      const { firstName, lastName } = updateUserDetailsDto;
+
+      // Get Firebase Admin Auth
+      const { getFirebaseAdminAuth } = await import("@keystone/auth");
+      const adminAuth = getFirebaseAdminAuth();
+
+      // Get current user's claims to determine selected tenant
+      const freshUser = await adminAuth.getUser(userInfo.uid);
+      const currentClaims = (freshUser.customClaims as FirebaseCustomClaims) || {};
+      const selectedTenantId = currentClaims.selectedTenantId;
+
+      if (!selectedTenantId) {
+        throw new Error("No tenant selected. Please select a tenant first.");
+      }
+
+      // Verify current user has access to the selected tenant
+      const tenantIds: string[] = Array.isArray(currentClaims.tenantIds) ? currentClaims.tenantIds : [];
+      if (!tenantIds.includes(selectedTenantId)) {
+        throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
+      }
+
+      // Get the target user
+      const targetUser = await adminAuth.getUser(userId);
+      const targetUserClaims = (targetUser.customClaims as FirebaseCustomClaims) || {};
+      const targetUserTenantIds: string[] = Array.isArray(targetUserClaims.tenantIds) ? targetUserClaims.tenantIds : [];
+
+      // Verify the target user has access to the same tenant
+      if (!targetUserTenantIds.includes(selectedTenantId)) {
+        throw new Error(`User ${userId} does not have access to the current tenant: ${selectedTenantId}`);
+      }
+
+      // Update custom claims with new user details
+      const updatedClaims = {
+        ...targetUserClaims,
+      };
+
+      if (firstName !== undefined) {
+        updatedClaims.firstName = firstName;
+      }
+
+      if (lastName !== undefined) {
+        updatedClaims.lastName = lastName;
+      }
+
+      await adminAuth.setCustomUserClaims(userId, updatedClaims);
+
+      // Get updated user data to return
+      const updatedUser = await adminAuth.getUser(userId);
+      const updatedUserClaims = (updatedUser.customClaims as FirebaseCustomClaims) || {};
+
+      const userData: UserData = {
+        sub: updatedUser.uid,
+        email: updatedUser.email || undefined,
+        username: updatedUser.email || undefined,
+        email_verified: updatedUser.emailVerified || false,
+        firstName: updatedUserClaims.firstName || undefined,
+        lastName: updatedUserClaims.lastName || undefined,
+        tenantIds: targetUserTenantIds,
+        selectedTenantId: updatedUserClaims.selectedTenantId,
+        tenantRoles: updatedUserClaims.tenantRoles || {},
+      };
+
+      console.log(`✅ Updated user ${userId} details for tenant ${selectedTenantId}`);
+      
+      return {
+        message: "User details updated successfully",
+        user: userData,
+      };
+    } catch (error) {
+      console.error("Failed to update user details:", error);
+      throw new Error(`Failed to update user details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

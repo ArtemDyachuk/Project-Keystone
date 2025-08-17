@@ -15,6 +15,11 @@ export interface UserData {
   tenantRoles?: Record<string, string>;
 }
 
+export interface UpdateUserDetailsData {
+  firstName?: string;
+  lastName?: string;
+}
+
 /**
  * Get current user data from backend API
  * This makes a server-side request to the backend which extracts data from the session cookie
@@ -156,6 +161,48 @@ export async function getTenantUsers(): Promise<UserData[]> {
     return tenantUsers;
   } catch (error) {
     console.error("Failed to get tenant users:", error);
+    throw error;
+  }
+}
+
+/**
+ * Update user details (firstName, lastName) for a specific user
+ * This makes a server-side request to the backend which verifies tenant access
+ */
+export async function updateUserDetails(userId: string, updateData: UpdateUserDetailsData): Promise<UserData> {
+  try {
+    // Get the session cookie
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("fb_session")?.value;
+
+    if (!sessionCookie) {
+      throw new Error("No session cookie found");
+    }
+
+    // Make request to backend API with session cookie
+    let apiBaseUrl = config.apiBaseUrl;
+    if (!apiBaseUrl || apiBaseUrl === "undefined") {
+      apiBaseUrl = "http://localhost:3001";
+    }
+
+    const response = await fetch(`${apiBaseUrl}/api/user/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Cookie": `fb_session=${sessionCookie}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to update user details:", response.status);
+      throw new Error(`Failed to update user details: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.user;
+  } catch (error) {
+    console.error("Failed to update user details:", error);
     throw error;
   }
 }
