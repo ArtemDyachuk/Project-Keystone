@@ -1,14 +1,17 @@
-import styles from "./dashboard.module.css";
+"use client";
 
-// Force dynamic rendering since layout uses cookies
-export const dynamic = 'force-dynamic';
+import styles from "./dashboard.module.css";
 
 export default function DashboardPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Dashboard</h1>
-        <p className={styles.subtitle}>Welcome to your CMS dashboard</p>
+        <div className={styles.headerContent}>
+          <div>
+            <h1 className={styles.title}>Dashboard</h1>
+            <p className={styles.subtitle}>Welcome to your CMS dashboard</p>
+          </div>
+        </div>
       </div>
 
       <div className={styles.grid}>
