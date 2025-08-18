@@ -1,5 +1,38 @@
 /* Form-specific styles - layout handled by AuthForm component */
 
+.stytchSection {
+  margin-bottom: 1.5rem;
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.divider span {
+  background: #1f2937;
+  padding: 0 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.stytchButton {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;

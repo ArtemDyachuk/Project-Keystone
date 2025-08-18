@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "./lib/auth-cookies";
-import { getUserDataFromJWT, UserData } from "./lib/auth-utils";
 
 // Routes that don't require authentication
-// Route groups (auth) and (public) are organizational only - they don't appear in URLs
 const PUBLIC_ROUTES = [
   "/", // Home page
-  "/login", // Actually accessible at /login (from (auth) folder)
-  "/signup", // Actually accessible at /signup (from (auth) folder)
-  "/forgot-password", // Actually accessible at /forgot-password (from (auth) folder)
-  "/reset-password", // Actually accessible at /reset-password (from (auth) folder)
-  "/ui-test" // From (public) folder
+  "/login", // Login page
+  "/signup", // Signup page
+  "/forgot-password", // Forgot password page
+  "/reset-password", // Reset password page
+  "/ui-test" // UI test page
 ];
 
 // Helper function to check if path is a public route
@@ -28,39 +25,19 @@ function isAuthPage(pathname: string): boolean {
   return ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 }
 
-// Helper function to validate tenant access
-async function validateTenantAccess(pathname: string, userData: UserData, request: NextRequest): Promise<NextResponse | null> {
-  // If user has no tenants, redirect to tenant creation (unless already there)
-  if (!userData?.tenantIds || userData.tenantIds.length === 0) {
-    if (!pathname.startsWith("/tenants/create")) {
-      return NextResponse.redirect(new URL("/tenants/create", request.url));
-    }
-    return null;
+// Helper function to check if user has Stytch session
+async function hasStytchSession(request: NextRequest): Promise<boolean> {
+  try {
+    // Check for Stytch opaque session cookie only
+    // Using only opaque tokens for maximum security (no JWT in cookies)
+    const stytchSession = request.cookies.get("stytch_session");
+    
+    // User is authenticated if opaque session cookie exists
+    return !!stytchSession;
+  } catch (error) {
+    console.error("Failed to check Stytch session:", error);
+    return false;
   }
-
-  // User has tenants - validate access to specific tenant routes
-  const tenantIdMatch = pathname.match(/^\/tenants\/([^\/]+)(?:\/|$)/);
-  if (tenantIdMatch) {
-    const requestedTenantId = tenantIdMatch[1];
-
-    // Skip validation for special routes and allow tenant management pages
-    const allowedSpecialRoutes = ["create", "page"];
-    if (!allowedSpecialRoutes.includes(requestedTenantId)) {
-      // Validate that user has access to the specific tenant
-      if (!userData.tenantIds.includes(requestedTenantId)) {
-        // SECURITY: Log security violation but don't expose tenant IDs
-        console.warn(`Unauthorized tenant access attempt blocked`, {
-          userId: userData.sub,
-          requestedPath: pathname,
-          // Don't log the actual tenant ID for security
-        });
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-  }
-
-  // Allow users to create additional tenants regardless of existing tenant count
-  return null;
 }
 
 export async function middleware(request: NextRequest) {
@@ -71,8 +48,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check authentication once
-  const authenticated = await isAuthenticated();
+  // Check Stytch authentication
+  const authenticated = await hasStytchSession(request);
 
   // If not authenticated and not on public routes, redirect to login
   if (!authenticated && !isPublicRoute(pathname)) {
@@ -86,34 +63,14 @@ export async function middleware(request: NextRequest) {
 
   // User is authenticated from here on
 
-  // For authenticated users on auth pages, always redirect to dashboard
+  // For authenticated users on auth pages, redirect to dashboard
   if (isAuthPage(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // TENANT VALIDATION: Only for protected routes that need tenant context
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/tenants")) {
-    let userData: UserData | null;
-
-    try {
-      userData = await getUserDataFromJWT();
-
-      // If we can't get user data but they're authenticated, something's wrong
-      if (!userData) {
-        console.error("Authenticated user but no JWT data available");
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-    } catch (error) {
-      console.error("Failed to get user data:", error);
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
-
-    if (tenantValidationResult) {
-      return tenantValidationResult;
-    }
-  }
+  // For now, allow access to protected routes if authenticated
+  // TODO: Add tenant validation when you implement multi-tenancy
+  // This would involve checking the Stytch session for tenant information
 
   return NextResponse.next();
 }

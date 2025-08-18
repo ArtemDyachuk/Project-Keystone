@@ -3,14 +3,42 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@keystone/ui";
+import { useStytchMember, useStytchB2BClient } from "@stytch/nextjs/b2b";
+import { useRouter } from "next/navigation";
 import styles from "./PublicNavigation.module.css";
-import { UserData } from "@/lib/auth-utils";
 
-interface PublicNavigationProps {
-  user: UserData | null;
-}
+export function PublicNavigation() {
+  const { member } = useStytchMember();
+  const stytch = useStytchB2BClient();
+  const router = useRouter();
 
-export function PublicNavigation({ user }: PublicNavigationProps) {
+  const handleLogout = async () => {
+    try {
+      await stytch.session.revoke();
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  // Extract user display name safely
+  const getUserDisplayName = () => {
+    if (!member) return "User";
+    
+    // Try to get name from member object (type-safe approach)
+    try {
+      // Access member properties safely using any type
+      const memberAny = member as any;
+      const firstName = memberAny?.name?.first_name || memberAny?.name?.firstName;
+      const email = memberAny?.emails?.[0]?.email || memberAny?.email;
+      
+      if (firstName) return firstName;
+      if (email) return email.split("@")[0];
+      return "User";
+    } catch {
+      return "User";
+    }
+  };
 
   return (
     <nav className={styles.navbar}>
@@ -20,19 +48,23 @@ export function PublicNavigation({ user }: PublicNavigationProps) {
         </Link>
 
         <div className={styles.authSection}>
-          {user ? (
+          {member ? (
             <div className={styles.userSection}>
               <span className={styles.welcome}>
-                Welcome, {user.firstName || user.email?.split("@")[0] || "User"}!
+                Welcome, {getUserDisplayName()}!
               </span>
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">
                   Dashboard
                 </Button>
               </Link>
-              <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
-                <Button type="submit" variant="outline" size="sm">Sign Out</Button>
-              </form>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+              >
+                Sign Out
+              </Button>
             </div>
           ) : (
             <div className={styles.guestSection}>

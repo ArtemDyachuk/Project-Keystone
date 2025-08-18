@@ -2,47 +2,31 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@keystone/ui";
 import { Input } from "@keystone/ui";
+import { useStytchB2BClient } from "@stytch/nextjs/b2b";
 import styles from "./styles.module.css";
 import { AuthForm } from "../AuthForm";
 
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [confirmationCode, setConfirmationCode] = useState("");
+  const router = useRouter();
+  const stytch = useStytchB2BClient();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get token from URL parameters and validate it
-    const token = searchParams.get("token");
-    const emailParam = searchParams.get("email");
+    // Get token from URL parameters
+    const tokenParam = searchParams.get("token");
 
-    if (token) {
-      // Validate JWT token and extract email
-      fetch("/api/auth/validate-reset-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.email) {
-            setEmail(data.email);
-          } else {
-            setError("Invalid or expired reset link. Please request a new one.");
-          }
-        })
-        .catch(() => {
-          setError("Invalid reset link. Please request a new one.");
-        });
-    } else if (emailParam) {
-      setEmail(emailParam);
+    if (tokenParam) {
+      setToken(tokenParam);
+    } else {
+      setError("No reset token found. Please request a new password reset link.");
     }
   }, [searchParams]);
 
@@ -64,50 +48,51 @@ export function ResetPasswordForm() {
       return;
     }
 
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_.])[A-Za-z\d@$!%*?&_.]/.test(newPassword)) {
-      setError("Password must contain uppercase, lowercase, number, and special character");
+    if (!token) {
+      setError("No reset token found. Please request a new password reset link.");
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/auth/confirm-reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          confirmationCode,
-          newPassword,
-        }),
+      // Use Stytch B2B SDK for Organization flow password setup
+      // This works for both password reset and initial password setup
+      console.log("Processing Organization flow token:", { token: token.substring(0, 20) + "..." });
+      
+      const response = await stytch.passwords.resetByEmail({
+        password_reset_token: token, // The token from the email link
+        password: newPassword,
+        session_duration_minutes: 60, // Session duration after password setup
       });
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error);
-      }
-
-      setSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reset password");
+      console.log("Password reset successful:", response);
+      
+      // User is now authenticated, redirect to dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("Password reset failed:", err);
+      setError(err?.message || "Failed to reset password. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
+
+
+  if (!token) {
     return (
-      <AuthForm title="Password Reset Complete!" subtitle="Your password has been successfully updated.">
-        <div className={styles.successContent}>
-          <div className={styles.successIcon}>🎉</div>
+      <AuthForm title="Invalid Reset Link" subtitle="This password reset link is invalid or has expired.">
+        <div className={styles.errorContent}>
+          <div className={styles.errorIcon}>⚠️</div>
           <div className={styles.instructions}>
-            <p>You can now sign in with your new password.</p>
+            <p>Please request a new password reset link.</p>
           </div>
           <div className={styles.links}>
-            <Link href="/login" className={styles.primaryLink}>
-              Go to Login
+            <Link href="/forgot-password" className={styles.primaryLink}>
+              Request New Reset Link
+            </Link>
+            <Link href="/login" className={styles.link}>
+              ← Back to login
             </Link>
           </div>
         </div>
@@ -116,101 +101,76 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <AuthForm title="Reset Your Password" subtitle="Enter the verification code from your email and choose a new password.">
+    <AuthForm title="Set Your Password" subtitle="Complete your account setup by choosing a password.">
       <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.field}>
-            <label htmlFor="email">Email Address</label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="confirmationCode">Verification Code</label>
-            <Input
-              id="confirmationCode"
-              type="text"
-              value={confirmationCode}
-              onChange={(e) => setConfirmationCode(e.target.value)}
-              placeholder="Enter 6-digit code from email"
-              maxLength={6}
-              required
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="newPassword">New Password</label>
-            <Input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password"
-              required
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="confirmPassword">Confirm New Password</label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-              required
-            />
-          </div>
-
-          <div className={styles.passwordRequirements}>
-            <p className={styles.requirementsTitle}>Password requirements:</p>
-            <ul className={styles.requirementsList}>
-              <li className={newPassword.length >= 8 ? styles.valid : ""}>
-                At least 8 characters
-              </li>
-              <li className={/[A-Z]/.test(newPassword) ? styles.valid : ""}>
-                One uppercase letter
-              </li>
-              <li className={/[a-z]/.test(newPassword) ? styles.valid : ""}>
-                One lowercase letter
-              </li>
-              <li className={/\d/.test(newPassword) ? styles.valid : ""}>
-                One number
-              </li>
-              <li className={/[@$!%*?&_.]/.test(newPassword) ? styles.valid : ""}>
-                One special character (@$!%*?&_.)
-              </li>
-            </ul>
-          </div>
-
-          {error && (
-            <div className={styles.error}>
-              ❌ {error}
-            </div>
-          )}
-
-          <Button type="submit" disabled={loading} className={styles.submitButton}>
-            {loading ? "Resetting..." : "Reset Password"}
-          </Button>
-        </form>
-
-        <div className={styles.links}>
-          <p>
-            <Link href="/forgot-password" className={styles.link}>
-              Didn't receive the code? Send new one
-            </Link>
-          </p>
-          <p>
-            <Link href="/login" className={styles.link}>
-              ← Back to login
-            </Link>
-          </p>
+        <div className={styles.field}>
+          <label htmlFor="newPassword">New Password</label>
+          <Input
+            id="newPassword"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+            required
+          />
         </div>
+
+        <div className={styles.field}>
+          <label htmlFor="confirmPassword">Confirm New Password</label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+            required
+          />
+        </div>
+
+        <div className={styles.passwordRequirements}>
+          <p className={styles.requirementsTitle}>Password requirements:</p>
+          <ul className={styles.requirementsList}>
+            <li className={newPassword.length >= 8 ? styles.valid : ""}>
+              At least 8 characters
+            </li>
+            <li className={/[A-Z]/.test(newPassword) ? styles.valid : ""}>
+              One uppercase letter
+            </li>
+            <li className={/[a-z]/.test(newPassword) ? styles.valid : ""}>
+              One lowercase letter
+            </li>
+            <li className={/\d/.test(newPassword) ? styles.valid : ""}>
+              One number
+            </li>
+            <li className={/[@$!%*?&_.]/.test(newPassword) ? styles.valid : ""}>
+              One special character (@$!%*?&_.)
+            </li>
+          </ul>
+        </div>
+
+        {error && (
+          <div className={styles.error}>
+            ❌ {error}
+          </div>
+        )}
+
+        <Button type="submit" disabled={loading} className={styles.submitButton}>
+          {loading ? "Setting Password..." : "Set New Password"}
+        </Button>
+      </form>
+
+      <div className={styles.links}>
+        <p>
+          <Link href="/forgot-password" className={styles.link}>
+            Need a new reset link?
+          </Link>
+        </p>
+        <p>
+          <Link href="/login" className={styles.link}>
+            ← Back to login
+          </Link>
+        </p>
+      </div>
     </AuthForm>
   );
 }

@@ -1,5 +1,5 @@
-import { PublicNavigation } from '../components/navigation';
-import { getUserDataFromJWT } from '@/lib/auth-utils';
+// import { PublicNavigation } from '../components/navigation';
+// import { getUserDataFromJWT } from '@/lib/auth-utils';
 
 export default async function PublicLayout({
   children,
@@ -7,11 +7,11 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   // Fetch user data server-side
-  const userData = await getUserDataFromJWT();
+  // const userData = await getUserDataFromJWT();
 
   return (
     <>
-      <PublicNavigation user={userData} />
+      {/* <PublicNavigation user={userData} /> */}
       {children}
     </>
   );

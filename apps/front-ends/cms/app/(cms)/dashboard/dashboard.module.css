@@ -6,6 +6,17 @@
   margin-bottom: 2rem;
 }
 
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.logoutButton {
+  flex-shrink: 0;
+}
+
 .title {
   font-size: 2rem;
   font-weight: 700;
