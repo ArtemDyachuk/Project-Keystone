@@ -1,5 +1,7 @@
-import { SignupForm } from "../../components/authentication";
+"use client";
+
+import { ServerAuthForm } from "../../components/authentication/ServerAuthForm";
 
 export default function SignupPage() {
-  return <SignupForm />;
+  return <ServerAuthForm mode="signup" />;
 }

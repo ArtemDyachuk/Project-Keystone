@@ -23,7 +23,7 @@ export function CMSNavigation({ className, userData, selectedTenant, userTenants
           <span className={styles.userInfo}>
             {userData?.firstName || ""}
           </span>
-          <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
+          <form action={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/signout`} method="POST" style={{ display: "inline" }}>
             <button type="submit" className={styles.logoutButton}>
               Logout
             </button>

@@ -30,7 +30,7 @@ export function PublicNavigation({ user }: PublicNavigationProps) {
                   Dashboard
                 </Button>
               </Link>
-              <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
+              <form action={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/signout`} method="POST" style={{ display: "inline" }}>
                 <Button type="submit" variant="outline" size="sm">Sign Out</Button>
               </form>
             </div>

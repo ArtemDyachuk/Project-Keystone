@@ -16,7 +16,7 @@ async function bootstrap() {
   // Basic security headers
   app.use(helmet());
 
-  // Simple CORS for Render.com backend
+  // CORS for frontend communication
   const isDev = process.env.NODE_ENV !== 'production';
   
   app.enableCors({
