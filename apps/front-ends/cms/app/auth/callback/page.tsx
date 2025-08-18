@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
 import { LoginForm } from "../../components/authentication";
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStytchMemberSession } from '@stytch/nextjs/b2b';
 
-export default function Index() {
+export default function AuthenticatePage() {
   const { session, isInitialized } = useStytchMemberSession();
   const router = useRouter();
 

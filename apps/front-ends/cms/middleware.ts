@@ -33,7 +33,7 @@ async function validateTenantAccess(pathname: string, userData: UserData, reques
   // If user has no tenants, redirect to tenant creation (unless already there)
   if (!userData?.tenantIds || userData.tenantIds.length === 0) {
     if (!pathname.startsWith("/tenants/create")) {
-      return NextResponse.redirect(new URL("/tenants/create", request.url));
+      // return NextResponse.redirect(new URL("/tenants/create", request.url));
     }
     return null;
   }
@@ -54,7 +54,7 @@ async function validateTenantAccess(pathname: string, userData: UserData, reques
           requestedPath: pathname,
           // Don't log the actual tenant ID for security
         });
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        // return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
   }
@@ -76,7 +76,7 @@ export async function middleware(request: NextRequest) {
 
   // If not authenticated and not on public routes, redirect to login
   if (!authenticated && !isPublicRoute(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // If not authenticated, allow public routes
@@ -88,7 +88,7 @@ export async function middleware(request: NextRequest) {
 
   // For authenticated users on auth pages, always redirect to dashboard
   if (isAuthPage(pathname)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // TENANT VALIDATION: Only for protected routes that need tenant context
@@ -101,18 +101,18 @@ export async function middleware(request: NextRequest) {
       // If we can't get user data but they're authenticated, something's wrong
       if (!userData) {
         console.error("Authenticated user but no JWT data available");
-        return NextResponse.redirect(new URL("/login", request.url));
+        // return NextResponse.redirect(new URL("/login", request.url));
       }
     } catch (error) {
       console.error("Failed to get user data:", error);
-      return NextResponse.redirect(new URL("/login", request.url));
+      // return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
+    // const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
 
-    if (tenantValidationResult) {
-      return tenantValidationResult;
-    }
+    // if (tenantValidationResult) {
+    //   return tenantValidationResult;
+    // }
   }
 
   return NextResponse.next();

@@ -166,7 +166,16 @@ export async function signOutUser(): Promise<boolean> {
       method: "POST",
     });
 
-    return response.ok;
+    if (response.ok) {
+      // The API will handle the redirect, but if we're calling this from client-side
+      // and want to ensure immediate redirect, we can do it here too
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
+      return true;
+    }
+    
+    return false;
   } catch {
     return false;
   }

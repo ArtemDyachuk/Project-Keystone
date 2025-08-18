@@ -16,6 +16,8 @@
   "private": true,
   "packageManager": "npm@10.9.3",
   "dependencies": {
+    "@stytch/nextjs": "^21.8.0",
+    "@stytch/vanilla-js": "^5.31.1",
     "dotenv": "^17.2.1",
     "jose": "^6.0.12",
     "ts-node": "^10.9.2",
