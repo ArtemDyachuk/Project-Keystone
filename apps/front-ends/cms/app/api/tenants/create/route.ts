@@ -18,12 +18,15 @@ export async function POST(request: NextRequest) {
 
     console.log("🔄 Creating tenant via backend API:", name);
 
-    // Forward the request to the backend API with the session cookie
+    // Forward the request to the backend API with all session cookies
+    const allCookies = request.cookies.getAll();
+    const cookieHeader = allCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+
     const response = await fetch(`${config.apiBaseUrl}/api/tenants`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Cookie": `fb_session=${sessionCookie}`, // Pass session cookie to backend
+        "Cookie": cookieHeader, // Pass all cookies including fb_session and sid
       },
       body: JSON.stringify({ name: name.trim() }),
     });

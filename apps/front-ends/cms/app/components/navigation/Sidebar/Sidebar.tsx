@@ -15,6 +15,7 @@ const navigationItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/tenants", label: "Tenants", icon: "🏢" },
   { href: "/users", label: "Users", icon: "👥" },
+  { href: "/system/health", label: "Health", icon: "🔄" },
 ];
 
 export async function Sidebar({ className }: SidebarProps) {

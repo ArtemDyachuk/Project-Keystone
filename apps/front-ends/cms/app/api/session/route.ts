@@ -36,8 +36,6 @@ export async function POST(req: NextRequest) {
          // domain: ".example.com", // uncomment if using subdomains
       });
 
-      console.log("✅ Session cookie set in browser");
-
       return NextResponse.json({
          ok: true,
          message: "Session created successfully"

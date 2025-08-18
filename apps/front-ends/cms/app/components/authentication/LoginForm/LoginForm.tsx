@@ -10,9 +10,10 @@ import { MfaTotpModal } from "./MfaTotpModal";
 
 interface LoginFormProps {
   redirectUrl: string;
+  gipTenantId?: string;
 }
 
-export function LoginForm({ redirectUrl }: LoginFormProps) {
+export function LoginForm({ redirectUrl, gipTenantId }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +32,11 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          email, 
+          password,
+          gipTenantId // Pass the GIP tenant ID if provided
+        }),
       });
 
       if (response.ok) {
@@ -63,7 +68,23 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
 
   return (
     <>
-      <AuthForm title="Sign In" subtitle="Welcome back to Keystone CMS">
+      <AuthForm 
+        title={gipTenantId ? "🔐 Organization Sign In" : "Sign In"} 
+        subtitle={gipTenantId 
+          ? "Please sign in to access your organization workspace." 
+          : "Welcome back to Keystone CMS"
+        }
+      >
+        {gipTenantId && (
+          <div className={styles.tenantNotice}>
+            <div className={styles.tenantIcon}>🏢</div>
+            <div>
+              <div className={styles.tenantLabel}>Organization Context:</div>
+              <div className={styles.tenantId}>{gipTenantId}</div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
             <label htmlFor="email">Email</label>

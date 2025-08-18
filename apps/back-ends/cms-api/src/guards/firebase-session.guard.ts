@@ -10,6 +10,7 @@ import type { DecodedIdToken } from "firebase-admin/auth";
 // Extend the Request interface locally
 interface AuthenticatedRequest extends Request {
   user?: DecodedIdToken;
+  firebase?: { uid: string; tenant?: string };
 }
 
 @Injectable()
@@ -51,6 +52,9 @@ export class FirebaseSessionGuard implements CanActivate {
 
       // Attach user info to request for use in controllers
       req.user = decoded as DecodedIdToken;
+      // Expose firebase tenant context for downstream guards
+      const firebaseTenant = (decoded as any).firebase?.tenant as string | undefined;
+      req.firebase = { uid: decoded.uid, tenant: firebaseTenant };
 
       return true;
     } catch (error) {

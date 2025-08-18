@@ -6,7 +6,7 @@ import { connectToDatabase, isConnectedToDatabase } from "@keystone/database";
 export async function initializeDatabase() {
   try {
     await connectToDatabase();
-    console.log("✅ CMS Frontend: Database connection established");
+    // console.info("✅ CMS Frontend: Database connection established");
   } catch (error) {
     console.error("❌ CMS Frontend: Failed to connect to database", error);
     throw error;

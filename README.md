@@ -64,6 +64,7 @@ Project-Keystone/
 - Node.js 18+
 - npm or yarn
 - MongoDB Atlas account
+- Docker (for Redis, or install Redis locally)
 
 ### Installation
 
@@ -77,25 +78,45 @@ npm install
 
 # Set up environment variables
 cp .env.example .env
-# Edit .env with your MongoDB URI
+# Edit .env with required variables (see below)
+```
+
+### Required Environment Variables
+
+```bash
+# Database & Authentication (existing)
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+NEXT_PUBLIC_API_URL=http://localhost:3001
+
+# Redis Session Management (new)
+REDIS_URL=redis://localhost:6379
+SESSION_COOKIE_NAME=sid
+SESSION_TTL_SECONDS=86400
+
+# Security Configuration (new)
+COOKIE_DOMAIN=localhost  # Optional, use .yourdomain.com in prod
+NODE_ENV=development     # Set to 'production' in prod
+CSRF_SECRET=your-32-char-secret-here  # Required for session-bound CSRF tokens
 ```
 
 ### Development
 
 ```bash
-# Start all services
+# Start everything (auto-starts Redis + all services)
 npm run dev
 
-# Start individual services
+# This automatically:
+# 1. Starts Redis container if needed (Docker)
+# 2. Prints "Redis ready" when healthy  
+# 3. Starts Next.js frontend and NestJS API
+# 4. If Docker unavailable, shows install hint but continues
+
+# Individual services
 npm run dev:cms        # Frontend only
 npm run dev:cms-api    # Backend only
 
 # Build all services
 npm run build
-
-# Build individual services
-npm run build:cms      # Frontend only
-npm run build:cms-api  # Backend only
 ```
 
 ## 🌐 **Deployment**
@@ -132,6 +153,67 @@ MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
 ```bash
 NEXT_PUBLIC_API_URL=https://your-backend.onrender.com
 ```
+
+## 🔐 **Security Architecture**
+
+### Redis-Backed Multi-Tenant Sessions
+
+- **Session Management**: Redis sessions with rolling 24-hour TTL
+- **CSRF Protection**: Double-submit cookie pattern with automatic retry
+- **Tenant Isolation**: All queries automatically filtered by session `tenantId`
+- **MFA Support**: Time-based step-up authentication for admin operations
+
+### API Security Features
+
+```bash
+# CSRF Protection (automatic)
+GET  /api/auth/csrf              # Get CSRF token for client
+POST /api/tenants/switch         # Protected with CSRF + rate limiting
+
+# Session Management  
+GET  /api/sessions              # List active sessions
+POST /api/sessions/revoke-all   # Revoke all user sessions
+POST /api/sessions/revoke-others # Revoke other sessions
+
+# Health & Monitoring
+GET  /api/health/redis         # Redis connectivity status
+```
+
+### Client-Side Usage
+
+```typescript
+import { apiFetch } from '@/app/lib/fetcher';
+
+// CSRF tokens and error handling automatic
+const response = await apiFetch('/api/tenants/switch', {
+  method: 'POST',
+  body: JSON.stringify({ tenantId: 'new-tenant-id' }),
+});
+
+// Handles:
+// - CSRF token injection
+// - 403 CSRF retry with fresh token  
+// - 503 service unavailable errors
+// - Proper error types for UI feedback
+```
+
+### Security Flow
+
+```
+Client Request → CSRF Guard → Firebase Auth → Session Guard → Tenant Guard → Controller
+                     ↓              ↓            ↓            ↓            ↓
+              CSRF Token      Identity      Redis Session  Tenant Check  Business Logic
+              Validation      Verification   Validation     & Context     + Enforcement
+```
+
+### Production Security
+
+- **HttpOnly Cookies**: Session + CSRF cookies inaccessible to JavaScript
+- **Secure Cookies**: HTTPS-only in production (`NODE_ENV=production`)
+- **SameSite Strict**: Maximum CSRF protection in production
+- **Session Rotation**: New session ID on every tenant switch
+- **Rate Limiting**: 10 tenant switches per minute per user
+- **Audit Logging**: All tenant operations logged to MongoDB
 
 ## 📦 **Shared Packages**
 

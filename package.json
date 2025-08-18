@@ -5,7 +5,8 @@
   "scripts": {
     "build": "turbo build --filter='!@keystone/auth-aws'",
     "build:safe": "npm test && turbo build --filter='!@keystone/auth-aws'",
-    "dev": "turbo dev --filter=@keystone/cms --filter=@keystone/cms-api",
+    "dev:infra": "ts-node --transpile-only scripts/dev-infra.ts",
+    "dev": "npm run dev:infra && turbo dev --filter=@keystone/cms --filter=@keystone/cms-api",
     "lint": "turbo lint --filter='!@keystone/auth-aws'",
     "type-check": "turbo type-check --filter='!@keystone/auth-aws'",
     "test": "turbo test --filter=@keystone/cms --filter=@keystone/cms-api",

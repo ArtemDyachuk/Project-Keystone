@@ -38,13 +38,17 @@ export interface UpdateUserRoleData {
  */
 export async function getCurrentUser(): Promise<UserData | null> {
   try {
-    // Get the session cookie
+    // Get cookies; avoid backend call if not authenticated
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("fb_session")?.value;
+    const hasFb = !!cookieStore.get("fb_session")?.value;
+    const hasSid = !!cookieStore.get("sid")?.value;
 
-    if (!sessionCookie) {
+    if (!hasFb || !hasSid) {
       return null;
     }
+    // Forward all cookies (fb_session + sid) to backend for consistent guard chain
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
     // Make request to backend API with session cookie
     let apiBaseUrl = config.apiBaseUrl;
@@ -55,7 +59,7 @@ export async function getCurrentUser(): Promise<UserData | null> {
     const response = await fetch(`${apiBaseUrl}/api/user/me`, {
       method: "GET",
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
       },
     });
 
@@ -105,11 +109,8 @@ export async function getUserById(userId: string): Promise<UserData> {
   try {
     // Get the session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("fb_session")?.value;
-
-    if (!sessionCookie) {
-      throw new Error("No session cookie found");
-    }
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
     // Make request to backend API with session cookie
     let apiBaseUrl = config.apiBaseUrl;
@@ -120,7 +121,7 @@ export async function getUserById(userId: string): Promise<UserData> {
     const response = await fetch(`${apiBaseUrl}/api/user/${userId}`, {
       method: "GET",
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
       },
     });
 
@@ -145,11 +146,8 @@ export async function getTenantUsers(): Promise<UserData[]> {
   try {
     // Get the session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("fb_session")?.value;
-
-    if (!sessionCookie) {
-      throw new Error("No session cookie found");
-    }
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
     // Make request to backend API with session cookie
     let apiBaseUrl = config.apiBaseUrl;
@@ -160,7 +158,7 @@ export async function getTenantUsers(): Promise<UserData[]> {
     const response = await fetch(`${apiBaseUrl}/api/user/tenant-users`, {
       method: "GET",
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
       },
     });
 
@@ -185,11 +183,8 @@ export async function updateUserDetails(userId: string, updateData: UpdateUserDe
   try {
     // Get the session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("fb_session")?.value;
-
-    if (!sessionCookie) {
-      throw new Error("No session cookie found");
-    }
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
     // Make request to backend API with session cookie
     let apiBaseUrl = config.apiBaseUrl;
@@ -200,7 +195,7 @@ export async function updateUserDetails(userId: string, updateData: UpdateUserDe
     const response = await fetch(`${apiBaseUrl}/api/user/${userId}`, {
       method: "PUT",
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(updateData),
@@ -227,11 +222,8 @@ export async function getAvailableRoles(): Promise<RoleDefinition[]> {
   try {
     // Get the session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("fb_session")?.value;
-
-    if (!sessionCookie) {
-      throw new Error("No session cookie found");
-    }
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
     // Make request to backend API with session cookie
     let apiBaseUrl = config.apiBaseUrl;
@@ -242,7 +234,7 @@ export async function getAvailableRoles(): Promise<RoleDefinition[]> {
     const response = await fetch(`${apiBaseUrl}/api/roles`, {
       method: "GET",
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
       },
     });
 
@@ -267,11 +259,8 @@ export async function updateMyAccount(updateData: UpdateUserDetailsData): Promis
   try {
     // Get the session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("fb_session")?.value;
-
-    if (!sessionCookie) {
-      throw new Error("No session cookie found");
-    }
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
     // Make request to backend API with session cookie to update current user
     let apiBaseUrl = config.apiBaseUrl;
@@ -282,7 +271,7 @@ export async function updateMyAccount(updateData: UpdateUserDetailsData): Promis
     const response = await fetch(`${apiBaseUrl}/api/user/me`, {
       method: "PUT",
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(updateData),

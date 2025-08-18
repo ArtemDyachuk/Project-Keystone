@@ -22,14 +22,18 @@ export async function createTenant(name: string) {
     // Determine the API base URL
     const apiBaseUrl = config.apiBaseUrl;
 
-    // Call backend CMS API directly with the session cookie
+    // Call backend CMS API directly with session cookies
     let response;
     try {
+      // Get all cookies from the request
+      const allCookies = cookieStore.getAll();
+      const cookieHeader = allCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+
       response = await fetch(`${apiBaseUrl}/api/tenants`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Cookie": `fb_session=${sessionCookie}`, // Pass session cookie manually
+          "Cookie": cookieHeader, // Pass all cookies including fb_session and sid
         },
         body: JSON.stringify({ name: name.trim() }),
       });

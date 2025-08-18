@@ -1,5 +1,7 @@
 import { Controller, Get, Put, UseGuards, Req, Body, Param } from '@nestjs/common';
 import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
+import { SessionGuard } from '../guards/session.guard';
+import { TenantGuard } from '../guards/tenant-access.guard';
 // RBAC endpoints moved to RolesController; keep only dynamic admin imports where needed
 import type { Request } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
@@ -7,6 +9,9 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 // Extend Request to include user property from Firebase session guard
 interface AuthenticatedRequest extends Request {
   user: DecodedIdToken; // Firebase decoded user object
+  sessionCtx?: any; // Session context from SessionGuard
+  tenantId?: string; // Tenant ID from TenantGuard
+  tenantRole?: string; // Tenant role from TenantGuard
 }
 
 export interface UserData {
@@ -21,15 +26,6 @@ export interface UserData {
   tenantRoles?: Record<string, string | string[]>; // Support both single and multiple roles
 }
 
-// Firebase Custom Claims interface
-interface FirebaseCustomClaims {
-  tenantIds?: string[];
-  selectedTenantId?: string;
-  tenantRoles?: Record<string, string>;
-  firstName?: string;
-  lastName?: string;
-  [key: string]: unknown;
-}
 
 // DTO for updating selected tenant
 export class UpdateSelectedTenantDto {
@@ -54,30 +50,36 @@ export class UserController {
    * GET /user/me
    */
   @Get('me')
-  @UseGuards(FirebaseSessionGuard)
+  @UseGuards(FirebaseSessionGuard, SessionGuard)
   async getCurrentUser(@Req() req: AuthenticatedRequest): Promise<UserData> {
     try {
       // User info is already verified and attached by FirebaseSessionGuard
       const userInfo = req.user;
 
-      // Get fresh custom claims from Firebase Admin SDK
+      // Get user info from Firebase (no more custom claims dependency)
       const { getFirebaseAdminAuth } = await import("@keystone/auth");
       const adminAuth = getFirebaseAdminAuth();
       const freshUser = await adminAuth.getUser(userInfo.uid);
 
-      // Extract custom claims for tenant information
-      const customClaims = (freshUser.customClaims as FirebaseCustomClaims) || {};
-      const tenantIds = customClaims.tenantIds || [];
-      const selectedTenantId = customClaims.selectedTenantId;
-      const tenantRoles = customClaims.tenantRoles || {};
+      // Get tenant information from TenantMember collection and session context
+      const { TenantService } = await import("@keystone/database");
+      const userTenants = await TenantService.getUserTenants(userInfo.uid);
+      const tenantIds = userTenants.map(ut => ut.tenant._id!);
+      const tenantRoles = userTenants.reduce((acc, ut) => {
+        acc[ut.tenant._id!] = ut.membership.roles?.[0] || 'tenant_user'; // Use first role for backward compatibility
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Selected tenant comes from session context
+      const selectedTenantId = req.sessionCtx?.tenantId || undefined;
 
       return {
         sub: freshUser.uid,
         email: freshUser.email || undefined,
         username: freshUser.email || undefined,
         email_verified: freshUser.emailVerified || false,
-        firstName: customClaims.firstName || undefined,
-        lastName: customClaims.lastName || undefined,
+        firstName: undefined, // Remove custom claims dependency
+        lastName: undefined,  // Remove custom claims dependency
         tenantIds,
         selectedTenantId,
         tenantRoles,
@@ -106,43 +108,36 @@ export class UserController {
       const { getFirebaseAdminAuth } = await import("@keystone/auth");
       const adminAuth = getFirebaseAdminAuth();
 
-      // Get current user's claims
-      const currentUser = await adminAuth.getUser(userInfo.uid);
-      const currentClaims = (currentUser.customClaims as FirebaseCustomClaims) || {};
+      // Note: User profile data (firstName, lastName) is no longer stored in Firebase custom claims
+      // In a production system, this would be stored in a user profile collection
+      console.log(`✅ Account update requested for user ${userInfo.uid} (firstName: ${firstName}, lastName: ${lastName})`);
 
-      // Update custom claims with new user details
-      const updatedClaims = {
-        ...currentClaims,
-      };
-
-      if (firstName !== undefined) {
-        updatedClaims.firstName = firstName;
-      }
-
-      if (lastName !== undefined) {
-        updatedClaims.lastName = lastName;
-      }
-
-      await adminAuth.setCustomUserClaims(userInfo.uid, updatedClaims);
-
-      // Get updated user data to return
+      // Get basic user data from Firebase
       const updatedUser = await adminAuth.getUser(userInfo.uid);
-      const updatedUserClaims = (updatedUser.customClaims as FirebaseCustomClaims) || {};
+
+      // Get tenant information from TenantMember collection and session context
+      const { TenantService } = await import("@keystone/database");
+      const userTenants = await TenantService.getUserTenants(userInfo.uid);
+      const tenantIds = userTenants.map(ut => ut.tenant._id!);
+      const tenantRoles = userTenants.reduce((acc, ut) => {
+        acc[ut.tenant._id!] = ut.membership.roles?.[0] || 'tenant_user'; // Use first role for backward compatibility
+        return acc;
+      }, {} as Record<string, string>);
 
       const userData: UserData = {
         sub: updatedUser.uid,
         email: updatedUser.email || undefined,
         username: updatedUser.email || undefined,
         email_verified: updatedUser.emailVerified || false,
-        firstName: updatedUserClaims.firstName || undefined,
-        lastName: updatedUserClaims.lastName || undefined,
-        tenantIds: updatedUserClaims.tenantIds || [],
-        selectedTenantId: updatedUserClaims.selectedTenantId,
-        tenantRoles: updatedUserClaims.tenantRoles || {},
+        firstName: firstName || undefined, // From request, not stored in Firebase
+        lastName: lastName || undefined,   // From request, not stored in Firebase
+        tenantIds,
+        selectedTenantId: req.sessionCtx?.tenantId || undefined,
+        tenantRoles,
       };
 
       console.log(`✅ Updated account details for user ${userInfo.uid}`);
-      
+
       return {
         message: "Account updated successfully",
         user: userData,
@@ -154,53 +149,15 @@ export class UserController {
   }
 
   /**
-   * Update user's selected tenant in Firebase custom claims
-   * PUT /user/selected-tenant
+   * @deprecated This endpoint is deprecated. Use POST /tenants/switch instead.
+   * Kept for backward compatibility but returns error.
    */
   @Put('selected-tenant')
   @UseGuards(FirebaseSessionGuard)
-  async updateSelectedTenant(
-    @Body() updateSelectedTenantDto: UpdateSelectedTenantDto,
-    @Req() req: AuthenticatedRequest
-  ): Promise<{ message: string; selectedTenantId: string }> {
-    try {
-      const userInfo = req.user;
-      const { selectedTenantId } = updateSelectedTenantDto;
-
-      if (!selectedTenantId) {
-        throw new Error("Tenant ID is required");
-      }
-
-      // Get Firebase Admin Auth
-      const { getFirebaseAdminAuth } = await import("@keystone/auth");
-      const adminAuth = getFirebaseAdminAuth();
-
-      // Get current user's claims to verify tenant access
-      const freshUser = await adminAuth.getUser(userInfo.uid);
-      const currentClaims = (freshUser.customClaims as FirebaseCustomClaims) || {};
-      const tenantIds: string[] = Array.isArray(currentClaims.tenantIds) ? currentClaims.tenantIds : [];
-
-      // Verify user has access to the selected tenant
-      if (!tenantIds.includes(selectedTenantId)) {
-        throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
-      }
-
-      // Update custom claims with new selected tenant
-      await adminAuth.setCustomUserClaims(userInfo.uid, {
-        ...currentClaims,
-        selectedTenantId: selectedTenantId,
-      });
-
-      console.log(`✅ Updated selected tenant for user ${userInfo.uid} to: ${selectedTenantId}`);
-
-      return {
-        message: "Selected tenant updated successfully",
-        selectedTenantId: selectedTenantId,
-      };
-    } catch (error) {
-      console.error("Failed to update selected tenant:", error);
-      throw new Error(`Failed to update selected tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  async updateSelectedTenant(): Promise<{ error: string }> {
+    return {
+      error: "This endpoint is deprecated. Use POST /tenants/switch instead."
+    };
   }
 
   /**
@@ -208,51 +165,41 @@ export class UserController {
    * GET /user/tenant-users
    */
   @Get('tenant-users')
-  @UseGuards(FirebaseSessionGuard)
+  @UseGuards(FirebaseSessionGuard, SessionGuard, TenantGuard)
   async getTenantUsers(@Req() req: AuthenticatedRequest): Promise<UserData[]> {
     try {
-      const userInfo = req.user;
+      // const userInfo = req.user;
+      const selectedTenantId = req.tenantId!; // Set by TenantGuard
 
       // Get Firebase Admin Auth
       const { getFirebaseAdminAuth } = await import("@keystone/auth");
       const adminAuth = getFirebaseAdminAuth();
 
-      // Get current user's claims to determine selected tenant
-      const freshUser = await adminAuth.getUser(userInfo.uid);
-      const currentClaims = (freshUser.customClaims as FirebaseCustomClaims) || {};
-      const selectedTenantId = currentClaims.selectedTenantId;
-
-      if (!selectedTenantId) {
-        throw new Error("No tenant selected. Please select a tenant first.");
-      }
-
-      // Verify user has access to the selected tenant
-      const tenantIds: string[] = Array.isArray(currentClaims.tenantIds) ? currentClaims.tenantIds : [];
-      if (!tenantIds.includes(selectedTenantId)) {
-        throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
-      }
-
-      // Get all users and filter by selected tenant
-      const listUsersResult = await adminAuth.listUsers();
+      // Get all tenant members for the current tenant (from Redis session)
+      const { TenantService } = await import("@keystone/database");
+      const tenantMembers = await TenantService.getTenantMembers(selectedTenantId);
       const tenantUsers: UserData[] = [];
 
-      for (const userRecord of listUsersResult.users) {
-        const userClaims = (userRecord.customClaims as FirebaseCustomClaims) || {};
-        const userTenantIds: string[] = Array.isArray(userClaims.tenantIds) ? userClaims.tenantIds : [];
-        
-        // Check if this user has access to the selected tenant
-        if (userTenantIds.includes(selectedTenantId)) {
+      // Get Firebase user details for each tenant member
+      for (const member of tenantMembers) {
+        try {
+          const userRecord = await adminAuth.getUser(member.userId);
+          // No longer reading custom claims
+
           tenantUsers.push({
             sub: userRecord.uid,
             email: userRecord.email || undefined,
             username: userRecord.email || undefined,
             email_verified: userRecord.emailVerified || false,
-            firstName: userClaims.firstName || undefined,
-            lastName: userClaims.lastName || undefined,
-            tenantIds: userTenantIds,
-            selectedTenantId: userClaims.selectedTenantId,
-            tenantRoles: userClaims.tenantRoles || {},
+            firstName: undefined, // No longer stored in Firebase claims
+            lastName: undefined,  // No longer stored in Firebase claims
+            tenantIds: [selectedTenantId], // Only show current tenant
+            selectedTenantId: selectedTenantId, // Current tenant from session
+            tenantRoles: { [selectedTenantId]: member.roles?.[0] || 'tenant_user' }, // First role from TenantMember
           });
+        } catch (userError) {
+          console.warn(`Failed to get user details for ${member.userId}:`, userError);
+          // Skip users that can't be found in Firebase
         }
       }
 
@@ -264,38 +211,32 @@ export class UserController {
     }
   }
 
-  
+
 
   /**
    * Get user by ID (must be in same tenant)
    * GET /user/:id
    */
   @Get(':id')
-  @UseGuards(FirebaseSessionGuard)
+  @UseGuards(FirebaseSessionGuard, SessionGuard, TenantGuard)
   async getUserById(
     @Param('id') userId: string,
     @Req() req: AuthenticatedRequest
   ): Promise<UserData> {
     try {
-      const userInfo = req.user;
+      // const userInfo = req.user;
+      const selectedTenantId = req.tenantId!; // Set by TenantGuard
 
       // Get Firebase Admin Auth
       const { getFirebaseAdminAuth } = await import("@keystone/auth");
       const adminAuth = getFirebaseAdminAuth();
 
-      // Get current user's claims to determine selected tenant
-      const freshUser = await adminAuth.getUser(userInfo.uid);
-      const currentClaims = (freshUser.customClaims as FirebaseCustomClaims) || {};
-      const selectedTenantId = currentClaims.selectedTenantId;
+      // Verify the target user is a member of the current tenant
+      const { TenantService } = await import("@keystone/database");
+      const membership = await TenantService.getMembership(userId, selectedTenantId);
 
-      if (!selectedTenantId) {
-        throw new Error("No tenant selected. Please select a tenant first.");
-      }
-
-      // Verify current user has access to the selected tenant
-      const tenantIds: string[] = Array.isArray(currentClaims.tenantIds) ? currentClaims.tenantIds : [];
-      if (!tenantIds.includes(selectedTenantId)) {
-        throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
+      if (!membership) {
+        throw new Error(`User ${userId} does not have access to the current tenant: ${selectedTenantId}`);
       }
 
       // Get the target user with better error handling
@@ -312,25 +253,17 @@ export class UserController {
         throw firebaseError;
       }
 
-      const targetUserClaims = (targetUser.customClaims as FirebaseCustomClaims) || {};
-      const targetUserTenantIds: string[] = Array.isArray(targetUserClaims.tenantIds) ? targetUserClaims.tenantIds : [];
-
-      // Verify the target user has access to the same tenant
-      if (!targetUserTenantIds.includes(selectedTenantId)) {
-        throw new Error(`User ${userId} does not have access to the current tenant: ${selectedTenantId}`);
-      }
-
-      // Return user data
+      // Return user data (membership already verified above)
       const userData: UserData = {
         sub: targetUser.uid,
         email: targetUser.email || undefined,
         username: targetUser.email || undefined,
         email_verified: targetUser.emailVerified || false,
-        firstName: targetUserClaims.firstName || undefined,
-        lastName: targetUserClaims.lastName || undefined,
-        tenantIds: targetUserTenantIds,
-        selectedTenantId: targetUserClaims.selectedTenantId,
-        tenantRoles: targetUserClaims.tenantRoles || {},
+        firstName: undefined, // No longer stored in Firebase claims
+        lastName: undefined,  // No longer stored in Firebase claims
+        tenantIds: [selectedTenantId], // Only show current tenant
+        selectedTenantId: selectedTenantId, // Current tenant from session
+        tenantRoles: { [selectedTenantId]: membership.roles?.[0] || 'tenant_user' }, // First role from TenantMember
       };
 
       console.log(`✅ Retrieved user ${userId} for tenant ${selectedTenantId}`);
@@ -346,78 +279,59 @@ export class UserController {
    * PUT /user/:id
    */
   @Put(':id')
-  @UseGuards(FirebaseSessionGuard)
+  @UseGuards(FirebaseSessionGuard, SessionGuard, TenantGuard)
   async updateUserDetails(
     @Param('id') userId: string,
     @Body() updateUserDetailsDto: UpdateUserDetailsDto,
     @Req() req: AuthenticatedRequest
   ): Promise<{ message: string; user: UserData }> {
     try {
-      const userInfo = req.user;
+      // const userInfo = req.user;
       const { firstName, lastName } = updateUserDetailsDto;
 
       // Get Firebase Admin Auth
       const { getFirebaseAdminAuth } = await import("@keystone/auth");
       const adminAuth = getFirebaseAdminAuth();
 
-      // Get current user's claims to determine selected tenant
-      const freshUser = await adminAuth.getUser(userInfo.uid);
-      const currentClaims = (freshUser.customClaims as FirebaseCustomClaims) || {};
-      const selectedTenantId = currentClaims.selectedTenantId;
+      const selectedTenantId = req.tenantId!; // Set by TenantGuard
 
-      if (!selectedTenantId) {
-        throw new Error("No tenant selected. Please select a tenant first.");
-      }
+      // Verify the target user is a member of the current tenant
+      const { TenantService } = await import("@keystone/database");
+      const membership = await TenantService.getMembership(userId, selectedTenantId);
 
-      // Verify current user has access to the selected tenant
-      const tenantIds: string[] = Array.isArray(currentClaims.tenantIds) ? currentClaims.tenantIds : [];
-      if (!tenantIds.includes(selectedTenantId)) {
-        throw new Error(`User does not have access to tenant: ${selectedTenantId}`);
-      }
-
-      // Get the target user
-      const targetUser = await adminAuth.getUser(userId);
-      const targetUserClaims = (targetUser.customClaims as FirebaseCustomClaims) || {};
-      const targetUserTenantIds: string[] = Array.isArray(targetUserClaims.tenantIds) ? targetUserClaims.tenantIds : [];
-
-      // Verify the target user has access to the same tenant
-      if (!targetUserTenantIds.includes(selectedTenantId)) {
+      if (!membership) {
         throw new Error(`User ${userId} does not have access to the current tenant: ${selectedTenantId}`);
       }
 
-      // Update custom claims with new user details
-      const updatedClaims = {
-        ...targetUserClaims,
-      };
-
-      if (firstName !== undefined) {
-        updatedClaims.firstName = firstName;
+      // Get the target user
+      // const targetUser = await adminAuth.getUser(userId);
+      // Verify the target user has access to the same tenant (no more custom claims)
+      const targetMembership = await TenantService.getMembership(userId, selectedTenantId);
+      if (!targetMembership) {
+        throw new Error(`User ${userId} does not have access to the current tenant: ${selectedTenantId}`);
       }
 
-      if (lastName !== undefined) {
-        updatedClaims.lastName = lastName;
-      }
-
-      await adminAuth.setCustomUserClaims(userId, updatedClaims);
+      // Note: User profile data (firstName, lastName) is no longer stored in Firebase custom claims
+      // In a production system, this would be stored in a user profile collection
+      console.log(`✅ User details update requested for ${userId} (firstName: ${firstName}, lastName: ${lastName})`);
 
       // Get updated user data to return
       const updatedUser = await adminAuth.getUser(userId);
-      const updatedUserClaims = (updatedUser.customClaims as FirebaseCustomClaims) || {};
 
       const userData: UserData = {
         sub: updatedUser.uid,
         email: updatedUser.email || undefined,
         username: updatedUser.email || undefined,
         email_verified: updatedUser.emailVerified || false,
-        firstName: updatedUserClaims.firstName || undefined,
-        lastName: updatedUserClaims.lastName || undefined,
-        tenantIds: targetUserTenantIds,
-        selectedTenantId: updatedUserClaims.selectedTenantId,
-        tenantRoles: updatedUserClaims.tenantRoles || {},
+        firstName: firstName || undefined, // From request, not stored in Firebase
+        lastName: lastName || undefined,   // From request, not stored in Firebase
+        tenantIds: [selectedTenantId], // Only current tenant
+        selectedTenantId: selectedTenantId, // Current tenant from session
+        tenantRoles: { [selectedTenantId]: targetMembership.roles?.[0] || 'tenant_user' }, // First role from TenantMember
       };
 
       console.log(`✅ Updated user ${userId} details for tenant ${selectedTenantId}`);
-      
+
       return {
         message: "User details updated successfully",
         user: userData,

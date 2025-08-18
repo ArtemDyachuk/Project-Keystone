@@ -11,6 +11,7 @@ export default async function TenantsPage() {
 
   // Get user's tenants from backend API directly
   let userTenants: any[] = [];
+  let hasError = false;
 
   try {
     // Determine the API base URL
@@ -20,8 +21,9 @@ export default async function TenantsPage() {
     const { cookies } = await import("next/headers");
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("fb_session")?.value;
+    const sidCookie = cookieStore.get("sid")?.value;
 
-    if (!sessionCookie) {
+    if (!sessionCookie || !sidCookie) {
       return (
         <div className={styles.container}>
           <div className={styles.header}>
@@ -32,10 +34,11 @@ export default async function TenantsPage() {
       );
     }
 
-    // Call backend API directly with the session cookie
+    // Call backend API directly with all cookies
+    const cookieHeader = `fb_session=${sessionCookie}; sid=${sidCookie}`;
     const response = await fetch(`${apiBaseUrl}/api/tenants/user/me`, {
       headers: {
-        "Cookie": `fb_session=${sessionCookie}`,
+        "Cookie": cookieHeader,
       },
       cache: "no-store", // Don't cache this request
     });
@@ -43,14 +46,19 @@ export default async function TenantsPage() {
     if (response.ok) {
       const result = await response.json();
       userTenants = result.tenants || [];
+    } else if (response.status === 401) {
+      // User not authenticated or session expired - this is normal, not an error
+      userTenants = [];
     } else {
+      // Only log actual errors, not authentication issues
       console.error("❌ Failed to fetch tenants from API:", response.status);
-      // Fallback to empty array
+      hasError = true;
       userTenants = [];
     }
   } catch (error) {
-    console.error("❌ Error fetching tenants:", error);
-    // Fallback to empty array
+    // Only log unexpected errors, not authentication issues
+    console.error("❌ Unexpected error fetching tenants:", error);
+    hasError = true;
     userTenants = [];
   }
 
@@ -60,8 +68,27 @@ export default async function TenantsPage() {
         <h1>🏢 Organizations</h1>
         <p>Manage your organizations and their settings.</p>
 
+        {/* Show error notice if there was a technical issue */}
+        {hasError && (
+          <div style={{
+            background: "#fee2e2",
+            border: "1px solid #fecaca",
+            borderRadius: "8px",
+            padding: "15px",
+            marginTop: "15px",
+            fontSize: "14px"
+          }}>
+            <p style={{ margin: "0 0 10px 0", fontWeight: "500", color: "#dc2626" }}>
+              ⚠️ Technical Issue
+            </p>
+            <p style={{ margin: "0", color: "#dc2626" }}>
+              There was a problem loading your organizations. Please try refreshing the page.
+            </p>
+          </div>
+        )}
+
         {/* Show re-authentication notice if user has no tenants but might have created one */}
-        {userTenants.length === 0 && userData?.sub && (
+        {userTenants.length === 0 && userData?.sub && !hasError && (
           <div style={{
             background: "#fff3cd",
             border: "1px solid #ffeaa7",

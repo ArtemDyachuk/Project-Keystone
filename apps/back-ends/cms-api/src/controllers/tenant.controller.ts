@@ -1,13 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req, Res } from '@nestjs/common';
 import { TenantService, ITenant } from "@keystone/database";
 import { FirebaseSessionGuard } from '../guards/firebase-session.guard';
-import { assignUserRole, ROLES } from "@keystone/auth";
-import type { Request } from 'express';
+import { SessionGuard } from '../guards/session.guard';
+import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { SkipCsrf } from '../guards/csrf.guard';
+import { RateLimit } from '../decorators/rate-limit.decorator';
+import { ROLES } from "@keystone/auth";
+import { sessionStore } from '../lib/session/session.store';
+import { getSessionConfig } from '../lib/session/session.config';
+import { clearUserSession } from '../lib/session/session.helper';
+import { SkipTenantEnforcement } from '../interceptors/tenant-enforcement.interceptor';
+import type { Request, Response } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
 // Extend Request to include user property from Firebase session guard
 interface AuthenticatedRequest extends Request {
   user: DecodedIdToken; // Firebase decoded user object
+  sessionCtx?: any; // Session context from SessionGuard
+  sessionId?: string; // Session ID
 }
 
 // DTOs for request validation
@@ -23,6 +33,10 @@ export class RefreshTokenDto {
   refreshToken!: string;
 }
 
+export class SwitchTenantDto {
+  tenantId!: string;
+}
+
 @Controller('tenants')
 export class TenantController {
   constructor() { }
@@ -36,13 +50,9 @@ export class TenantController {
   async getAllTenants(@Req() req: AuthenticatedRequest): Promise<ITenant[]> {
     try {
       const userInfo = req.user;
-      const { getFirebaseAdminAuth } = await import("@keystone/auth");
-      const adminAuth = getFirebaseAdminAuth();
-      const fresh = await adminAuth.getUser(userInfo.uid);
-      const claims = (fresh.customClaims as Record<string, any>) || {};
-      const tenantIds: string[] = Array.isArray(claims.tenantIds) ? claims.tenantIds : [];
-      if (tenantIds.length === 0) return [];
-      return await TenantService.getTenantsByIds(tenantIds);
+      // Get user's tenants from TenantMember collection (no more custom claims)
+      const userTenants = await TenantService.getUserTenants(userInfo.uid);
+      return userTenants.map(ut => ut.tenant);
     } catch (error) {
       throw new HttpException(
         `Failed to fetch tenants: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -86,6 +96,7 @@ export class TenantController {
    */
   @Post()
   @UseGuards(FirebaseSessionGuard)
+  @SkipCsrf() // Tenant creation doesn't require CSRF since user has no tenant context yet
   async createTenant(@Body() createTenantDto: CreateTenantDto, @Req() req: AuthenticatedRequest): Promise<ITenant & { message?: string; requiresReauth?: boolean; firebaseError?: string; sessionCookie?: string }> {
     try {
       // 1. Create tenant in database
@@ -133,9 +144,19 @@ export class TenantController {
           // Assign owner/admin role inside tenant context
           await tenantAuth.setCustomUserClaims(tenantUser.uid, { role: "owner" });
 
-          // Use new RBAC system to assign tenant_owner role
+          // Use TenantService to assign tenant_owner role (no more Firebase custom claims)
           const mongoTenantId = tenant._id as string;
-          await assignUserRole(userInfo.uid, mongoTenantId, ROLES.TENANT_OWNER, "system");
+          await TenantService.addMember(mongoTenantId, userInfo.uid, ROLES.TENANT_OWNER);
+
+          console.log(`✅ Added user ${userInfo.uid} as owner of ${tenant.name} using TenantService`);
+
+          // Also create TenantMember record for the new multi-tenancy system
+          try {
+            await TenantService.addMember(mongoTenantId, userInfo.uid, ROLES.TENANT_OWNER);
+          } catch (memberError) {
+            console.warn("⚠️ Failed to create TenantMember record:", memberError);
+            // Don't fail the whole operation - the Firebase claims are the primary source
+          }
         } catch (userAssignmentError) {
           console.error("❌ Failed to ensure creator/assign role in tenant:", userAssignmentError);
         }
@@ -181,46 +202,20 @@ export class TenantController {
    * GET /tenants/user/me
    */
   @Get('user/me')
-  @UseGuards(FirebaseSessionGuard)
+  @UseGuards(FirebaseSessionGuard, SessionGuard)
   async getUserTenants(@Req() req: AuthenticatedRequest): Promise<{
     tenants: ITenant[];
     selectedTenantId: string | null;
   }> {
     try {
-      // User info is already verified and attached by FirebaseSessionGuard
+      // Get user's tenants from TenantMember collection (no more custom claims)
       const userInfo = req.user;
+      const userTenants = await TenantService.getUserTenants(userInfo.uid);
 
-      // If custom claims are missing, try to get them directly from Firebase
-      if (!userInfo.customClaims) {
-        try {
-          const { getFirebaseAdminAuth } = await import("@keystone/auth");
-          const adminAuth = getFirebaseAdminAuth();
-          const userRecord = await adminAuth.getUser(userInfo.uid);
+      const tenants = userTenants.map(ut => ut.tenant);
 
-          // Update the userInfo with fresh custom claims
-          userInfo.customClaims = userRecord.customClaims;
-        } catch (firebaseError) {
-          console.warn("⚠️ Failed to get fresh custom claims:", firebaseError);
-        }
-      }
-
-      // Read tenant IDs from fresh Admin SDK custom claims
-      const { getFirebaseAdminAuth } = await import("@keystone/auth");
-      const adminAuth = getFirebaseAdminAuth();
-      const fresh = await adminAuth.getUser(userInfo.uid);
-      const claims = (fresh.customClaims as Record<string, any>) || {};
-      const tenantIds: string[] = Array.isArray(claims.tenantIds) ? claims.tenantIds : [];
-      const selectedTenantId: string | null = claims.selectedTenantId || null;
-
-      const tenants: ITenant[] = [];
-      for (const tenantId of tenantIds) {
-        try {
-          const tenant = await TenantService.getTenantById(tenantId);
-          if (tenant) tenants.push(tenant);
-        } catch (e) {
-          console.warn(`Failed to fetch tenant ${tenantId}:`, e);
-        }
-      }
+      // Selected tenant comes from current session context
+      const selectedTenantId = req.sessionCtx?.tenantId || null;
 
       return { tenants, selectedTenantId };
     } catch (error) {
@@ -296,33 +291,12 @@ export class TenantController {
 
       // 3. Remove tenant from all users' custom claims
       try {
-        const { getFirebaseAdminAuth } = await import("@keystone/auth");
-        const adminAuth = getFirebaseAdminAuth();
-
-        // Get all users and remove this tenant from their claims
-        const users = await adminAuth.listUsers();
-
-        for (const user of users.users) {
-          if (user.customClaims?.tenantIds?.includes(id)) {
-            const currentClaims = user.customClaims || {};
-            const newTenantIds = currentClaims.tenantIds.filter((tid: string) => tid !== id);
-            const newTenantRoles = { ...currentClaims.tenantRoles };
-            delete newTenantRoles[id];
-
-            // Update selectedTenantId if it was this tenant
-            let newSelectedTenantId = currentClaims.selectedTenantId;
-            if (newSelectedTenantId === id) {
-              newSelectedTenantId = newTenantIds.length > 0 ? newTenantIds[0] : null;
-            }
-
-            await adminAuth.setCustomUserClaims(user.uid, {
-              ...currentClaims,
-              tenantIds: newTenantIds,
-              tenantRoles: newTenantRoles,
-              selectedTenantId: newSelectedTenantId,
-            });
-          }
+        // Remove all tenant memberships for this tenant (no more custom claims)
+        const tenantMembers = await TenantService.getTenantMembers(id);
+        for (const member of tenantMembers) {
+          await TenantService.removeMember(member.userId, id);
         }
+        console.log(`✅ Removed ${tenantMembers.length} tenant memberships`);
       } catch (claimsError) {
         console.warn("⚠️ Failed to update user claims:", claimsError);
         // Continue - tenant will still be deleted from database
@@ -367,7 +341,195 @@ export class TenantController {
     }
   }
 
+  /**
+   * Switch user's active tenant
+   * POST /tenants/switch
+   */
+  @Post('switch')
+  @UseGuards(FirebaseSessionGuard, SessionGuard, RateLimitGuard)
+  @SkipTenantEnforcement()
+  @RateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // 10 switches per minute per user/IP
+    keyGenerator: (req) => `tenant_switch:${req.user?.uid || 'anonymous'}:${req.ip}`
+  })
+  async switchTenant(
+    @Body() switchTenantDto: SwitchTenantDto,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response
+  ): Promise<{ message: string; tenantId: string; role: string }> {
+    const startTime = Date.now();
 
+    try {
+      const { tenantId } = switchTenantDto;
+      const userInfo = req.user;
 
+      if (!tenantId) {
+        throw new HttpException('Tenant ID is required', HttpStatus.BAD_REQUEST);
+      }
+
+      // Get target tenant and its GIP tenant ID first
+      const targetTenant = await TenantService.getTenantById(tenantId);
+      if (!targetTenant) {
+        throw new HttpException('Target tenant not found', HttpStatus.NOT_FOUND);
+      }
+
+      const firebaseTenantId = (targetTenant as any)?.firebaseTenantId as string | undefined;
+
+      // Check if user is a member of this tenant
+      const membership = await TenantService.getMembership(userInfo.uid, tenantId);
+
+      if (!membership) {
+        throw new HttpException(
+          'Access denied: You are not a member of this tenant',
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // Check for idempotency - if already on target tenant, return success without rotation
+      if (req.sessionCtx?.tenantId === tenantId && req.sessionCtx?.firebaseTenantId === firebaseTenantId) {
+        return {
+          message: 'Already on target tenant',
+          tenantId,
+          role: membership.roles?.[0] || 'tenant_user', // Use first role for backward compatibility
+        };
+      }
+
+      // For GIP tenants, require re-authentication instead of silent switching
+      if (firebaseTenantId && req.sessionCtx?.firebaseTenantId !== firebaseTenantId) {
+        console.log(`🔐 GIP tenant switch requires re-authentication`);
+        console.log(`   Current GIP tenant: ${req.sessionCtx?.firebaseTenantId}`);
+        console.log(`   Target GIP tenant: ${firebaseTenantId}`);
+        console.log(`   Target app tenant: ${tenantId}`);
+        
+        // Return 401 with re-auth required payload
+        throw new HttpException({
+          code: 'REAUTH_REQUIRED',
+          message: 'Re-authentication required for GIP tenant switch',
+          gipTenantId: firebaseTenantId,
+          appTenantId: tenantId,
+        }, HttpStatus.UNAUTHORIZED);
+      }
+
+      // For non-GIP tenants (legacy), allow direct switching
+      console.log('ℹ️ Non-GIP tenant - allowing direct app-level switching');
+
+      // Update Redis session with new tenant context
+      const updateSuccess = await sessionStore.updateSession(req.sessionId!, {
+        tenantId: tenantId,
+        roles: membership.roles,
+        firebaseTenantId: firebaseTenantId,
+        firebaseUid: req.user.uid, // Keep current Firebase UID for non-GIP tenants
+        lastSeen: Date.now(),
+      });
+
+      if (!updateSuccess) {
+        throw new HttpException('Failed to update session', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Log the tenant context that was stored
+      console.log(`🔍 Tenant Context Stored in Redis:`);
+      console.log(`   - firebaseTenantId: ${firebaseTenantId}`);
+      console.log(`   - firebaseUid: ${req.user.uid}`);
+      console.log(`   - appTenantId: ${tenantId}`);
+      console.log(`   - userRoles: ${membership.roles?.join(', ')}`);
+      console.log(`   - sessionId: ${req.sessionId}`);
+
+      // Rotate session ID for security (defense-in-depth)
+      const rotateResult = await sessionStore.rotateSession(req.sessionId!);
+
+      if (!rotateResult) {
+        throw new HttpException('Failed to rotate session', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Set new session cookie
+      const sessionConfig = getSessionConfig();
+      res.cookie(sessionConfig.cookieName, rotateResult.newSid, sessionConfig.cookieOptions);
+
+      console.log(`✅ User ${userInfo.uid} switched to tenant ${tenantId} (${Date.now() - startTime}ms)`);
+
+      return {
+        message: 'Successfully switched tenant',
+        tenantId,
+        role: membership.roles?.[0] || 'tenant_user', // Return first role for backward compatibility
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to switch tenant: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Debug endpoint to show current session data
+   * GET /tenants/debug/session
+   */
+  @Get('debug/session')
+  @UseGuards(FirebaseSessionGuard, SessionGuard)
+  async debugSession(@Req() req: AuthenticatedRequest): Promise<any> {
+    return {
+      sessionId: req.sessionId,
+      sessionCtx: req.sessionCtx,
+      firebase: (req as any).firebase,
+      timestamp: new Date().toISOString(),
+      message: 'Current session data for debugging'
+    };
+  }
+
+  /**
+   * Logout user and clear session
+   * POST /tenants/logout
+   */
+  @Post('logout')
+  @UseGuards(SessionGuard)
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response
+  ): Promise<{ message: string }> {
+    try {
+      if (req.sessionId) {
+        await clearUserSession(req.sessionId, res);
+      }
+
+      // Also clear CSRF cookie
+      try {
+        // Clear using same cookie options
+        const isProduction = process.env.NODE_ENV === 'production';
+        const cookieDomain = process.env.COOKIE_DOMAIN;
+        res.clearCookie('csrf_token', {
+          httpOnly: false,
+          secure: isProduction,
+          sameSite: 'strict',
+          path: '/',
+          domain: cookieDomain,
+        } as any);
+      } catch {
+        // Ignore if CSRF service not available
+      }
+
+      return { message: 'Successfully logged out' };
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear the cookie even if Redis fails
+      const sessionConfig = getSessionConfig();
+      res.clearCookie(sessionConfig.cookieName, sessionConfig.cookieOptions);
+      // Best-effort CSRF cookie clear
+      const isProduction = process.env.NODE_ENV === 'production';
+      const cookieDomain = process.env.COOKIE_DOMAIN;
+      res.clearCookie('csrf_token', {
+        httpOnly: false,
+        secure: isProduction,
+        sameSite: 'strict',
+        path: '/',
+        domain: cookieDomain,
+      } as any);
+
+      return { message: 'Logged out with warnings' };
+    }
+  }
 
 }
