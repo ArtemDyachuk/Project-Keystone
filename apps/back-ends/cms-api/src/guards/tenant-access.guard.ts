@@ -1,6 +1,6 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { CognitoAdminService } from '../services/cognito-admin.service';
-import { decodeJwtToken, verifyJwtToken } from '@keystone/auth';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from "@nestjs/common";
+import { CognitoAdminService } from "../services/cognito-admin.service";
+import { decodeJwtToken, verifyJwtToken, verifyOidcJwtToken } from "@keystone/auth";
 
 @Injectable()
 export class TenantAccessGuard implements CanActivate {
@@ -28,19 +28,28 @@ export class TenantAccessGuard implements CanActivate {
       
       // SECURITY: Always verify JWT signatures in production
       let decoded;
-      if (process.env.NODE_ENV === 'production') {
-        const userPoolId = process.env.COGNITO_USER_POOL_ID;
-        const region = process.env.AWS_REGION || 'us-east-1';
-        if (userPoolId) {
-          // Use verified JWT in production
-          decoded = await verifyJwtToken(token, userPoolId, region, 'access');
+      const provider = process.env.AUTH_PROVIDER || "cognito";
+      if (process.env.NODE_ENV === "production") {
+        if (provider === "zitadel") {
+          const issuer = process.env.ZITADEL_ISSUER;
+          if (!issuer) {
+            throw new UnauthorizedException("Authentication service not properly configured (Zitadel issuer missing)");
+          }
+          decoded = await verifyOidcJwtToken(token, issuer, process.env.ZITADEL_AUDIENCE || process.env.ZITADEL_CLIENT_ID);
         } else {
-          throw new UnauthorizedException('Authentication service not properly configured');
+          const userPoolId = process.env.COGNITO_USER_POOL_ID;
+          const region = process.env.AWS_REGION || "us-east-1";
+          if (userPoolId) {
+            // Use verified JWT in production
+            decoded = await verifyJwtToken(token, userPoolId, region, "access");
+          } else {
+            throw new UnauthorizedException("Authentication service not properly configured");
+          }
         }
       } else {
         // For development, decode without verification (but log warning)
         decoded = decodeJwtToken(token);
-        console.warn('⚠️ JWT signature verification disabled in development mode');
+        console.warn("JWT signature verification disabled in development mode");
       }
       const username = decoded.username || decoded.email || decoded.sub;
 

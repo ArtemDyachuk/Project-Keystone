@@ -35,6 +35,11 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        if (data.authorizeUrl) {
+          window.location.href = data.authorizeUrl;
+          return;
+        }
         router.push(redirectUrl);
       } else {
         const data = await response.json();

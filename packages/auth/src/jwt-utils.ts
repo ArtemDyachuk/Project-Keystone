@@ -1,5 +1,5 @@
 import { jwtVerify, createRemoteJWKSet } from "jose";
-import { DecodedToken } from "./types";
+import type { DecodedToken } from "./types";
 
 /**
  * Verify and decode a Cognito JWT token
@@ -29,6 +29,36 @@ export async function verifyJwtToken(
     return payload as unknown as DecodedToken;
   } catch (error) {
     throw new Error(`JWT verification failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Verify and decode a generic OIDC JWT using issuer discovery (ZITADEL, etc.)
+ */
+export async function verifyOidcJwtToken(
+  token: string,
+  issuer: string,
+  audience?: string
+): Promise<DecodedToken> {
+  try {
+    const wellKnownUrl = new URL(".well-known/openid-configuration", issuer.endsWith("/") ? issuer : issuer + "/");
+    const discovery = await fetch(wellKnownUrl.toString()).then(async (r) => {
+      if (!r.ok) {
+        throw new Error(`OIDC discovery failed: ${r.status} ${r.statusText}`);
+      }
+      return r.json() as Promise<{ jwks_uri: string; issuer: string }>;
+    });
+
+    const JWKS = createRemoteJWKSet(new URL(discovery.jwks_uri));
+
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: discovery.issuer,
+      audience,
+    });
+
+    return payload as unknown as DecodedToken;
+  } catch (error) {
+    throw new Error(`OIDC JWT verification failed: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 

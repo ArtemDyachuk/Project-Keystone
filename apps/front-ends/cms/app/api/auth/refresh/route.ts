@@ -1,26 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CognitoAuthClient, getCognitoConfig } from "@keystone/auth";
+import { CognitoAuthClient, getCognitoConfig, refreshZitadelTokens, getZitadelConfig } from "@keystone/auth";
 import { setAuthCookiesInAction } from "@/lib/auth-cookies";
 
 export async function POST(request: NextRequest) {
   try {
     const { refreshToken, email } = await request.json();
 
-    if (!refreshToken || !email) {
+    const provider = process.env.AUTH_PROVIDER || "cognito";
+    if (!refreshToken || (provider !== "zitadel" && !email)) {
       return NextResponse.json(
-        { error: "Refresh token and email are required" },
+        { error: provider === "zitadel" ? "Refresh token is required" : "Refresh token and email are required" },
         { status: 400 }
       );
     }
 
-    // Get Cognito configuration
-    const config = await getCognitoConfig();
     
-    // Create Cognito client
-    const authClient = new CognitoAuthClient(config);
-
-    // Refresh the tokens
-    const newTokens = await authClient.refreshTokens(refreshToken, email);
+    let newTokens: { accessToken: string; idToken: string; refreshToken: string; expiresIn: number };
+    if (provider === "zitadel") {
+      await getZitadelConfig(); // validates config present
+      const rt = await refreshZitadelTokens({ refreshToken });
+      newTokens = {
+        accessToken: rt.access_token,
+        idToken: rt.id_token,
+        refreshToken: rt.refresh_token,
+        expiresIn: rt.expires_in,
+      };
+    } else {
+      // Get Cognito configuration
+      const config = await getCognitoConfig();
+      // Create Cognito client
+      const authClient = new CognitoAuthClient(config);
+      // Refresh the tokens
+      newTokens = await authClient.refreshTokens(refreshToken, email);
+    }
 
     // Set new tokens in cookies
     await setAuthCookiesInAction(newTokens);

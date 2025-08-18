@@ -1,5 +1,5 @@
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import { CognitoConfig } from "./types";
+import { CognitoConfig, ZitadelConfig } from "./types";
 
 let cachedConfig: CognitoConfig | null = null;
 
@@ -95,6 +95,42 @@ export async function getCognitoConfig(environment?: string): Promise<CognitoCon
       "Cognito environment variables not found. Please check your .env file contains COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, etc."
     );
   }
+}
+
+let cachedZitadelConfig: ZitadelConfig | null = null;
+
+/**
+ * Get ZITADEL configuration from environment variables
+ */
+export async function getZitadelConfig(): Promise<ZitadelConfig> {
+  if (cachedZitadelConfig) {
+    return cachedZitadelConfig;
+  }
+
+  if (typeof window !== "undefined") {
+    const issuer = process.env.NEXT_PUBLIC_ZITADEL_ISSUER;
+    const clientId = process.env.NEXT_PUBLIC_ZITADEL_CLIENT_ID;
+    if (!issuer || !clientId) {
+      throw new Error("Missing ZITADEL public env: NEXT_PUBLIC_ZITADEL_ISSUER, NEXT_PUBLIC_ZITADEL_CLIENT_ID");
+    }
+    cachedZitadelConfig = {
+      issuer,
+      clientId,
+      clientSecret: "",
+    };
+    return cachedZitadelConfig;
+  }
+
+  const issuer = process.env.ZITADEL_ISSUER;
+  const clientId = process.env.ZITADEL_CLIENT_ID;
+  const clientSecret = process.env.ZITADEL_CLIENT_SECRET || "";
+
+  if (!issuer || !clientId) {
+    throw new Error("Missing ZITADEL env: ZITADEL_ISSUER, ZITADEL_CLIENT_ID");
+  }
+
+  cachedZitadelConfig = { issuer, clientId, clientSecret };
+  return cachedZitadelConfig;
 }
 
 async function getParameter(ssmClient: SSMClient, name: string): Promise<string> {

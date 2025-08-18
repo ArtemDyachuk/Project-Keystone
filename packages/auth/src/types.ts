@@ -6,6 +6,12 @@ export interface CognitoConfig {
   region: string;
 }
 
+export interface ZitadelConfig {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 export interface CognitoUser {
   sub: string;
   email: string;
