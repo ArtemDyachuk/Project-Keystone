@@ -97,7 +97,7 @@ export class TenantController {
   @Post()
   @UseGuards(FirebaseSessionGuard)
   @SkipCsrf() // Tenant creation doesn't require CSRF since user has no tenant context yet
-  async createTenant(@Body() createTenantDto: CreateTenantDto, @Req() req: AuthenticatedRequest): Promise<ITenant & { message?: string; requiresReauth?: boolean; firebaseError?: string; sessionCookie?: string }> {
+  async createTenant(@Body() createTenantDto: CreateTenantDto, @Req() req: AuthenticatedRequest): Promise<ITenant & { message?: string; requiresReauth?: boolean; firebaseError?: string; sessionCookie?: string; autoSwitched?: boolean }> {
     try {
       // 1. Create tenant in database
       const tenant = await TenantService.createTenant(createTenantDto.name);
@@ -137,8 +137,27 @@ export class TenantController {
           let tenantUser;
           try {
             tenantUser = await tenantAuth.getUserByEmail(creatorEmail);
+            console.log(`✅ User ${creatorEmail} already exists in GIP tenant ${firebaseTenantId}`);
           } catch {
-            tenantUser = await tenantAuth.createUser({ email: creatorEmail, emailVerified: true });
+            // Create user in the GIP tenant with a temporary password
+            // We'll send them a password reset email to set their own password
+            const tempPassword = `TempPass${Date.now()}!`; // Temporary secure password
+            
+            tenantUser = await tenantAuth.createUser({ 
+              email: creatorEmail, 
+              emailVerified: true,
+              password: tempPassword, // Temporary password
+            });
+            
+            console.log(`✅ Created user ${creatorEmail} in GIP tenant ${firebaseTenantId}`);
+            
+            // Send password reset email immediately so user can set their own password
+            try {
+              await tenantAuth.generatePasswordResetLink(creatorEmail);
+              console.log(`📧 Password reset email sent to ${creatorEmail} for tenant ${firebaseTenantId}`);
+            } catch (emailError) {
+              console.warn(`⚠️ Failed to send password reset email:`, emailError);
+            }
           }
 
           // Assign owner/admin role inside tenant context
@@ -181,12 +200,43 @@ export class TenantController {
         // Continue without Firebase Auth tenant - MongoDB tenant still exists
       }
 
-      // 4. Respond success
+      // 4. Auto-switch to the newly created tenant if user has a session
+      let autoSwitched = false;
+      if (req.sessionId) {
+        try {
+          const mongoTenantId = tenant._id as string;
+          const membership = await TenantService.getMembership(userInfo.uid, mongoTenantId);
+          
+          if (membership) {
+            // Update Redis session with new tenant context
+            const updateSuccess = await sessionStore.updateSession(req.sessionId, {
+              tenantId: mongoTenantId,
+              roles: membership.roles,
+              firebaseTenantId: firebaseTenantId || undefined,
+              firebaseUid: userInfo.uid,
+              lastSeen: Date.now(),
+            });
+            
+            if (updateSuccess) {
+              autoSwitched = true;
+              console.log(`✅ Auto-switched user ${userInfo.uid} to newly created tenant ${tenant.name}`);
+            }
+          }
+        } catch (autoSwitchError) {
+          console.warn("⚠️ Failed to auto-switch to new tenant:", autoSwitchError);
+          // Don't fail the whole operation - tenant was still created successfully
+        }
+      }
+
+      // 5. Respond success
       return {
         ...tenant,
-        message: "Tenant created successfully. You are the owner.",
-        requiresReauth: true, // Signal that session refresh is needed
+        message: autoSwitched 
+          ? "Tenant created successfully. You are now working in this organization." 
+          : "Tenant created successfully. You are the owner.",
+        requiresReauth: !autoSwitched && !!firebaseTenantId, // Only require reauth if auto-switch failed and it's a GIP tenant
         firebaseTenantId: firebaseTenantId || undefined,
+        autoSwitched,
       };
     } catch (error) {
       console.error('❌ Tenant creation failed:', error);
@@ -320,6 +370,46 @@ export class TenantController {
       throw new HttpException(
         `Failed to delete tenant: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  /**
+   * Enable Email/Password provider for an existing GIP tenant
+   * POST /tenants/:id/enable-auth
+   */
+  @Post(':id/enable-auth')
+  @UseGuards(FirebaseSessionGuard)
+  async enableAuthForTenant(@Param('id') id: string): Promise<{ message: string }> {
+    try {
+      const tenant = await TenantService.getTenantById(id);
+      if (!tenant) {
+        throw new HttpException(
+          `Tenant with ID "${id}" not found`,
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      const firebaseTenantId = (tenant as any)?.firebaseTenantId as string | undefined;
+      if (!firebaseTenantId) {
+        throw new HttpException(
+          `Tenant "${id}" is not a GIP tenant`,
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      // Enable Email/Password provider for the existing tenant
+      const { enableEmailPasswordForTenant } = await import("@keystone/auth");
+      await enableEmailPasswordForTenant(firebaseTenantId);
+
+      return { message: `Email/Password authentication enabled for tenant "${tenant.name}"` };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to enable authentication for tenant: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

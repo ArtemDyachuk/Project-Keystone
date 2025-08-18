@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { config } from "@/lib/config";
 import styles from "./TenantReauthModal.module.css";
 
@@ -36,8 +37,7 @@ export function TenantReauthModal({
     try {
       console.log(`🔐 Re-authenticating for GIP tenant: ${targetTenant.gipTenantId}`);
 
-      // For now, let's redirect to login with tenant context
-      // This is the most reliable way to handle GIP tenant authentication
+      // For GIP tenant authentication, we need to redirect to the auth login page
       console.log("🔄 Redirecting to tenant-scoped login...");
       
       // Store the target tenant info
@@ -47,9 +47,13 @@ export function TenantReauthModal({
         tenantName: targetTenant.name
       }));
       
-      // Redirect to login with tenant context
+      // Redirect to the login page with tenant context
+      // The login page is at (auth)/login/page.tsx which creates route /login in Next.js App Router
       const loginUrl = `/login?tenantId=${encodeURIComponent(targetTenant.gipTenantId)}&returnTo=${encodeURIComponent('/dashboard')}`;
-      router.push(loginUrl);
+      console.log("🔄 Redirecting to:", loginUrl);
+      
+      // Use window.location.href for a hard redirect to ensure it works
+      window.location.href = loginUrl;
 
     } catch (error) {
       console.error("❌ Re-authentication failed:", error);
@@ -61,7 +65,7 @@ export function TenantReauthModal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.header}>
@@ -127,4 +131,9 @@ export function TenantReauthModal({
       </div>
     </div>
   );
+
+  // Use portal to render modal at document body level to avoid stacking context issues
+  return typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : null;
 }

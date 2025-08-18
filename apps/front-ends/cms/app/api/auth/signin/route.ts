@@ -41,16 +41,43 @@ export async function POST(request: NextRequest) {
         const tenantUser = await tenantAuth.getUserByEmail(email);
         console.log("✅ Found user in GIP tenant:", tenantUser.uid);
         
-        // For simplicity, we'll create a custom token for the user
-        // In production, you'd want to verify the password properly
-        const customToken = await tenantAuth.createCustomToken(tenantUser.uid);
-        
-        // For now, we'll use the custom token as our "ID token"
-        // This is a simplified approach - in production you'd want proper password verification
-        idToken = customToken;
-        user = { uid: tenantUser.uid, email: tenantUser.email };
-        
-        console.log("✅ Created custom token for GIP tenant user");
+        // For GIP tenant authentication, we'll use the client SDK to authenticate
+        // and get a proper ID token that matches the tenant context
+        try {
+          // Import Firebase client auth at runtime to avoid issues
+          const { signInWithEmailAndPassword, getAuth } = await import("firebase/auth");
+          const { initializeApp, getApps } = await import("firebase/app");
+          
+          // Initialize Firebase app with tenant context if needed
+          const firebaseConfig = {
+            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          };
+          
+          let app;
+          const existingApps = getApps();
+          if (existingApps.length > 0) {
+            app = existingApps[0];
+          } else {
+            app = initializeApp(firebaseConfig);
+          }
+          
+          const clientAuth = getAuth(app);
+          clientAuth.tenantId = gipTenantId; // Set tenant ID for client auth
+          
+          // Sign in with email and password
+          const userCredential = await signInWithEmailAndPassword(clientAuth, email, password);
+          
+          // Get the ID token
+          idToken = await userCredential.user.getIdToken();
+          user = userCredential.user;
+          
+          console.log("✅ GIP tenant client authentication successful");
+        } catch (clientAuthError) {
+          console.error("❌ GIP tenant client authentication failed:", clientAuthError);
+          throw new Error("Invalid credentials");
+        }
       } catch (tenantError) {
         console.error("❌ GIP tenant authentication failed:", tenantError);
         return NextResponse.json(
@@ -82,8 +109,8 @@ export async function POST(request: NextRequest) {
       if (!tenantManager) {
         throw new Error("GIP multi-tenancy not enabled");
       }
-      const tenantAuth = tenantManager.authForTenant(gipTenantId);
-      sessionCookie = await tenantAuth.createSessionCookie(idToken, {
+      const adminTenantAuth = tenantManager.authForTenant(gipTenantId);
+      sessionCookie = await adminTenantAuth.createSessionCookie(idToken, {
         expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
     } else {

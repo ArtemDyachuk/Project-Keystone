@@ -78,8 +78,18 @@ export async function middleware(request: NextRequest) {
 
   // User is authenticated from here on
 
-  // For authenticated users on auth pages, always redirect to dashboard
+  // For authenticated users on auth pages, redirect to dashboard
+  // Exception: Allow access to login page if tenantId is provided (for GIP tenant switching)
   if (isAuthPage(pathname)) {
+    const url = request.nextUrl;
+    const tenantId = url.searchParams.get("tenantId");
+    
+    // Allow login page access for GIP tenant switching
+    if (pathname === "/login" && tenantId) {
+      console.log(`🔐 Allowing login access for GIP tenant switch: ${tenantId}`);
+      return NextResponse.next();
+    }
+    
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

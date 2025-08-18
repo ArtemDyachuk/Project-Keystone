@@ -40,7 +40,26 @@ export function LoginForm({ redirectUrl, gipTenantId }: LoginFormProps) {
       });
 
       if (response.ok) {
-        router.push(redirectUrl);
+        // Check if there's a pending tenant switch after GIP authentication
+        const pendingSwitch = sessionStorage.getItem('pendingTenantSwitch');
+        if (pendingSwitch) {
+          try {
+            const switchData = JSON.parse(pendingSwitch);
+            console.log("🔄 Processing pending tenant switch:", switchData);
+            
+            // Clear the pending switch
+            sessionStorage.removeItem('pendingTenantSwitch');
+            
+            // The user should now be authenticated with the GIP tenant
+            // Redirect to dashboard which should work now
+            router.push('/dashboard');
+          } catch (switchError) {
+            console.error("❌ Failed to process pending tenant switch:", switchError);
+            router.push(redirectUrl);
+          }
+        } else {
+          router.push(redirectUrl);
+        }
       } else {
         const data = await response.json();
 

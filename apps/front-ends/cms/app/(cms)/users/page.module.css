@@ -42,6 +42,197 @@
   margin: 8px 0;
 }
 
+.tenantHelp {
+  background: var(--info-bg, #eff6ff);
+  border: 1px solid var(--info-border, #bfdbfe);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.tenantHelp h3 {
+  color: var(--info-text, #1d4ed8);
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+}
+
+.tenantHelp p {
+  color: var(--info-text-secondary, #1e40af);
+  margin: 8px 0;
+}
+
+.tenantHelp ol {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.tenantHelp li {
+  color: var(--info-text-secondary, #1e40af);
+  margin: 4px 0;
+}
+
+.tenantHelp a {
+  color: var(--primary-color, #3b82f6);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.tenantHelp a:hover {
+  color: var(--primary-hover, #2563eb);
+}
+
+.userInfo {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.userInfo p {
+  margin: 4px 0;
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+}
+
+.userInfo strong {
+  color: var(--text-primary, #111827);
+}
+
+.troubleshooting {
+  background: var(--warning-bg, #fffbeb);
+  border: 1px solid var(--warning-border, #fed7aa);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.troubleshooting h4 {
+  color: var(--warning-text, #92400e);
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+}
+
+.troubleshooting p {
+  margin: 6px 0;
+  color: var(--warning-text-secondary, #a16207);
+  font-size: 0.875rem;
+}
+
+.troubleshooting strong {
+  color: var(--warning-text, #92400e);
+}
+
+.resolutionSteps {
+  background: var(--success-bg, #f0fdf4);
+  border: 1px solid var(--success-border, #bbf7d0);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.resolutionSteps h4 {
+  color: var(--success-text, #166534);
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+}
+
+.resolutionSteps ol {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.resolutionSteps li {
+  color: var(--success-text-secondary, #15803d);
+  margin: 6px 0;
+  font-size: 0.875rem;
+}
+
+.resolutionSteps strong {
+  color: var(--success-text, #166534);
+}
+
+.resolutionSteps p {
+  margin: 8px 0;
+  color: var(--success-text-secondary, #15803d);
+  font-size: 0.875rem;
+}
+
+.debugInfo {
+  margin: 20px 0;
+}
+
+.debugInfo summary {
+  cursor: pointer;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 500;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
+}
+
+.debugInfo summary:hover {
+  color: var(--text-primary, #111827);
+}
+
+.debugContent {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.debugContent p {
+  margin: 6px 0;
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+}
+
+.debugContent strong {
+  color: var(--text-primary, #111827);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.primaryButton, .secondaryButton {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.primaryButton {
+  background: var(--primary-color, #3b82f6);
+  color: white;
+  border: 1px solid var(--primary-color, #3b82f6);
+}
+
+.primaryButton:hover {
+  background: var(--primary-hover, #2563eb);
+  border-color: var(--primary-hover, #2563eb);
+  transform: translateY(-1px);
+}
+
+.secondaryButton {
+  background: var(--surface, #ffffff);
+  color: var(--text-primary, #111827);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.secondaryButton:hover {
+  background: var(--surface-hover, #f9fafb);
+  border-color: var(--border-hover, #d1d5db);
+  transform: translateY(-1px);
+}
+
 .emptyState {
   background: var(--surface, #f9fafb);
   border: 1px solid var(--border-color, #e5e7eb);

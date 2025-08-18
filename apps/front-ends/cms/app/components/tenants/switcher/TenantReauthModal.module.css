@@ -10,8 +10,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 999999; /* Extremely high z-index to ensure it's above everything */
   padding: 20px;
+  overflow-y: auto; /* Allow scrolling if modal is too tall */
+  /* Ensure it's not affected by any parent positioning contexts */
+  isolation: isolate;
 }
 
 /* Modal container */
@@ -24,6 +27,8 @@
   max-height: 90vh;
   overflow: hidden;
   animation: modalSlideIn 0.2s ease-out;
+  margin: auto; /* Ensure proper centering */
+  position: relative; /* Ensure it's positioned correctly within the flex container */
 }
 
 @keyframes modalSlideIn {

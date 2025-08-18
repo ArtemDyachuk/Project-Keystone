@@ -20,6 +20,7 @@ export {
   createFirebaseAuthTenant,
   listFirebaseAuthTenants,
   deleteFirebaseAuthTenant,
+  enableEmailPasswordForTenant,
   addUserToFirebaseTenant,
   
   // JWT Utilities

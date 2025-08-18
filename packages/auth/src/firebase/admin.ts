@@ -319,7 +319,14 @@ export async function createFirebaseAuthTenant(tenantData: {
       displayName: sanitizedName,
     });
 
-
+    // Enable Email/Password provider for the tenant using REST API
+    try {
+      await enableEmailPasswordProviderViaAPI(tenant.tenantId);
+      console.log(`✅ Enabled Email/Password provider for tenant ${tenant.tenantId}`);
+    } catch (providerError) {
+      console.warn(`⚠️ Failed to configure authentication providers for tenant ${tenant.tenantId}:`, providerError);
+      // Don't fail the whole operation - tenant is still created
+    }
 
     return {
       tenantId: tenant.tenantId,
@@ -361,6 +368,73 @@ export async function listFirebaseAuthTenants(): Promise<Array<{ tenantId: strin
       return [];
     }
     throw new Error(`Failed to list Firebase Auth tenants: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Enable Email/Password provider via Firebase REST API
+ */
+async function enableEmailPasswordProviderViaAPI(tenantId: string): Promise<void> {
+  try {
+    // Get access token for Firebase REST API
+    const auth = getFirebaseAdminAuth();
+    const accessToken = await auth.app.options.credential?.getAccessToken();
+    
+    if (!accessToken) {
+      throw new Error('Failed to get access token for Firebase REST API');
+    }
+
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      throw new Error('Firebase project ID not configured');
+    }
+
+    // Firebase Identity Platform REST API endpoint for tenant configuration
+    const url = `https://identitytoolkit.googleapis.com/admin/v2/projects/${projectId}/tenants/${tenantId}/inboundSamlConfigs`;
+    
+    // Actually, let's use the correct endpoint for enabling email/password
+    const configUrl = `https://identitytoolkit.googleapis.com/admin/v2/projects/${projectId}/tenants/${tenantId}:updateConfig`;
+    
+    const response = await fetch(configUrl, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${accessToken.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        signIn: {
+          email: {
+            enabled: true,
+            passwordRequired: true,
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Firebase REST API error: ${response.status} ${errorText}`);
+    }
+
+    console.log(`✅ Enabled Email/Password provider via REST API for tenant ${tenantId}`);
+  } catch (error) {
+    console.error('Failed to enable Email/Password provider via REST API:', error);
+    throw error;
+  }
+}
+
+/**
+ * Enable Email/Password provider for an existing Firebase Auth tenant
+ */
+export async function enableEmailPasswordForTenant(tenantId: string): Promise<void> {
+  try {
+    await enableEmailPasswordProviderViaAPI(tenantId);
+    console.log(`✅ Enabled Email/Password provider for existing tenant ${tenantId}`);
+  } catch (error: any) {
+    if (error.code === 'auth/operation-not-allowed') {
+      throw new Error('Firebase Auth tenant update not enabled. Please enable Google Identity Platform multi-tenancy.');
+    }
+    throw new Error(`Failed to enable Email/Password for tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
