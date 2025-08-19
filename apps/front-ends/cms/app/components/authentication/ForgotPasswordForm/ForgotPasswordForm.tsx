@@ -6,13 +6,13 @@ import { Button } from "@keystone/ui";
 import { Input } from "@keystone/ui";
 import styles from "./styles.module.css";
 import { AuthForm } from "../AuthForm";
+import { forgotPasswordAction } from "@/app/actions";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [resetLink, setResetLink] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,21 +20,12 @@ export function ForgotPasswordForm() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
+      const result = await forgotPasswordAction(email);
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error);
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      setResetLink(data.resetLink || "");
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send reset email");
@@ -49,16 +40,9 @@ export function ForgotPasswordForm() {
         <div className={styles.successContent}>
           <div className={styles.successIcon}>📧</div>
           <div className={styles.instructions}>
-            <p>Please check your email for a 6-digit verification code.</p>
-            <p>Or use this direct reset link:</p>
-            {resetLink && (
-              <div className={styles.resetLinkContainer}>
-                <a href={resetLink} className={styles.resetLink}>
-                  🔗 Click here to reset your password
-                </a>
-              </div>
-            )}
+            <p>Please check your email for a password reset link.</p>
             <p className={styles.note}>The link will expire in 1 hour.</p>
+            <p className={styles.note}>If you don't see the email, please check your spam folder.</p>
           </div>
           <div className={styles.links}>
             <Link href="/login" className={styles.link}>

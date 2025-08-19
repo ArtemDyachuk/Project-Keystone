@@ -10,6 +10,8 @@ const PUBLIC_ROUTES = [
   "/signup", // Actually accessible at /signup (from (auth) folder)
   "/forgot-password", // Actually accessible at /forgot-password (from (auth) folder)
   "/reset-password", // Actually accessible at /reset-password (from (auth) folder)
+  "/auth/verify-email", // Email verification page
+  "/auth/reset-password", // Password reset page
   "/ui-test" // From (public) folder
 ];
 

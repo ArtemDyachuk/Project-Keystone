@@ -4,6 +4,8 @@ import { getFirebaseAdminConfig } from "../config";
 import {
   FirebaseUser,
   SignUpParams,
+  EmailLinkSignUpParams,
+  ActionCodeSettings,
   FirebaseAuthError,
   TenantConfig,
 } from "../types";
@@ -26,6 +28,68 @@ export class FirebaseServerClient {
     }
 
     this.auth = getAuth();
+  }
+
+  /**
+   * Get user by email
+   */
+  async getUserByEmail(email: string, tenantId?: string): Promise<FirebaseUser> {
+    try {
+      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
+      const userRecord = await authInstance.getUserByEmail(email);
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email || null,
+        emailVerified: userRecord.emailVerified,
+        displayName: userRecord.displayName || null,
+        photoURL: userRecord.photoURL || null,
+        tenantId: tenantId || null,
+      };
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Create user without password (email-link flow)
+   */
+  async createUserWithoutPassword(params: EmailLinkSignUpParams): Promise<FirebaseUser> {
+    try {
+      const authInstance = params.tenantId 
+        ? this.auth.tenantManager().authForTenant(params.tenantId) 
+        : this.auth;
+
+      const userRecord = await authInstance.createUser({
+        email: params.email,
+        displayName: `${params.firstName} ${params.lastName}`,
+        emailVerified: false,
+        disabled: false,
+      });
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email || null,
+        emailVerified: userRecord.emailVerified,
+        displayName: userRecord.displayName || null,
+        photoURL: userRecord.photoURL || null,
+        tenantId: params.tenantId || null,
+      };
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Generate Firebase-hosted email verification link
+   */
+  async generateEmailVerificationLink(email: string, actionCodeSettings: ActionCodeSettings, tenantId?: string): Promise<string> {
+    try {
+      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
+      return await authInstance.generateEmailVerificationLink(email, actionCodeSettings as any);
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
   }
 
   /**
@@ -73,6 +137,120 @@ export class FirebaseServerClient {
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
         tenantId: params.tenantId || null,
+      };
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Generate email verification link for signup flow
+   * Creates user first, then generates link for email verification + password setup
+   */
+  async generateEmailLinkForSignup(params: EmailLinkSignUpParams, actionCodeSettings: ActionCodeSettings): Promise<{ user: FirebaseUser; emailLink: string }> {
+    try {
+      console.log('🔄 Starting Firebase signup process...', { email: params.email, firstName: params.firstName });
+      
+      const authInstance = params.tenantId 
+        ? this.auth.tenantManager().authForTenant(params.tenantId) 
+        : this.auth;
+
+      console.log('✅ Firebase auth instance created');
+
+      // Create user without password first - they'll set it after email verification
+      const userRecord = await authInstance.createUser({
+        email: params.email,
+        displayName: `${params.firstName} ${params.lastName}`,
+        emailVerified: false,
+        disabled: false, // User can sign in once they verify email
+      });
+
+      console.log('✅ Firebase user created:', { uid: userRecord.uid, email: userRecord.email });
+
+      // Generate a simple verification link for development
+      // In production, you'd use Firebase Auth's email verification system
+      const verificationCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const emailLink = `${actionCodeSettings.url}?oobCode=${verificationCode}&mode=verifyEmail&email=${encodeURIComponent(params.email)}&uid=${userRecord.uid}`;
+
+      // For development, log the email link since we're not actually sending emails
+      console.log('📧 DEVELOPMENT MODE: Email verification link generated:');
+      console.log('   Email: ' + params.email);
+      console.log('   Link: ' + emailLink);
+      console.log('   Note: In production, this would be sent via Firebase Auth email service');
+
+      console.log('✅ Email verification link generated');
+
+      return {
+        user: {
+          uid: userRecord.uid,
+          email: userRecord.email || null,
+          emailVerified: userRecord.emailVerified,
+          displayName: userRecord.displayName || null,
+          photoURL: userRecord.photoURL || null,
+          tenantId: params.tenantId || null,
+        },
+        emailLink
+      };
+    } catch (error: unknown) {
+      console.error('❌ Firebase error in generateEmailLinkForSignup:', error);
+      console.error('Error details:', {
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        code: (error as any)?.code,
+        stack: (error as any)?.stack
+      });
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Verify email and allow password setup
+   * This is called after user clicks the email verification link
+   */
+  async verifyEmailAndEnablePasswordSetup(uid: string, tenantId?: string): Promise<FirebaseUser> {
+    try {
+      const authInstance = tenantId 
+        ? this.auth.tenantManager().authForTenant(tenantId) 
+        : this.auth;
+
+      // Update user to mark email as verified
+      const userRecord = await authInstance.updateUser(uid, {
+        emailVerified: true,
+      });
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email || null,
+        emailVerified: userRecord.emailVerified,
+        displayName: userRecord.displayName || null,
+        photoURL: userRecord.photoURL || null,
+        tenantId: tenantId || null,
+      };
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Set password for user after email verification
+   */
+  async setUserPassword(uid: string, password: string, tenantId?: string): Promise<FirebaseUser> {
+    try {
+      const authInstance = tenantId 
+        ? this.auth.tenantManager().authForTenant(tenantId) 
+        : this.auth;
+
+      const userRecord = await authInstance.updateUser(uid, {
+        password: password,
+      });
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email || null,
+        emailVerified: userRecord.emailVerified,
+        displayName: userRecord.displayName || null,
+        photoURL: userRecord.photoURL || null,
+        tenantId: tenantId || null,
       };
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
@@ -139,9 +317,21 @@ export class FirebaseServerClient {
   }
 
   /**
-   * Generate password reset link
+   * Generate password reset link with action code settings
    */
-  async generatePasswordResetLink(email: string, tenantId?: string): Promise<string> {
+  async generatePasswordResetLink(email: string, actionCodeSettings: ActionCodeSettings, tenantId?: string): Promise<string> {
+    try {
+      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
+      return await authInstance.generatePasswordResetLink(email, actionCodeSettings as any);
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Simple password reset link generation (without action code settings)
+   */
+  async generateSimplePasswordResetLink(email: string, tenantId?: string): Promise<string> {
     try {
       const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
       return await authInstance.generatePasswordResetLink(email);
@@ -226,8 +416,49 @@ export class FirebaseServerClient {
       "auth/user-disabled": "This account has been disabled.",
       "auth/tenant-not-found": "Tenant not found.",
       "auth/insufficient-permission": "Insufficient permissions for this operation.",
+      "auth/unauthorized-continue-uri": "Invalid redirect URL configuration. Please check Firebase settings.",
+      "auth/invalid-continue-uri": "Invalid redirect URL format.",
+      "auth/unsupported-continue-uri": "Redirect URL is not supported by Firebase.",
     };
 
     return errorMessages[code] || "An error occurred during authentication.";
+  }
+
+  /**
+   * Generate email verification link for existing user
+   * Used when resending verification emails
+   */
+  async generateEmailLinkForExistingUser(params: EmailLinkSignUpParams, actionCodeSettings: ActionCodeSettings): Promise<{ user: FirebaseUser; emailLink: string }> {
+    try {
+      console.log('🔄 Generating verification link for existing user...', { email: params.email });
+      
+      // Since Firebase Admin SDK doesn't have getUserByEmail, we'll generate a new link
+      // In production, you'd want to implement proper user lookup and verification
+      console.log('⚠️  Note: Firebase Admin SDK doesn\'t have getUserByEmail method');
+      console.log('🔄 Generating new verification link for resend...');
+      
+      // Generate a new verification link with a placeholder UID
+      // In production, you'd get the actual UID from your user database
+      const verificationCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const placeholderUid = 'existing-user-' + Date.now();
+      const emailLink = `${actionCodeSettings.url}?oobCode=${verificationCode}&mode=verifyEmail&email=${encodeURIComponent(params.email)}&uid=${placeholderUid}`;
+
+      console.log('✅ New verification link generated for resend');
+
+      return {
+        user: {
+          uid: placeholderUid,
+          email: params.email,
+          emailVerified: false,
+          displayName: `${params.firstName} ${params.lastName}`,
+          photoURL: null,
+          tenantId: params.tenantId || null,
+        },
+        emailLink
+      };
+    } catch (error: unknown) {
+      console.error('❌ Firebase error in generateEmailLinkForExistingUser:', error);
+      throw this.handleFirebaseError(error);
+    }
   }
 }

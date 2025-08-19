@@ -26,9 +26,30 @@ export interface AuthTokens {
 
 export interface SignUpParams {
   email: string;
-  password: string;
+  password?: string; // Optional for email-link flow
   displayName?: string;
   tenantId?: string;
+}
+
+export interface EmailLinkSignUpParams {
+  email: string;
+  firstName: string;
+  lastName: string;
+  tenantId?: string;
+}
+
+export interface ActionCodeSettings {
+  url: string;
+  handleCodeInApp: boolean;
+  iOS?: {
+    bundleId: string;
+  };
+  android?: {
+    packageName: string;
+    installApp?: boolean;
+    minimumVersion?: string;
+  };
+  dynamicLinkDomain?: string;
 }
 
 export interface SignInParams {
