@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { newPassword } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    if (!newPassword) {
-      return NextResponse.json(
-        { success: false, error: "New password is required" },
-        { status: 400 }
-      );
-    }
-
-    const authClient = createFirebaseAuthClient();
-
-    // Update password using Firebase
-    await authClient.updatePassword(newPassword);
-
-    return NextResponse.json({ 
-      success: true,
-      message: "Password updated successfully."
-    });
+    // Original code commented out:
+    // const { username, password } = await request.json();
+    // const config = await getCognitoConfig();
+    // const { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } = await import("@aws-sdk/client-cognito-identity-provider");
+    // const clientConfig: any = { region: config.region };
+    // if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    //   clientConfig.credentials = {
+    //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    //   };
+    // }
+    // const cognitoClient = new CognitoIdentityProviderClient(clientConfig);
+    // const command = new AdminSetUserPasswordCommand({
+    //   UserPoolId: config.userPoolId,
+    //   Username: username,
+    //   Password: password,
+    //   Permanent: true,
+    // });
+    // await cognitoClient.send(command);
+    // return NextResponse.json({
+    //   success: true,
+    //   message: "Password set successfully"
+    // });
   } catch (error) {
     console.error("Set password error:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to update password" },
+      { success: false, error: error instanceof Error ? error.message : "Failed to set password" },
       { status: 400 }
     );
   }

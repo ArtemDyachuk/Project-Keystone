@@ -1,195 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "@keystone/auth";
-import { getFirebaseAdminAuth } from "@keystone/auth";
-import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, gipTenantId } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
-    }
-
-    console.log("🔄 Starting signin process for:", email);
-
-    let idToken: string;
-    let user: any;
-
-    if (gipTenantId) {
-      // For GIP tenant authentication, we need to use the admin SDK to verify credentials
-      // and create a custom token, since client SDK doesn't support tenant-scoped auth directly
-      console.log("🔄 GIP tenant authentication for:", gipTenantId);
-      
-      const adminAuth = getFirebaseAdminAuth();
-      const tenantManager = (adminAuth as any).tenantManager?.();
-      
-      if (!tenantManager) {
-        return NextResponse.json(
-          { error: "GIP multi-tenancy not enabled" },
-          { status: 500 }
-        );
-      }
-
-      const tenantAuth = tenantManager.authForTenant(gipTenantId);
-      
-      try {
-        // Get user by email in the tenant context
-        const tenantUser = await tenantAuth.getUserByEmail(email);
-        console.log("✅ Found user in GIP tenant:", tenantUser.uid);
-        
-        // For GIP tenant authentication, we'll use the client SDK to authenticate
-        // and get a proper ID token that matches the tenant context
-        try {
-          // Import Firebase client auth at runtime to avoid issues
-          const { signInWithEmailAndPassword, getAuth } = await import("firebase/auth");
-          const { initializeApp, getApps } = await import("firebase/app");
-          
-          // Initialize Firebase app with tenant context if needed
-          const firebaseConfig = {
-            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-          };
-          
-          let app;
-          const existingApps = getApps();
-          if (existingApps.length > 0) {
-            app = existingApps[0];
-          } else {
-            app = initializeApp(firebaseConfig);
-          }
-          
-          const clientAuth = getAuth(app);
-          clientAuth.tenantId = gipTenantId; // Set tenant ID for client auth
-          
-          // Sign in with email and password
-          const userCredential = await signInWithEmailAndPassword(clientAuth, email, password);
-          
-          // Get the ID token
-          idToken = await userCredential.user.getIdToken();
-          user = userCredential.user;
-          
-          console.log("✅ GIP tenant client authentication successful");
-        } catch (clientAuthError) {
-          console.error("❌ GIP tenant client authentication failed:", clientAuthError);
-          throw new Error("Invalid credentials");
-        }
-      } catch (tenantError) {
-        console.error("❌ GIP tenant authentication failed:", tenantError);
-        return NextResponse.json(
-          { error: "Invalid credentials or user not found in organization" },
-          { status: 401 }
-        );
-      }
-    } else {
-      // Default authentication for non-GIP tenants
-      const auth = createFirebaseAuthClient();
-      const userCredential = await auth.signIn({ email, password });
-      user = userCredential.user;
-
-      console.log("✅ Firebase Auth signin successful for user:", user.uid);
-
-      // Get Firebase ID token
-      idToken = await user.getIdToken();
-      console.log("✅ Got ID token, length:", idToken.length);
-    }
-
-    // Create Firebase session cookie using Admin SDK (tenant-aware if GIP tenant provided)
-    const adminAuth = getFirebaseAdminAuth();
-    let sessionCookie: string;
-
-    if (gipTenantId) {
-      // Use tenant-scoped auth for GIP multi-tenancy
-      console.log("🔄 Creating tenant-scoped session cookie for GIP tenant:", gipTenantId);
-      const tenantManager = (adminAuth as any).tenantManager?.();
-      if (!tenantManager) {
-        throw new Error("GIP multi-tenancy not enabled");
-      }
-      const adminTenantAuth = tenantManager.authForTenant(gipTenantId);
-      sessionCookie = await adminTenantAuth.createSessionCookie(idToken, {
-        expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-    } else {
-      // Default (non-tenant) session cookie
-      sessionCookie = await adminAuth.createSessionCookie(idToken, {
-        expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-    }
-
-    console.log("✅ Session cookie created, length:", sessionCookie.length);
-
-    // Set session cookie in browser
-    const cookieStore = await cookies();
-    cookieStore.set("fb_session", sessionCookie, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-    });
-
-    // Bootstrap Redis session
-    try {
-      const { config } = await import("@/lib/config");
-      const apiBaseUrl = config.apiBaseUrl || "http://localhost:3001";
-
-      const bootstrapResponse = await fetch(`${apiBaseUrl}/api/sessions/bootstrap`, {
-        method: "POST",
-        headers: {
-          "Cookie": `fb_session=${sessionCookie}`,
-          "User-Agent": request.headers.get("user-agent") || "unknown",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          expectedGipTenantId: gipTenantId
-        }),
-      });
-
-      if (bootstrapResponse.ok) {
-        const bootstrapData = await bootstrapResponse.json();
-        console.log("✅ Redis session bootstrapped:", bootstrapData.sessionId);
-
-        // Get the Set-Cookie header from the bootstrap response
-        const setCookieHeader = bootstrapResponse.headers.get("set-cookie");
-        const response = NextResponse.json({
-          success: true,
-          message: "Signed in successfully",
-          userId: user.uid,
-          sessionCookieLength: sessionCookie.length,
-          redisSessionId: bootstrapData.sessionId,
-          defaultTenantId: bootstrapData.defaultTenantId,
-        });
-
-        // Forward the SID cookie from the API response
-        if (setCookieHeader) {
-          response.headers.set("set-cookie", setCookieHeader);
-        }
-
-        return response;
-      } else {
-        console.warn("⚠️ Failed to bootstrap Redis session, will be created lazily");
-      }
-    } catch (sessionError) {
-      console.warn("⚠️ Redis session bootstrap failed, will be created lazily:", sessionError);
-    }
-
-    // Return success response (Redis session will be created on first API call if bootstrap failed)
-    return NextResponse.json({
-      success: true,
-      message: "Signed in successfully",
-      userId: user.uid,
-      sessionCookieLength: sessionCookie.length
-    });
+    // Original code commented out:
+    // const { email, password } = await request.json();
+    // if (!email || !password) {
+    //   return NextResponse.json(
+    //     { error: "Email and password are required" },
+    //     { status: 400 }
+    //   );
+    // }
+    // const config = await getCognitoConfig();
+    // const authClient = new CognitoAuthClient(config);
+    // const tokens = await authClient.signIn({ email, password });
+    // return setAuthCookies(tokens);
   } catch (error) {
-    console.error("❌ Signin error:", error);
-    const rawMessage = error instanceof Error ? error.message : "Login failed";
-    const errorMessage = rawMessage.includes("auth/multi-factor-auth-required")
-      ? "auth/multi-factor-auth-required"
-      : rawMessage;
+    const errorMessage = error instanceof Error ? error.message : "Login failed";
     return NextResponse.json(
       { error: errorMessage },
       { status: 400 }

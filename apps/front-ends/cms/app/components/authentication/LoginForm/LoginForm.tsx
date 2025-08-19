@@ -1,25 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import styles from "./styles.module.css";
 import Link from "next/link";
 import { Button, Input } from "@keystone/ui";
 import { AuthForm } from "../AuthForm";
-import { MfaTotpModal } from "./MfaTotpModal";
+import { loginAction } from "@/app/actions";
 
 interface LoginFormProps {
   redirectUrl: string;
-  gipTenantId?: string;
 }
 
-export function LoginForm({ redirectUrl, gipTenantId }: LoginFormProps) {
+export function LoginForm({ redirectUrl }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showMfaModal, setShowMfaModal] = useState(false);
-  const router = useRouter();
+
+  // Removed checkAuth useEffect - middleware handles this now
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,152 +25,76 @@ export function LoginForm({ redirectUrl, gipTenantId }: LoginFormProps) {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          gipTenantId // Pass the GIP tenant ID if provided
-        }),
-      });
-
-      if (response.ok) {
-        // Check if there's a pending tenant switch after GIP authentication
-        const pendingSwitch = sessionStorage.getItem('pendingTenantSwitch');
-        if (pendingSwitch) {
-          try {
-            const switchData = JSON.parse(pendingSwitch);
-            console.log("🔄 Processing pending tenant switch:", switchData);
-            
-            // Clear the pending switch
-            sessionStorage.removeItem('pendingTenantSwitch');
-            
-            // The user should now be authenticated with the GIP tenant
-            // Redirect to dashboard which should work now
-            router.push('/dashboard');
-          } catch (switchError) {
-            console.error("❌ Failed to process pending tenant switch:", switchError);
-            router.push(redirectUrl);
-          }
-        } else {
-          router.push(redirectUrl);
-        }
-      } else {
-        const data = await response.json();
-
-        // Handle Firebase-specific errors
-        if (data.error?.includes("email-not-verified")) {
-          setError("Please verify your email address before signing in. Check your inbox for the verification link.");
-        } else if (data.error?.includes("user-not-found")) {
-          setError("No account found with this email. Please sign up first.");
-        } else if (data.error?.includes("wrong-password")) {
-          setError("Incorrect password. Please try again.");
-        } else if (data.error?.includes("multi-factor-auth-required")) {
-          // Trigger client-side MFA resolution
-          setShowMfaModal(true);
-          setError("");
-        } else {
-          setError(data.error || "Login failed");
-        }
-      }
+      await loginAction(email, password, redirectUrl);
+      // If we reach here without error, login was successful
+      // The loginAction will handle the redirect
     } catch (error) {
-      setError("An error occurred. Please try again.");
-    } finally {
+      // Only show error if it's not a redirect
+      if (error instanceof Error && error.message !== 'NEXT_REDIRECT') {
+        setError("An error occurred. Please try again.");
+      }
+      // If it's NEXT_REDIRECT, that means login was successful
       setIsLoading(false);
     }
   };
 
   return (
-    <>
-      <AuthForm 
-        title={gipTenantId ? "🔐 Organization Sign In" : "Sign In"} 
-        subtitle={gipTenantId 
-          ? "Please sign in to access your organization workspace." 
-          : "Welcome back to Keystone CMS"
-        }
-      >
-        {gipTenantId && (
-          <div className={styles.tenantNotice}>
-            <div className={styles.tenantIcon}>🏢</div>
-            <div>
-              <div className={styles.tenantLabel}>Organization Context:</div>
-              <div className={styles.tenantId}>{gipTenantId}</div>
-            </div>
+    <AuthForm title="Login" subtitle="Welcome back to Keystone CMS">
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.field}>
+          <label htmlFor="email">Email</label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="password">Password</label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            required
+          />
+        </div>
+
+        {error && (
+          <div className={styles.error}>
+            ❌ {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.field}>
-            <label htmlFor="email">Email</label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
+        <Button type="submit" className={styles.submitButton} disabled={isLoading}>
+          {isLoading ? "Logging in..." : "Login"}
+        </Button>
 
-          <div className={styles.field}>
-            <label htmlFor="password">Password</label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className={styles.error}>
-              ❌ {error}
-            </div>
-          )}
-
-          <Button type="submit" className={styles.submitButton} disabled={isLoading}>
-            {isLoading ? "Signing In..." : "Sign In"}
-          </Button>
-
-          <div className={styles.forgotPassword}>
-            <Link href="/forgot-password" className={styles.forgotLink}>
-              Forgot password?
-            </Link>
-          </div>
-        </form>
-
-        <div className={styles.links}>
-          <p>
-            Don't have an account?{" "}
-            <Link href="/signup" className={styles.link}>
-              Sign up here
-            </Link>
-          </p>
-          <p>
-            <Link href="/" className={styles.link}>
-              ← Back to home
-            </Link>
-          </p>
+        <div className={styles.forgotPassword}>
+          <Link href="/forgot-password" className={styles.forgotLink}>
+            Forgot password?
+          </Link>
         </div>
-      </AuthForm>
+      </form>
 
-      {showMfaModal && (
-        <MfaTotpModal
-          email={email}
-          password={password}
-          redirectUrl={redirectUrl}
-          onClose={() => setShowMfaModal(false)}
-          onSuccess={() => {
-            setShowMfaModal(false);
-            router.push(redirectUrl);
-          }}
-        />
-      )}
-    </>
+      <div className={styles.links}>
+        <p>
+          Don't have an account?{" "}
+          <Link href="/signup" className={styles.link}>
+            Sign up here
+          </Link>
+        </p>
+        <p>
+          <Link href="/" className={styles.link}>
+            ← Back to home
+          </Link>
+        </p>
+      </div>
+    </AuthForm>
   );
 }

@@ -1,30 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: "Email is required" },
-        { status: 400 }
-      );
-    }
-
-    const authClient = createFirebaseAuthClient();
-
-    // Resend verification email using Firebase
-    await authClient.resendVerificationEmail();
-
-    return NextResponse.json({ 
-      success: true,
-      message: "Verification email resent successfully. Please check your email."
-    });
+    // Original code commented out:
+    // const { username } = await request.json();
+    // const config = await getCognitoConfig();
+    // const secretHash = createHmac("sha256", config.clientSecret)
+    //   .update(username + config.clientId)
+    //   .digest("base64");
+    // const { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } = await import("@aws-sdk/client-cognito-identity-provider");
+    // const clientConfig: any = { region: config.region };
+    // if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    //   clientConfig.credentials = {
+    //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    //   };
+    // }
+    // const cognitoClient = new CognitoIdentityProviderClient(clientConfig);
+    // const command = new ResendConfirmationCodeCommand({
+    //   ClientId: config.clientId,
+    //   Username: username,
+    //   SecretHash: secretHash,
+    // });
+    // await cognitoClient.send(command);
+    // return NextResponse.json({
+    //   success: true,
+    //   message: "Verification code resent successfully"
+    // });
   } catch (error) {
-    console.error("Resend verification error:", error);
+    console.error("Resend error:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to resend verification email" },
+      { success: false, error: error instanceof Error ? error.message : "Failed to resend code" },
       { status: 400 }
     );
   }

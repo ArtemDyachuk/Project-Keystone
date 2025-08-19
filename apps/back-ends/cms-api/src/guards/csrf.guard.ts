@@ -1,54 +1,41 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  ForbiddenException,
-  SetMetadata,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
-import { CsrfService } from '../lib/security/csrf.service';
-import 'reflect-metadata';
-
-export const SKIP_CSRF_KEY = 'skipCsrf';
-export const SkipCsrf = () => SetMetadata(SKIP_CSRF_KEY, true);
+import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
+import { CSRFService } from '../services/csrf.service';
 
 @Injectable()
-export class CsrfGuard implements CanActivate {
-  constructor(
-    private readonly csrfService: CsrfService,
-    private readonly reflector: Reflector
-  ) {}
+export class CSRFGuard implements CanActivate {
+  constructor(private readonly csrfService: CSRFService) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // Check if CSRF protection should be skipped for this route
-    const skipCsrf = this.reflector.getAllAndOverride<boolean>(SKIP_CSRF_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (skipCsrf) {
-      return true;
-    }
-
-    const request = context.switchToHttp().getRequest<Request>();
-    const method = request.method.toLowerCase();
+    const request = context.switchToHttp().getRequest();
+    const method = request.method;
 
     // Only protect state-changing methods
-    if (!['post', 'put', 'patch', 'delete'].includes(method)) {
+    if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
       return true;
     }
 
-    const cookieToken = this.csrfService.getTokenFromCookie(request);
-    const headerToken = this.csrfService.getTokenFromHeader(request);
-    const sessionId = (request as any).sessionId; // Set by SessionGuard
-
-    if (!sessionId) {
-      throw new ForbiddenException('Session required for CSRF validation');
+    // Skip CSRF for login endpoint (chicken-and-egg problem)
+    const url = request.url;
+    if (url.includes('/auth/login') || url.includes('/auth/signup-email-link')) {
+      return true;
     }
 
-    if (!cookieToken || !headerToken || !this.csrfService.validateToken(cookieToken, headerToken, sessionId)) {
-      throw new ForbiddenException('Invalid CSRF token');
+    // Get session ID from cookie
+    const sessionId = request.cookies?.session;
+    if (!sessionId) {
+      throw new HttpException('Session required for this operation', HttpStatus.UNAUTHORIZED);
+    }
+
+    // Get CSRF token from header or body
+    const csrfToken = request.headers['x-csrf-token'] || request.body?.csrfToken;
+    if (!csrfToken) {
+      throw new HttpException('CSRF token required', HttpStatus.FORBIDDEN);
+    }
+
+    // Validate CSRF token
+    const isValid = this.csrfService.validateToken(sessionId, csrfToken);
+    if (!isValid) {
+      throw new HttpException('Invalid CSRF token', HttpStatus.FORBIDDEN);
     }
 
     return true;

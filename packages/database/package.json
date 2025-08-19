@@ -13,9 +13,8 @@
   },
   "dependencies": {
     "mongoose": "^8.0.0",
-    "@types/node": "^24.2.1"
+    "@types/node": "^22.0.0"
   },
-
   "files": [
     "dist/**/*"
   ]

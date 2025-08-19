@@ -1,180 +1,247 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Button, Input } from "@keystone/ui";
 import styles from "./styles.module.css";
 import Link from "next/link";
-import { Button, Input } from "@keystone/ui";
 import { AuthForm } from "../AuthForm";
+import { signupWithEmailLink } from "@/app/actions";
 
-interface SignupFormProps {
-  redirectUrl: string;
-}
+type SignupStep = "email" | "email-sent" | "complete";
 
-export function SignupForm({ redirectUrl }: SignupFormProps) {
+export function SignupForm() {
+  const [step, setStep] = useState<SignupStep>("email");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const router = useRouter();
+  const [successMessage, setSuccessMessage] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
     setError("");
-    setSuccess("");
-
-    // Validation
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      setIsLoading(false);
-      return;
-    }
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
-        }),
+      const result = await signupWithEmailLink({
+        firstName,
+        lastName,
+        email,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccess(
-          "Account created successfully! Please check your email for verification link. You can now sign in."
-        );
-        // Clear form
-        setEmail("");
-        setPassword("");
-        setConfirmPassword("");
-        setFirstName("");
-        setLastName("");
-        
-        // Redirect to login after a short delay
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
-      } else {
-        setError(data.error || "Signup failed");
+      if (!result.success) {
+        throw new Error(result.error);
       }
-    } catch (error) {
-      setError("An error occurred. Please try again.");
+
+      setSuccessMessage("✅ Verification email sent! Please check your inbox and spam folder.");
+      setStep("email-sent");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send verification email");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setLoading(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const result = await signupWithEmailLink({
+        firstName,
+        lastName,
+        email,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      setSuccessMessage("✅ Verification email resent! Check your email and spam folder.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification email");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case "email":
+        return (
+          <form onSubmit={handleEmailSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <label htmlFor="firstName">First Name</label>
+              <Input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Enter your first name"
+                required
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="lastName">Last Name</label>
+              <Input
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Enter your last name"
+                required
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="email">Email</label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className={styles.submitButton}>
+              {loading ? "Sending verification email..." : "Send Verification Email"}
+            </Button>
+          </form>
+        );
+
+      case "email-sent":
+        return (
+          <div className={styles.emailSent}>
+            <div className={styles.step}>
+              <div className={styles.successIcon}>📧</div>
+              <h2>Check Your Email!</h2>
+              <p className={styles.stepText}>
+                We've sent a verification link to:
+                <br />
+                <strong>{email}</strong>
+              </p>
+              <div className={styles.emailHelp}>
+                <p className={styles.helpText}>
+                  💡 <strong>Can't find the email?</strong>
+                  <br />
+                  • Check your spam/junk folder
+                  <br />
+                  • Wait up to 5 minutes for delivery
+                  <br />
+                  • Make sure the email address is correct
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.emailActions}>
+              <p className={styles.instructionText}>
+                <strong>Next steps:</strong>
+                <br />
+                1. Click the verification link in your email
+                <br />
+                2. You'll be redirected back here to set your password
+                <br />
+                3. Complete your account setup
+              </p>
+            </div>
+
+            <div className={styles.resendSection}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleResendEmail}
+                disabled={loading}
+                className={styles.resendButton}
+              >
+                {loading ? "Resending..." : "📨 Resend Email"}
+              </Button>
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setStep("email");
+                setSuccessMessage("");
+                setError("");
+              }}
+              className={styles.backButton}
+            >
+              ← Change Email Address
+            </Button>
+          </div>
+        );
+
+      case "complete":
+        return (
+          <div className={styles.complete}>
+            <div className={styles.successIcon}>🎉</div>
+            <h2>Account Created Successfully!</h2>
+            <p>Welcome to Keystone CMS, {firstName}!</p>
+            <p>Your account has been created and verified.</p>
+
+            <Link href="/login">
+              <Button className={styles.submitButton}>
+                Login to Your Account
+              </Button>
+            </Link>
+          </div>
+        );
+    }
+  };
+
+  const getStepTitle = () => {
+    switch (step) {
+      case "email": return "Create Account";
+      case "email-sent": return "Check Your Email";
+      case "complete": return "Welcome!";
+    }
+  };
+
+  const getStepNumber = () => {
+    switch (step) {
+      case "email": return "Step 1 of 2";
+      case "email-sent": return "Step 2 of 2";
+      case "complete": return "Complete";
     }
   };
 
   return (
-    <AuthForm title="Create Account" subtitle="Join Keystone CMS">
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.field}>
-          <label htmlFor="firstName">First Name</label>
-          <Input
-            id="firstName"
-            type="text"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            placeholder="Enter your first name"
-            required
-          />
+    <AuthForm title={getStepTitle()} subtitle={step !== "complete" ? getStepNumber() : undefined}>
+      {renderStep()}
+
+      {error && step !== "email-sent" && (
+        <div className={styles.error}>
+          ❌ {error}
         </div>
+      )}
 
-        <div className={styles.field}>
-          <label htmlFor="lastName">Last Name</label>
-          <Input
-            id="lastName"
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Enter your last name"
-            required
-          />
+      {successMessage && step === "email-sent" && (
+        <div className={styles.success}>
+          {successMessage}
         </div>
+      )}
 
-        <div className={styles.field}>
-          <label htmlFor="email">Email</label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            required
-          />
+      {step === "email" && (
+        <div className={styles.links}>
+          <p>
+            Already have an account?{" "}
+            <Link href="/login" className={styles.link}>
+              Login here
+            </Link>
+          </p>
+          <p>
+            <Link href="/" className={styles.link}>
+              ← Back to home
+            </Link>
+          </p>
         </div>
-
-        <div className={styles.field}>
-          <label htmlFor="password">Password</label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Create a password (min 6 characters)"
-            required
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="confirmPassword">Confirm Password</label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm your password"
-            required
-          />
-        </div>
-
-        {error && (
-          <div className={styles.error}>
-            ❌ {error}
-          </div>
-        )}
-
-        {success && (
-          <div className={styles.success}>
-            ✅ {success}
-          </div>
-        )}
-
-        <Button type="submit" className={styles.submitButton} disabled={isLoading}>
-          {isLoading ? "Creating Account..." : "Create Account"}
-        </Button>
-      </form>
-
-      <div className={styles.links}>
-        <p>
-          Already have an account?{" "}
-          <Link href="/login" className={styles.link}>
-            Sign in here
-          </Link>
-        </p>
-        <p>
-          <Link href="/" className={styles.link}>
-            ← Back to home
-          </Link>
-        </p>
-      </div>
+      )}
     </AuthForm>
   );
 }

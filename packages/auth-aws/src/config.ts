@@ -1,13 +1,12 @@
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import { CognitoConfig } from "./types";
+import { FirebaseConfig } from "./types";
 
-let cachedConfig: CognitoConfig | null = null;
+let cachedConfig: FirebaseConfig | null = null;
 
 /**
- * Get Cognito configuration from environment variables or AWS Parameter Store
- * Supports both local development and production environments
+ * Get Firebase configuration from environment variables
+ * Supports both client-side and server-side environments
  */
-export async function getCognitoConfig(environment?: string): Promise<CognitoConfig> {
+export function getFirebaseConfig(environment?: string): FirebaseConfig {
   // Return cached config if available
   if (cachedConfig) {
     return cachedConfig;
@@ -17,124 +16,115 @@ export async function getCognitoConfig(environment?: string): Promise<CognitoCon
 
   // For browser/client-side, use public environment variables
   if (typeof window !== "undefined") {
-    const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
-    const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-    const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
-    const region = process.env.NEXT_PUBLIC_AWS_REGION || "us-east-1";
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+    const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+    const measurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
 
-    if (!userPoolId || !clientId || !domain) {
-      throw new Error("Missing required Cognito environment variables. Please set NEXT_PUBLIC_COGNITO_USER_POOL_ID, NEXT_PUBLIC_COGNITO_CLIENT_ID, and NEXT_PUBLIC_COGNITO_DOMAIN in your .env.local file.");
+    if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
+      throw new Error(
+        "Missing required Firebase environment variables. Please set NEXT_PUBLIC_FIREBASE_* variables in your .env.local file."
+      );
     }
 
     cachedConfig = {
-      userPoolId,
-      clientId,
-      clientSecret: "", // Not needed for public client
-      domain,
-      region,
+      apiKey,
+      authDomain,
+      projectId,
+      storageBucket,
+      messagingSenderId,
+      appId,
+      measurementId,
     };
     return cachedConfig;
   }
 
   // For server-side, use environment variables
-  const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  const clientId = process.env.COGNITO_CLIENT_ID;
-  const domain = process.env.COGNITO_DOMAIN;
-  const region = process.env.AWS_REGION || "us-east-1";
+  const apiKey = process.env.FIREBASE_API_KEY;
+  const authDomain = process.env.FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
+  const messagingSenderId = process.env.FIREBASE_MESSAGING_SENDER_ID;
+  const appId = process.env.FIREBASE_APP_ID;
+  const measurementId = process.env.FIREBASE_MEASUREMENT_ID;
 
-  if (userPoolId && clientId && domain) {
-    cachedConfig = {
-      userPoolId,
-      clientId,
-      clientSecret: process.env.COGNITO_CLIENT_SECRET || "",
-      domain,
-      region,
-    };
-    console.log("✅ Using environment variables config");
-    return cachedConfig;
-  }
-
-  // For production, fetch from AWS Parameter Store
-  try {
-    const ssmConfig: any = {
-      region: process.env.AWS_REGION || "us-east-1",
-    };
-    
-    // In serverless environments, explicitly set credentials if available
-    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-      ssmConfig.credentials = {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      };
-    }
-    
-    const ssmClient = new SSMClient(ssmConfig);
-
-    const [userPoolId, clientId, domain, region] = await Promise.all([
-      getParameter(ssmClient, `/keystone/${env}/cognito/user-pool-id`),
-      getParameter(ssmClient, `/keystone/${env}/cognito/client-id`),
-      getParameter(ssmClient, `/keystone/${env}/cognito/domain`),
-      getParameter(ssmClient, `/keystone/${env}/cognito/region`),
-    ]);
-
-    // Client secret needs to be handled separately as it's sensitive
-    const clientSecret = await getCognitoClientSecret(clientId, region);
-
-    cachedConfig = {
-      userPoolId,
-      clientId,
-      clientSecret,
-      domain,
-      region,
-    };
-
-    return cachedConfig;
-  } catch (error) {
-    console.error("Failed to fetch Cognito configuration:", error);
+  if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
     throw new Error(
-      "Cognito environment variables not found. Please check your .env file contains COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, etc."
+      `Firebase environment variables not found for ${env}. Please check your .env file contains FIREBASE_* variables.`
     );
   }
-}
 
-async function getParameter(ssmClient: SSMClient, name: string): Promise<string> {
-  const command = new GetParameterCommand({
-    Name: name,
-    WithDecryption: true,
-  });
+  cachedConfig = {
+    apiKey,
+    authDomain,
+    projectId,
+    storageBucket,
+    messagingSenderId,
+    appId,
+    measurementId,
+  };
 
-  const result = await ssmClient.send(command);
-  if (!result.Parameter?.Value) {
-    throw new Error(`Parameter ${name} not found`);
-  }
-
-  return result.Parameter.Value;
-}
-
-async function getCognitoClientSecret(_clientId: string, _region: string): Promise<string> {
-  // In production, you might want to store the client secret in AWS Secrets Manager
-  // For now, we'll try to get it from environment variables
-  const clientSecret = process.env.COGNITO_CLIENT_SECRET;
-  if (!clientSecret) {
-    throw new Error(
-      "COGNITO_CLIENT_SECRET environment variable is required. " +
-      "Consider storing this in AWS Secrets Manager for production."
-    );
-  }
-  return clientSecret;
+  console.log("✅ Using Firebase environment variables config");
+  return cachedConfig;
 }
 
 /**
- * Get the OAuth URLs for Cognito
+ * Get Firebase Admin SDK configuration
+ * Supports both individual environment variables and JSON service account key
  */
-export function getCognitoUrls(config: CognitoConfig) {
-  const baseUrl = `https://${config.domain}.auth.${config.region}.amazoncognito.com`;
+export function getFirebaseAdminConfig() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  
+  if (!projectId) {
+    throw new Error(
+      "Missing Firebase Admin SDK configuration. Please set FIREBASE_PROJECT_ID."
+    );
+  }
+
+  // Check if we have a JSON service account key
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (serviceAccountKey) {
+    try {
+      return {
+        credential: JSON.parse(serviceAccountKey),
+        projectId,
+      };
+    } catch (error) {
+      throw new Error(
+        "Invalid FIREBASE_SERVICE_ACCOUNT_KEY. Please ensure it's valid JSON."
+      );
+    }
+  }
+
+  // Check if we have individual service account components
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  
+  if (!clientEmail || !privateKey) {
+    throw new Error(
+      "Missing Firebase Admin SDK configuration. Please set either FIREBASE_SERVICE_ACCOUNT_KEY (JSON) or both FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY."
+    );
+  }
+
+  // Construct service account object from individual variables
+  const serviceAccount = {
+    type: "service_account",
+    project_id: projectId,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || "default",
+    private_key: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
+    client_email: clientEmail,
+    client_id: process.env.FIREBASE_CLIENT_ID || "default",
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(clientEmail)}`
+  };
 
   return {
-    authorization: `${baseUrl}/oauth2/authorize`,
-    token: `${baseUrl}/oauth2/token`,
-    userInfo: `${baseUrl}/oauth2/userInfo`,
-    logout: `${baseUrl}/logout`,
-    jwks: `https://cognito-idp.${config.region}.amazonaws.com/${config.userPoolId}/.well-known/jwks.json`,
+    credential: serviceAccount,
+    projectId,
   };
 }

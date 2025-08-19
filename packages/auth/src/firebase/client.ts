@@ -1,174 +1,54 @@
-import { 
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  confirmPasswordReset,
-  signOut,
-  updateProfile,
-  updatePassword,
-  sendEmailVerification,
-  User,
-  UserCredential,
-  Auth
-} from "firebase/auth";
-import { getFirebaseAuth } from "./config";
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { getAuth, Auth, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { getFirebaseConfig } from "../config";
+import { FirebaseConfig, SignInParams, FirebaseAuthError } from "../types";
 
-export interface FirebaseAuthTokens {
-  accessToken: string;
-  idToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-export interface SignUpParams {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}
-
-export interface SignInParams {
-  email: string;
-  password: string;
-}
-
-export interface ResetPasswordParams {
-  email: string;
-}
-
-export interface ConfirmResetPasswordParams {
-  oobCode: string;
-  newPassword: string;
-}
-
-export class FirebaseAuthClient {
+/**
+ * Client-side Firebase client for getting ID tokens
+ * Use this only when you need client-side authentication (e.g., to get ID tokens)
+ * For all server operations, use FirebaseServerClient instead
+ */
+export class FirebaseClient {
+  private app: FirebaseApp;
   private auth: Auth;
 
-  constructor() {
-    this.auth = getFirebaseAuth();
+  constructor(config?: FirebaseConfig) {
+    const firebaseConfig = config || getFirebaseConfig();
+    
+    // Initialize Firebase app if not already initialized
+    if (getApps().length === 0) {
+      this.app = initializeApp(firebaseConfig);
+    } else {
+      this.app = getApps()[0];
+    }
+
+    this.auth = getAuth(this.app);
   }
 
   /**
-   * Sign up a new user with email and password
+   * Sign in to get ID token (client-side only)
    */
-  async signUp(params: SignUpParams): Promise<UserCredential> {
+  async signInForToken(params: SignInParams): Promise<string> {
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        this.auth,
-        params.email,
-        params.password
-      );
-
-      // Update user profile with display name
-      await updateProfile(userCredential.user, {
-        displayName: `${params.firstName} ${params.lastName}`.trim(),
-      });
-
-      // Send email verification
-      await sendEmailVerification(userCredential.user);
-
-      return userCredential;
-    } catch (error) {
-      throw new Error(`Sign up failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      const credential = await signInWithEmailAndPassword(this.auth, params.email, params.password);
+      return await credential.user.getIdToken();
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
     }
   }
 
   /**
-   * Sign in user with email and password
+   * Get current user's ID token
    */
-  async signIn(params: SignInParams): Promise<UserCredential> {
+  async getCurrentUserToken(forceRefresh = false): Promise<string | null> {
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        this.auth,
-        params.email,
-        params.password
-      );
-
-      return userCredential;
-    } catch (error) {
-      throw new Error(`Sign in failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  /**
-   * Get Firebase Auth tokens for a user
-   */
-  async getTokens(user: User): Promise<FirebaseAuthTokens> {
-    try {
-      const idToken = await user.getIdToken();
-      const idTokenResult = await user.getIdTokenResult();
-      
-      return {
-        accessToken: idToken, // Firebase uses ID token as access token
-        idToken: idToken,
-        refreshToken: user.refreshToken,
-        expiresIn: Math.floor((new Date(idTokenResult.expirationTime).getTime() - Date.now()) / 1000),
-      };
-    } catch (error) {
-      throw new Error(`Failed to get tokens: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  /**
-   * Refresh user tokens
-   */
-  async refreshTokens(): Promise<FirebaseAuthTokens | null> {
-    try {
-      const user = this.auth.currentUser;
-      if (!user) {
+      if (!this.auth.currentUser) {
         return null;
       }
 
-      // Force token refresh
-      const idToken = await user.getIdToken(true);
-      const idTokenResult = await user.getIdTokenResult();
-
-      return {
-        accessToken: idToken,
-        idToken: idToken,
-        refreshToken: user.refreshToken,
-        expiresIn: Math.floor((new Date(idTokenResult.expirationTime).getTime() - Date.now()) / 1000),
-      };
-    } catch (error) {
-      throw new Error(`Token refresh failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  /**
-   * Send password reset email
-   */
-  async forgotPassword(params: ResetPasswordParams): Promise<void> {
-    try {
-      await sendPasswordResetEmail(this.auth, params.email);
-    } catch (error) {
-      throw new Error(`Password reset failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  /**
-   * Confirm password reset with code
-   */
-  async confirmPasswordReset(params: ConfirmResetPasswordParams): Promise<void> {
-    try {
-      await confirmPasswordReset(this.auth, params.oobCode, params.newPassword);
-    } catch (error) {
-      throw new Error(`Password reset confirmation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  /**
-   * Update user password
-   */
-  async updatePassword(newPassword: string): Promise<void> {
-    try {
-      const user = this.auth.currentUser;
-      if (!user) {
-        throw new Error("No authenticated user");
-      }
-
-      await updatePassword(user, newPassword);
-    } catch (error) {
-      throw new Error(`Password update failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      return await this.auth.currentUser.getIdToken(forceRefresh);
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
     }
   }
 
@@ -178,74 +58,40 @@ export class FirebaseAuthClient {
   async signOut(): Promise<void> {
     try {
       await signOut(this.auth);
-    } catch (error) {
-      throw new Error(`Sign out failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
     }
   }
 
   /**
-   * Get current user
+   * Handle Firebase authentication errors
    */
-  getCurrentUser(): User | null {
-    return this.auth.currentUser;
+  private handleFirebaseError(error: unknown): FirebaseAuthError {
+    const errorCode = (error as { code?: string }).code || "unknown";
+    const errorMessage = (error as { message?: string }).message || "An unknown error occurred";
+    
+    const firebaseError: FirebaseAuthError = {
+      name: "FirebaseAuthError",
+      code: errorCode,
+      message: this.getErrorMessage(errorCode) || errorMessage,
+    };
+
+    return firebaseError;
   }
 
   /**
-   * Wait for auth state to be determined
+   * Get user-friendly error messages
    */
-  async waitForAuthState(): Promise<User | null> {
-    return new Promise((resolve) => {
-      const unsubscribe = this.auth.onAuthStateChanged((user) => {
-        unsubscribe();
-        resolve(user);
-      });
-    });
+  private getErrorMessage(code: string): string {
+    const errorMessages: Record<string, string> = {
+      "auth/user-not-found": "No account found with this email address.",
+      "auth/wrong-password": "Incorrect password.",
+      "auth/invalid-email": "Invalid email address.",
+      "auth/user-disabled": "This account has been disabled.",
+      "auth/too-many-requests": "Too many failed attempts. Please try again later.",
+      "auth/network-request-failed": "Network error. Please check your connection.",
+    };
+
+    return errorMessages[code] || "An error occurred during authentication.";
   }
-
-  /**
-   * Resend email verification
-   */
-  async resendVerificationEmail(): Promise<void> {
-    try {
-      const user = this.auth.currentUser;
-      if (!user) {
-        throw new Error("No authenticated user");
-      }
-
-      await sendEmailVerification(user);
-    } catch (error) {
-      throw new Error(`Failed to resend verification email: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-
-  /**
-   * Check if user's email is verified
-   */
-  isEmailVerified(): boolean {
-    const user = this.auth.currentUser;
-    return user?.emailVerified || false;
-  }
-
-  /**
-   * Get user's display name
-   */
-  getDisplayName(): string | null {
-    const user = this.auth.currentUser;
-    return user?.displayName || null;
-  }
-
-  /**
-   * Get user's email
-   */
-  getEmail(): string | null {
-    const user = this.auth.currentUser;
-    return user?.email || null;
-  }
-}
-
-/**
- * Factory function to create Firebase Auth client
- */
-export function createFirebaseAuthClient(): FirebaseAuthClient {
-  return new FirebaseAuthClient();
 }

@@ -1,7 +1,6 @@
 {
   "name": "@keystone/auth",
   "version": "0.0.1",
-  "description": "Firebase Authentication package for Keystone",
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,15 +10,16 @@
     "dev": "tsc --watch",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "setup:firebase:dev": "./setup-firebase.sh --stage=dev --mode=update",
+    "setup:firebase:prod": "./setup-firebase.sh --stage=prod --mode=update"
   },
   "dependencies": {
-    "firebase": "^10.7.1",
-    "firebase-admin": "^13.4.0",
-    "jose": "^5.2.0"
+    "firebase": "^12.1.0",
+    "firebase-admin": "^13.4.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.9.2"
   }
 }

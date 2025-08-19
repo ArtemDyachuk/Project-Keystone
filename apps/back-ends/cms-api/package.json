@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "prebuild": "cd ../../../packages/auth && npm run build && cd ../database && npm run build",
+    "prebuild": "cd ../../../packages/database && npm run build && cd ../auth && npm run build",
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
@@ -25,20 +25,17 @@
     "cookie-parser": "^1.4.7",
     "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",
-    "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
-    "uuid": "^10.0.0",
+    "resend": "^6.0.1",
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
     "@nestjs/testing": "^11.1.6",
-    "@types/ioredis": "^5.0.0",
     "@types/jest": "^30.0.0",
-    "@types/uuid": "^10.0.0",
     "@types/supertest": "^6.0.3",
     "jest": "^30.0.5",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.1",
-    "ts-node": "10.9.1"
+    "ts-node": "10.9.2"
   }
 }

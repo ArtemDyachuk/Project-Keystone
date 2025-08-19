@@ -23,6 +23,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
+  margin-bottom: 3rem;
 }
 
 .card {
@@ -74,4 +75,51 @@
 
 .statusGood {
   color: #059669 !important;
+}
+
+/* Session Data Display Styles */
+.sessionData {
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.sessionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.sessionInfo {
+  color: #6b7280;
+}
+
+.sessionInfo p {
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.sessionDebug {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.jsonDisplay {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background-color: var(--surface-secondary);
+  border: 1px solid var(--border-primary);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 1rem;
+  border-radius: 0.375rem;
 }

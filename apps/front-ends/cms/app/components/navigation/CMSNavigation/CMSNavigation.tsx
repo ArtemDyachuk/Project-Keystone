@@ -1,7 +1,7 @@
 "use client";
 
 import { TenantSwitcher } from "@/app/components/tenants";
-import Link from "next/link";
+import { logoutAction } from "@/app/actions";
 import styles from "./CMSNavigation.module.css";
 
 interface CMSNavigationProps {
@@ -12,6 +12,25 @@ interface CMSNavigationProps {
 }
 
 export function CMSNavigation({ className, userData, selectedTenant, userTenants }: CMSNavigationProps) {
+  // Client-safe display name extraction
+  const getDisplayName = (user: any): string => {
+    if (user?.displayName) {
+      return user.displayName;
+    }
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.firstName) {
+      return user.firstName;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return "User";
+  };
+
+  const displayName = userData ? getDisplayName(userData) : "User";
+
   return (
     <header className={`${styles.appHeader} ${className || ""}`}>
       <div className={styles.headerContent}>
@@ -21,12 +40,10 @@ export function CMSNavigation({ className, userData, selectedTenant, userTenants
             selectedTenant={selectedTenant}
             userTenants={userTenants}
           />
-          <Link href="/account" className={styles.accountLink}>
-            <span className={styles.userInfo}>
-              {userData?.firstName || userData?.email || "Account"}
-            </span>
-          </Link>
-          <form action="/api/auth/signout" method="POST" style={{ display: "inline" }}>
+          <span className={styles.userInfo}>
+            {displayName}
+          </span>
+          <form action={logoutAction} style={{ display: "inline" }}>
             <button type="submit" className={styles.logoutButton}>
               Logout
             </button>

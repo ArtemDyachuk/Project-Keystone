@@ -2,36 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { oobCode } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    if (!oobCode) {
-      return NextResponse.json(
-        { success: false, error: "Reset code is required" },
-        { status: 400 }
-      );
-    }
-
-    // For Firebase, the oobCode (out-of-band code) is validated
-    // when the user actually tries to reset their password.
-    // This route can be used to pre-validate the code format.
-    
-    // Basic validation: oobCode should be a non-empty string
-    if (typeof oobCode !== "string" || oobCode.trim().length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Invalid reset code format" },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ 
-      success: true,
-      message: "Reset code format is valid. You can now proceed with password reset.",
-      oobCode: oobCode
-    });
+    // Original code commented out:
+    // const { token } = await request.json();
+    // if (!token) {
+    //   return NextResponse.json(
+    //     { success: false, error: "Token is required" },
+    //     { status: 400 }
+    //   );
+    // }
+    // const decoded = verifyResetToken(token);
+    // return NextResponse.json({ 
+    //   success: true,
+    //   email: decoded.email,
+    //   message: "Token is valid"
+    // });
   } catch (error) {
-    console.error("Validate reset token error:", error);
+    console.error("Token validation error:", error);
+    
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to validate reset code" },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Invalid token" 
+      },
       { status: 400 }
     );
   }

@@ -1,19 +1,24 @@
 import { Sidebar, CMSNavigation } from "@/app/components/navigation";
 import { Footer } from "@/app/components/navigation/Footer/Footer";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { getUserDataAndTenants } from "@/app/actions/tenant.actions";
+import { getCurrentUserServer } from "@/lib/sessions/server";
+// import { TenantServiceClient } from "@/app/services";
 import styles from "./styles.module.css";
 
 // Force dynamic rendering since we use cookies
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Get fresh user data and tenants using the same logic as pages
-  const { userData, userTenants, selectedTenant } = await getUserDataAndTenants();
+  // Get user data from session
+  const userData = await getCurrentUserServer();
+
+  // Get user's tenants from database (only if user has tenant IDs)
+  const userTenants = [] as any[]; // tenants integration later
+  let selectedTenant = null as any;
 
   return (
     <ThemeProvider>
@@ -30,9 +35,7 @@ export default async function DashboardLayout({
           <Sidebar />
 
           <main className={styles.mainContent}>
-            <div className={styles.pageContent}>
-              {children}
-            </div>
+            <div className={styles.pageContent}>{children}</div>
             <Footer />
           </main>
         </div>

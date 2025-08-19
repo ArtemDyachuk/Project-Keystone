@@ -1,82 +1,107 @@
-export interface CognitoConfig {
-  userPoolId: string;
-  clientId: string;
-  clientSecret: string;
-  domain: string;
-  region: string;
+export interface FirebaseConfig {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket: string;
+  messagingSenderId: string;
+  appId: string;
+  measurementId?: string;
 }
 
-export interface CognitoUser {
-  sub: string;
-  email: string;
-  email_verified: boolean;
-  given_name: string;
-  family_name: string;
-  "custom:tenantId"?: string;
-  "custom:role"?: string;
+export interface FirebaseUser {
+  uid: string;
+  email: string | null;
+  emailVerified: boolean;
+  displayName: string | null;
+  photoURL: string | null;
+  tenantId?: string | null;
+  customClaims?: Record<string, unknown>;
 }
 
 export interface AuthTokens {
   accessToken: string;
-  idToken: string;
   refreshToken: string;
   expiresIn: number;
 }
 
-export interface DecodedToken {
-  sub: string;
-  email?: string;
-  email_verified?: boolean;
-  given_name?: string;
-  family_name?: string;
-  "custom:tenantId"?: string;
-  "custom:role"?: string;
-  "custom:tenantIds"?: string;
-  "custom:selectedTenantId"?: string;
-  aud?: string;
-  auth_time?: number;
-  exp: number;
-  iat: number;
-  iss?: string;
-  token_use?: "access" | "id";
-  username?: string;
-  client_id?: string;
-  origin_jti?: string;
-  event_id?: string;
-  scope?: string;
-  jti?: string;
-}
-
 export interface SignUpParams {
   email: string;
-  password: string;
-  givenName: string;
-  familyName: string;
+  password?: string; // Optional for email-link flow
+  displayName?: string;
   tenantId?: string;
-  role?: string;
+}
+
+export interface EmailLinkSignUpParams {
+  email: string;
+  firstName: string;
+  lastName: string;
+  tenantId?: string;
+}
+
+export interface ActionCodeSettings {
+  url: string;
+  handleCodeInApp: boolean;
+  iOS?: {
+    bundleId: string;
+  };
+  android?: {
+    packageName: string;
+    installApp?: boolean;
+    minimumVersion?: string;
+  };
+  dynamicLinkDomain?: string;
+}
+
+// Session Management Types
+export interface UserSession {
+  uid: string;
+  email: string;
+  displayName: string | null;
+  emailVerified: boolean;
+  tenantId: string | null;
+  roles: string[];
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+export interface SessionData {
+  sessionId: string;
+  user: UserSession;
+  isValid: boolean;
+}
+
+export interface CookieOptions {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'strict' | 'lax' | 'none';
+  maxAge: number;
+  path: string;
 }
 
 export interface SignInParams {
   email: string;
   password: string;
-}
-
-export interface ConfirmSignUpParams {
-  username: string;
-  confirmationCode: string;
+  tenantId?: string;
 }
 
 export interface ResetPasswordParams {
   email: string;
+  tenantId?: string;
 }
 
-export interface ConfirmResetPasswordParams {
-  email: string;
-  confirmationCode: string;
-  newPassword: string;
+export interface UpdateProfileParams {
+  displayName?: string;
+  photoURL?: string;
 }
 
-export interface UpdateUserAttributesParams {
-  accessToken: string;
-  attributes: Record<string, string>;
+export interface TenantConfig {
+  tenantId: string;
+  displayName: string;
+  allowPasswordSignup: boolean;
+  enableEmailLinkSignin: boolean;
+}
+
+export interface FirebaseAuthError extends Error {
+  code: string;
+  message: string;
 }

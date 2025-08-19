@@ -1,41 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, confirmationCode } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    if (!email || !confirmationCode) {
-      return NextResponse.json(
-        { success: false, error: "Email and confirmation code are required" },
-        { status: 400 }
-      );
-    }
-
-    const authClient = createFirebaseAuthClient();
-
-    // For Firebase, email verification is typically handled automatically
-    // when users click the link in their email. This route can be used
-    // to check verification status or handle custom verification flows.
-    
-    // Check if user's email is verified
-    const isVerified = authClient.isEmailVerified();
-    
-    if (isVerified) {
-      return NextResponse.json({ 
-        success: true,
-        message: "Email is already verified."
-      });
-    } else {
-      return NextResponse.json({ 
-        success: false,
-        error: "Email not verified. Please check your email and click the verification link."
-      });
-    }
+    // Original code commented out:
+    // const { username, confirmationCode } = await request.json();
+    // const config = await getCognitoConfig();
+    // const authClient = new CognitoAuthClient(config);
+    // await authClient.confirmSignUp({
+    //   username,
+    //   confirmationCode,
+    // });
+    // return NextResponse.json({ 
+    //   success: true,
+    //   message: "Email verified successfully"
+    // });
   } catch (error) {
-    console.error("Email verification error:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to verify email" },
+      { success: false, error: error instanceof Error ? error.message : "Verification failed" },
       { status: 400 }
     );
   }

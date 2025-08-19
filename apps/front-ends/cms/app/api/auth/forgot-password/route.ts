@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createFirebaseAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
-    
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: "Email is required" },
-        { status: 400 }
-      );
-    }
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    const authClient = createFirebaseAuthClient();
-    await authClient.forgotPassword({ email });
-    
-    // Firebase sends the reset email automatically, but we can also provide a custom link
-    console.log("📧 Password reset email sent via Firebase to:", email);
-
-    return NextResponse.json({ 
-      success: true,
-      message: "Password reset email sent successfully. Please check your email for the reset link.",
-      note: "Firebase automatically sends a reset link to your email address."
-    });
+    // Original code commented out:
+    // const { email } = await request.json();
+    // const config = await getCognitoConfig();
+    // const authClient = new CognitoAuthClient(config);
+    // await authClient.forgotPassword({ email });
+    // const resetToken = generateResetToken(email);
+    // ... rest of the logic
   } catch (error) {
     console.error("Forgot password error:", error);
     return NextResponse.json(
