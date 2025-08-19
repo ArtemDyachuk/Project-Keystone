@@ -1,111 +1,131 @@
 # @keystone/auth
 
-Simple AWS Cognito authentication package for the Keystone monorepo.
+**Server-side Firebase authentication** package with Google Identity Platform (GIP) multi-tenancy support for the Keystone monorepo.
 
 ## 🚀 **Quick Setup**
 
-### 1. Configure AWS
+### 1. Automated Setup (Recommended)
+
+The setup script will check and install all prerequisites automatically:
 
 ```bash
-aws configure
-# Enter: Access Key ID, Secret Access Key, Region (us-east-1), Format (json)
+# For development
+npm run setup:firebase:dev
+
+# For production  
+npm run setup:firebase:prod
+
+# Or run directly
+./setup-firebase.sh --stage=dev
+./setup-firebase.sh --stage=prod
 ```
 
-### 2. Create Cognito
+**What the script does:**
+
+- ✅ Checks for required CLIs (gcloud, firebase)
+- ✅ Prompts to install missing tools
+- ✅ Handles authentication
+- ✅ Creates Firebase project with GIP
+- ✅ Enables multi-tenancy and MFA TOTP
+- ✅ Creates `.env.dev` or `.env.prod` file
+- ✅ Outputs all environment variables
+
+### 2. Manual Prerequisites (if needed)
 
 ```bash
-npm run setup:cognito
+# Install Google Cloud SDK (macOS)
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL
+
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Authenticate
+gcloud auth login
+firebase login
 ```
 
-### 3. Copy Environment Variables
+## 🔧 **Usage (Server-side)**
 
-The script outputs all the variables you need. Copy them to:
-
-**Local (.env.local)**:
-
-```bash
-COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
-COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-COGNITO_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx
-COGNITO_DOMAIN=keystone-development-auth
-AWS_REGION=us-east-1
-```
-
-**Vercel Dashboard**:
-
-```bash
-COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
-COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-COGNITO_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx
-COGNITO_DOMAIN=keystone-development-auth
-AWS_REGION=us-east-1
-NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-NEXT_PUBLIC_COGNITO_DOMAIN=https://keystone-development-auth.auth.us-east-1.amazoncognito.com
-```
-
-**Render Dashboard**:
-
-```bash
-COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
-COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-COGNITO_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx
-COGNITO_DOMAIN=keystone-development-auth
-AWS_REGION=us-east-1
-```
-
-## 🔧 **Usage**
-
-### Sign Up with Email + 6-Digit Code
+### Basic Authentication
 
 ```typescript
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
+import { FirebaseAdminClient } from "@keystone/auth";
 
-const config = await getCognitoConfig();
-const authClient = new CognitoAuthClient(config);
+const adminClient = new FirebaseAdminClient();
 
-// Sign up - 6-digit code sent automatically to email
-await authClient.signUp({
+// Create user server-side
+const user = await adminClient.createUser({
   email: "user@example.com",
   password: "SecurePass123!",
-  givenName: "John",
-  familyName: "Doe"
+  displayName: "John Doe"
 });
 
-// Confirm with 6-digit code from email
-await authClient.confirmSignUp({
-  email: "user@example.com",
-  confirmationCode: "123456"
-});
+// Verify ID token from client
+const user = await adminClient.verifyIdToken(idToken);
 
-// Sign in
-const tokens = await authClient.signIn({
-  email: "user@example.com",
-  password: "SecurePass123!"
-});
+// Get user by UID
+const user = await adminClient.getUserByUid(uid);
+
+// Generate password reset link
+const resetLink = await adminClient.generatePasswordResetLink("user@example.com");
 ```
 
-### Verify JWT Tokens (Backend)
+### Multi-Tenant Operations
 
 ```typescript
-import { verifyJwtToken, getCognitoConfig } from "@keystone/auth";
+// Create user in specific tenant
+const user = await adminClient.createUser({
+  email: "user@example.com",
+  password: "SecurePass123!",
+  tenantId: "tenant-123"
+});
 
-const config = await getCognitoConfig();
-const user = await verifyJwtToken(token, config.userPoolId, config.region);
+// Verify token for tenant
+const user = await adminClient.verifyIdToken(idToken, "tenant-123");
+
+// Create tenant
+const tenant = await adminClient.createTenant({
+  tenantId: "tenant-123",
+  displayName: "Tenant Name",
+  allowPasswordSignup: true,
+  enableEmailLinkSignin: false
+});
+
+// List all tenants
+const tenants = await adminClient.listTenants();
 ```
 
 ## 📋 **What Gets Created**
 
-- **User Pool**: Email sign-in with 6-digit verification
-- **App Client**: Server-side authentication ready
-- **Domain**: OAuth hosted UI
-- **Security**: Strong password policy, proper OAuth flows
+- **Firebase Project**: Web app with authentication
+- **Google Identity Platform**: Multi-tenant authentication support
+- **Service Account**: For admin SDK operations
+- **APIs Enabled**: Firebase, Identity Toolkit, Hosting
+- **Configuration Files**: firebase.json, .firebaserc
 
 ## 🏗️ **Infrastructure as Code**
 
-The `setup-cognito.sh` script creates AWS resources using AWS CLI:
+The `setup-firebase.sh` script creates Firebase resources using gcloud CLI:
 
-- No manual AWS console configuration
-- Reproducible across environments
+- No manual Firebase console configuration
+- Reproducible across environments  
 - Version controlled setup
+- Automatic GIP (multi-tenancy) enablement
+
+## 🏢 **Multi-Tenancy Features**
+
+- **Google Identity Platform**: Enterprise-grade multi-tenancy
+- **Tenant Isolation**: Users isolated by tenant
+- **Tenant-specific Sign-in**: Custom domains per tenant
+- **Admin SDK**: Manage tenants programmatically
+
+## 🔐 **Security Features**
+
+- **Email/Password Authentication**: Built-in
+- **Email Verification**: Automatic
+- **Password Reset**: Secure token-based
+- **Service Account**: Secure server-side operations
+- **App Check Ready**: Additional security layer
 
 **Perfect for your Vercel + Render.com monorepo!**

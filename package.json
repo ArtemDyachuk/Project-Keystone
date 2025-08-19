@@ -17,7 +17,11 @@
   "packageManager": "npm@10.9.3",
   "dependencies": {
     "dotenv": "^17.2.1",
+    "firebase": "^12.1.0",
+    "firebase-admin": "^13.4.0",
     "jose": "^6.0.12",
+    "mongoose": "^8.17.2",
+    "next": "^15.4.7",
     "ts-node": "^10.9.2",
     "turbo": "^2.5.6"
   },

@@ -1,38 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CognitoAuthClient, getCognitoConfig } from "@keystone/auth";
-import { setAuthCookiesInAction } from "@/lib/auth-cookies";
 
 export async function POST(request: NextRequest) {
   try {
-    const { refreshToken, email } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    if (!refreshToken || !email) {
-      return NextResponse.json(
-        { error: "Refresh token and email are required" },
-        { status: 400 }
-      );
-    }
-
-    // Get Cognito configuration
-    const config = await getCognitoConfig();
-    
-    // Create Cognito client
-    const authClient = new CognitoAuthClient(config);
-
-    // Refresh the tokens
-    const newTokens = await authClient.refreshTokens(refreshToken, email);
-
-    // Set new tokens in cookies
-    await setAuthCookiesInAction(newTokens);
-
-    // Return both tokens for middleware usage
-    return NextResponse.json({
-      success: true,
-      accessToken: newTokens.accessToken,
-      idToken: newTokens.idToken,
-      expiresIn: newTokens.expiresIn,
-    });
-
+    // Original code commented out:
+    // const { refreshToken, email } = await request.json();
+    // if (!refreshToken || !email) {
+    //   return NextResponse.json(
+    //     { error: "Refresh token and email are required" },
+    //     { status: 400 }
+    //   );
+    // }
+    // const config = await getCognitoConfig();
+    // const authClient = new CognitoAuthClient(config);
+    // const newTokens = await authClient.refreshTokens(refreshToken, email);
+    // await setAuthCookiesInAction(newTokens);
+    // return NextResponse.json({
+    //   success: true,
+    //   accessToken: newTokens.accessToken,
+    //   idToken: newTokens.idToken,
+    //   expiresIn: newTokens.expiresIn,
+    // });
   } catch (error) {
     console.error("Error refreshing tokens:", error);
     

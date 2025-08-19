@@ -1,6 +1,13 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AuthTokens } from "@keystone/auth";
+
+// Temporary stub type while auth is being refactored
+export interface AuthTokens {
+  idToken?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number; // Token expiration time in seconds
+}
 
 // Cookie configuration
 const COOKIE_CONFIG = {
@@ -21,27 +28,34 @@ const SIDEBAR_COLLAPSED_COOKIE = "sidebarCollapsed";
 export function setAuthCookies(tokens: AuthTokens): NextResponse {
   const response = NextResponse.json({ success: true });
 
-  // Calculate expiration times
-  const accessTokenExpiry = new Date(Date.now() + (tokens.expiresIn * 1000));
+  // Calculate expiration times with default fallback
+  const expiresIn = tokens.expiresIn || 3600; // Default to 1 hour
+  const accessTokenExpiry = new Date(Date.now() + (expiresIn * 1000));
   const refreshTokenExpiry = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days
 
   // Set access token cookie (expires when token expires)
-  response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
+  if (tokens.accessToken) {
+    response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
+      ...COOKIE_CONFIG,
+      expires: accessTokenExpiry,
+    });
+  }
 
   // Set ID token cookie (expires when token expires)
-  response.cookies.set(ID_TOKEN_COOKIE, tokens.idToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
+  if (tokens.idToken) {
+    response.cookies.set(ID_TOKEN_COOKIE, tokens.idToken, {
+      ...COOKIE_CONFIG,
+      expires: accessTokenExpiry,
+    });
+  }
 
   // Set refresh token cookie (long-lived)
-  response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
-    ...COOKIE_CONFIG,
-    expires: refreshTokenExpiry,
-  });
+  if (tokens.refreshToken) {
+    response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
+      ...COOKIE_CONFIG,
+      expires: refreshTokenExpiry,
+    });
+  }
 
   return response;
 }
@@ -104,25 +118,32 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function setAuthCookiesInAction(tokens: AuthTokens) {
   const cookieStore = await cookies();
 
-  // Calculate expiration times
-  const accessTokenExpiry = new Date(Date.now() + (tokens.expiresIn * 1000));
+  // Calculate expiration times with default fallback
+  const expiresIn = tokens.expiresIn || 3600; // Default to 1 hour
+  const accessTokenExpiry = new Date(Date.now() + (expiresIn * 1000));
   const refreshTokenExpiry = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days
 
   // Set cookies directly
-  cookieStore.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
+  if (tokens.accessToken) {
+    cookieStore.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
+      ...COOKIE_CONFIG,
+      expires: accessTokenExpiry,
+    });
+  }
 
-  cookieStore.set(ID_TOKEN_COOKIE, tokens.idToken, {
-    ...COOKIE_CONFIG,
-    expires: accessTokenExpiry,
-  });
+  if (tokens.idToken) {
+    cookieStore.set(ID_TOKEN_COOKIE, tokens.idToken, {
+      ...COOKIE_CONFIG,
+      expires: accessTokenExpiry,
+    });
+  }
 
-  cookieStore.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
-    ...COOKIE_CONFIG,
-    expires: refreshTokenExpiry,
-  });
+  if (tokens.refreshToken) {
+    cookieStore.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
+      ...COOKIE_CONFIG,
+      expires: refreshTokenExpiry,
+    });
+  }
 }
 
 /**

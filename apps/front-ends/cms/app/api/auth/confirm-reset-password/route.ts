@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, confirmationCode, newPassword } = await request.json();
+    // Since auth is temporarily disabled, return an error
+    throw new Error("Cognito not configured - auth temporarily disabled");
 
-    const config = await getCognitoConfig();
-    const authClient = new CognitoAuthClient(config);
+    // Original code commented out:
+    // const { email, confirmationCode, newPassword } = await request.json();
+    // const config = await getCognitoConfig();
+    // const authClient = new CognitoAuthClient(config);
+    // await authClient.confirmForgotPassword({
+    //   email,
+    //   confirmationCode,
+    //   newPassword,
+    // });
 
-    await authClient.confirmForgotPassword({
-      email,
-      confirmationCode,
-      newPassword,
-    });
-
-    return NextResponse.json({ 
-      success: true,
-      message: "Password reset successfully"
-    });
+    // return NextResponse.json({ 
+    //   success: true,
+    //   message: "Password reset successfully"
+    // });
   } catch (error) {
     console.error("Confirm reset password error:", error);
     

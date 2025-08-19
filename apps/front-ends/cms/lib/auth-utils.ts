@@ -1,5 +1,20 @@
 import { getAuthCookies } from "./auth-cookies";
-import { decodeJwtToken } from "@keystone/auth";
+
+// Temporary stub implementation while auth is being refactored
+function decodeJwtToken(token: string): any {
+  try {
+    // Simple JWT decode without verification (for development only)
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.warn('Failed to decode JWT token:', error);
+    return null;
+  }
+}
 
 export interface UserData {
   sub: string;
@@ -37,7 +52,7 @@ export async function getUserDataFromJWT(): Promise<UserData | null> {
 
     // Convert comma-separated string to array
     const tenantIds = customTenantIds
-      ? customTenantIds.split(",").map(id => id.trim()).filter(Boolean)
+      ? customTenantIds.split(",").map((id: string) => id.trim()).filter(Boolean)
       : undefined;
 
     return {

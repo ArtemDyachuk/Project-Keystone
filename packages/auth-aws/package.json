@@ -1,5 +1,5 @@
 {
-  "name": "@keystone/auth",
+  "name": "@keystone/auth-aws",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -11,12 +11,17 @@
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "setup:firebase:dev": "./setup-firebase.sh --stage=dev --mode=update",
-    "setup:firebase:prod": "./setup-firebase.sh --stage=prod --mode=update"
+    "setup:cognito": "./setup-cognito.sh development",
+    "setup:cognito:profile": "./setup-cognito.sh development"
   },
   "dependencies": {
-    "firebase": "^12.1.0",
-    "firebase-admin": "^13.4.0"
+    "@aws-sdk/client-cognito-identity-provider": "^3.600.0",
+    "@aws-sdk/client-ssm": "^3.600.0",
+    "jose": "^6.0.12",
+    "jsonwebtoken": "^9.0.2",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/estree": "^1.0.5",
+    "@types/json-schema": "^7.0.15"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

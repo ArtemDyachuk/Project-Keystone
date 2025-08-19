@@ -5,7 +5,7 @@ export default [
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      // Add any Firebase auth-specific ESLint rules here
+      // Add any auth-specific ESLint rules here
     },
   },
 ];

@@ -1,6 +1,15 @@
 "use client";
 
-import { isTokenExpired } from "@keystone/auth";
+// Temporary stub function while auth is being refactored
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000; // Convert to milliseconds
+    return Date.now() >= exp;
+  } catch {
+    return true; // Consider invalid tokens as expired
+  }
+}
 
 /**
  * Client-side authentication utilities

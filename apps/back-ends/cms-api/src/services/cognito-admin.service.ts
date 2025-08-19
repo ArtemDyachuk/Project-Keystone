@@ -5,7 +5,7 @@ import {
   AdminGetUserCommand,
   type AttributeType,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
+// import { getCognitoConfig, CognitoAuthClient } from "@keystone/auth";
 
 @Injectable()
 export class CognitoAdminService {
@@ -146,15 +146,16 @@ export class CognitoAdminService {
     username: string
   ): Promise<{ accessToken: string; idToken: string; refreshToken: string }> {
     try {
-      const cognitoConfig = await getCognitoConfig();
-      const cognitoClient = new CognitoAuthClient(cognitoConfig);
+      // const cognitoConfig = await getCognitoConfig();
+      // const cognitoClient = new CognitoAuthClient(cognitoConfig);
 
-      const newTokens = await cognitoClient.refreshTokens(refreshToken, username);
-
+      // const newTokens = await cognitoClient.refreshTokens(refreshToken, username);
+      console.log("refreshToken", refreshToken);
+      console.log("username", username);
       return {
-        accessToken: newTokens.accessToken,
-        idToken: newTokens.idToken,
-        refreshToken: newTokens.refreshToken
+        accessToken: "test",
+        idToken: "test",
+        refreshToken: "test"
       };
     } catch (error) {
       console.error("Failed to refresh tokens in CognitoAdminService:", error);
