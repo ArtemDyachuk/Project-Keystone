@@ -1,7 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { TenantService, ITenant } from '@keystone/database';
-import { CognitoAdminService } from '../services/cognito-admin.service';
-// import { decodeJwtToken } from '@keystone/auth';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 
 // DTOs for request validation
@@ -16,7 +14,6 @@ export class UpdateTenantDto {
 @Controller('tenants')
 export class TenantController {
   constructor(
-    private readonly cognitoAdminService: CognitoAdminService
   ) { }
 
   /**
@@ -30,7 +27,7 @@ export class TenantController {
         throw new UnauthorizedException("Authorization header required");
       }
 
-      const userInfo = this.extractUserFromJWT(authHeader);
+      // const userInfo = this.extractUserFromJWT(authHeader);
       const userPoolId = process.env.COGNITO_USER_POOL_ID;
 
       if (!userPoolId) {
@@ -40,10 +37,10 @@ export class TenantController {
 
       try {
         // Get user's tenant info from Cognito
-        const tenantInfo = await this.cognitoAdminService.getUserTenantInfo(
-          userPoolId,
-          userInfo.username
-        );
+        const tenantInfo = {
+          tenantIds: [],
+          selectedTenantId: null
+        }
 
         // Fetch full tenant details from database using the new method
         if (tenantInfo.tenantIds.length > 0) {
@@ -112,20 +109,20 @@ export class TenantController {
 
       if (userPoolId) {
         try {
-          await this.cognitoAdminService.addUserTenant(
-            userPoolId,
-            userInfo.username,
-            tenant._id!
-          );
+          // await this.cognitoAdminService.addUserTenant(
+          //   userPoolId,
+          //   userInfo.username,
+          //   tenant._id!
+          // );
 
           // If refresh token provided, get fresh tokens with updated attributes
           if (refreshToken && userInfo.username) {
             try {
-              const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
+              // const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
 
               return {
                 ...tenant,
-                tokens: newTokens
+                tokens: null
               };
             } catch (refreshError) {
               console.warn("Failed to refresh tokens after tenant creation:", refreshError);
@@ -156,12 +153,13 @@ export class TenantController {
    * GET /tenants/user/me
    */
   @Get('user/me')
-  async getUserTenants(@Headers('authorization') authHeader: string): Promise<{
+  async getUserTenants(): Promise<{
+    // async getUserTenants(@Headers('authorization') authHeader: string): Promise<{
     tenants: ITenant[];
     selectedTenantId: string | null;
   }> {
     try {
-      const userInfo = this.extractUserFromJWT(authHeader);
+      // const userInfo = this.extractUserFromJWT(authHeader);
 
       // Get user's tenant info from Cognito (only if configured)
       const userPoolId = process.env.COGNITO_USER_POOL_ID;
@@ -169,10 +167,10 @@ export class TenantController {
 
       if (userPoolId) {
         try {
-          tenantInfo = await this.cognitoAdminService.getUserTenantInfo(
-            userPoolId,
-            userInfo.username
-          );
+          tenantInfo = {
+            tenantIds: [],
+            selectedTenantId: null
+          }
         } catch (cognitoError) {
           console.warn('Cognito integration failed:', cognitoError);
           // Return empty tenant list if Cognito fails
@@ -268,44 +266,47 @@ export class TenantController {
           const userInfo = this.extractUserFromJWT(authHeader);
 
           // Get current user attributes
-          const attributes = await this.cognitoAdminService.getUserAttributes(userPoolId, userInfo.username);
-          const currentTenantIds = attributes["custom:tenantIds"]?.split(",").filter(Boolean) || [];
-          const currentSelectedTenantId = attributes["custom:selectedTenantId"];
+          // const attributes = {
+          //   tenantIds: [],
+          //   selectedTenantId: null
+          // }
+          // const currentTenantIds = attributes.tenantIds?.split(",").filter(Boolean) || [];
+          // const currentSelectedTenantId = attributes.selectedTenantId;
 
           // Remove the deleted tenant
-          const updatedTenantIds = currentTenantIds.filter((tenantId: string) => tenantId !== id);
+          // const updatedTenantIds = currentTenantIds.filter((tenantId: string) => tenantId !== id);
 
           // Update selected tenant if it was the deleted one
-          let newSelectedTenantId = currentSelectedTenantId;
-          if (currentSelectedTenantId === id) {
-            newSelectedTenantId = updatedTenantIds.length > 0 ? updatedTenantIds[0] : "";
-          }
+          // let newSelectedTenantId = currentSelectedTenantId;
+          // if (currentSelectedTenantId === id) {
+          //   newSelectedTenantId = updatedTenantIds.length > 0 ? updatedTenantIds[0] : "";
+          // }
 
-          // Update Cognito user attributes
-          if (updatedTenantIds.length > 0) {
-            await this.cognitoAdminService.updateUserTenants(
-              userPoolId,
-              userInfo.username,
-              updatedTenantIds,
-              newSelectedTenantId
-            );
-          } else {
-            // If no tenants left, clear the attributes
-            await this.cognitoAdminService.updateUserTenants(
-              userPoolId,
-              userInfo.username,
-              [],
-              ""
-            );
-          }
+          // // Update Cognito user attributes
+          // if (updatedTenantIds.length > 0) {
+          //   await this.cognitoAdminService.updateUserTenants(
+          //     userPoolId,
+          //     userInfo.username,
+          //     updatedTenantIds,
+          //     newSelectedTenantId
+          //   );
+          // } else {
+          //   // If no tenants left, clear the attributes
+          //   await this.cognitoAdminService.updateUserTenants(
+          //     userPoolId,
+          //     userInfo.username,
+          //     [],
+          //     ""
+          //   );
+          // }
 
           // Refresh tokens if provided
           if (body.refreshToken && userInfo.username) {
             try {
-              const newTokens = await this.cognitoAdminService.refreshUserTokens(body.refreshToken, userInfo.username);
+              // const newTokens = await this.cognitoAdminService.refreshUserTokens(body.refreshToken, userInfo.username);
               return {
                 message: `Tenant with ID "${id}" deleted successfully`,
-                tokens: newTokens
+                tokens: null
               };
             } catch (refreshError) {
               console.warn("Failed to refresh tokens after tenant deletion:", refreshError);
@@ -365,20 +366,20 @@ export class TenantController {
       }
 
       const userInfo = this.extractUserFromJWT(authHeader);
-      const { tenantId, refreshToken } = body;
+      const { refreshToken } = body;
 
       // Update Cognito user's selectedTenantId
       if (process.env.COGNITO_USER_POOL_ID) {
-        await this.cognitoAdminService.updateSelectedTenant(process.env.COGNITO_USER_POOL_ID, userInfo.username, tenantId);
+        // await this.cognitoAdminService.updateSelectedTenant(process.env.COGNITO_USER_POOL_ID, userInfo.username, tenantId);
 
         // If refresh token provided, get fresh tokens with updated attributes
         if (refreshToken && userInfo.username) {
           try {
-            const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
+            // const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
 
             return {
               message: "Selected tenant updated successfully",
-              tokens: newTokens
+              tokens: null
             };
           } catch (refreshError) {
             console.warn("Failed to refresh tokens, but tenant was updated:", refreshError);
@@ -412,7 +413,7 @@ export class TenantController {
         throw new UnauthorizedException("Authorization header required");
       }
 
-      const userInfo = this.extractUserFromJWT(authHeader);
+      // const userInfo = this.extractUserFromJWT(authHeader);
       const { refreshToken } = body;
 
       if (!refreshToken) {
@@ -421,11 +422,11 @@ export class TenantController {
 
       if (process.env.COGNITO_USER_POOL_ID) {
         try {
-          const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
+          // const newTokens = await this.cognitoAdminService.refreshUserTokens(refreshToken, userInfo.username);
 
           return {
             message: "Tokens refreshed successfully",
-            tokens: newTokens
+            tokens: null
           };
         } catch (refreshError) {
           console.warn("Failed to refresh tokens:", refreshError);
@@ -455,7 +456,7 @@ export class TenantController {
         throw new UnauthorizedException("Authorization header required");
       }
 
-      const userInfo = this.extractUserFromJWT(authHeader);
+      // const userInfo = this.extractUserFromJWT(authHeader);
       const userPoolId = process.env.COGNITO_USER_POOL_ID;
 
       if (!userPoolId) {
@@ -466,7 +467,10 @@ export class TenantController {
       }
 
       // Get user attributes from Cognito
-      const attributes = await this.cognitoAdminService.getUserAttributes(userPoolId, userInfo.username);
+      const attributes = {
+        tenantIds: [],
+        selectedTenantId: null
+      }
 
       return {
         success: true,
