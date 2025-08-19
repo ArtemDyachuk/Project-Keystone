@@ -1,6 +1,7 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Get, Query, Req } from '@nestjs/common';
 import { FirebaseServerClient, EmailLinkSignUpParams, ActionCodeSettings } from '@keystone/auth';
 import { EmailService } from '../services/email.service';
+import { SessionService } from '../services/session.service';
 
 // DTOs for request validation
 export class SignupWithEmailLinkDto {
@@ -37,11 +38,20 @@ export class ResetPasswordDto {
   tenantId?: string;
 }
 
+export class LoginDto {
+  email!: string;
+  password!: string;
+  tenantId?: string;
+}
+
 @Controller('auth')
 export class AuthController {
   private readonly firebaseClient: FirebaseServerClient;
 
-  constructor(private readonly emailService: EmailService) {
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly sessionService: SessionService
+  ) {
     this.firebaseClient = new FirebaseServerClient();
   }
 
@@ -647,6 +657,188 @@ export class AuthController {
         'Failed to reset password. Please try again.',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
+    }
+  }
+
+  /**
+   * Login with email and password
+   * POST /auth/login
+   */
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    try {
+      if (!loginDto.email?.trim()) {
+        throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
+      }
+
+      if (!loginDto.password?.trim()) {
+        throw new HttpException('Password is required', HttpStatus.BAD_REQUEST);
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(loginDto.email)) {
+        throw new HttpException('Please enter a valid email address', HttpStatus.BAD_REQUEST);
+      }
+
+      const email = loginDto.email.trim().toLowerCase();
+
+      // Verify credentials with Firebase
+      const user = await this.firebaseClient.verifyUserCredentials(
+        email,
+        loginDto.password,
+        loginDto.tenantId
+      );
+
+      // Check if email is verified
+      if (!user.emailVerified) {
+        throw new HttpException(
+          'Please verify your email before signing in',
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // Create session
+      const sessionId = this.sessionService.createSession({
+        uid: user.uid,
+        email: user.email || email,
+        displayName: user.displayName,
+        emailVerified: user.emailVerified,
+        tenantId: user.tenantId || null,
+        roles: [], // Will be populated from database later
+      });
+
+      return {
+        success: true,
+        message: 'Login successful',
+        sessionId, // Frontend will set this as HttpOnly cookie
+        user: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          emailVerified: user.emailVerified,
+        }
+      };
+    } catch (error) {
+      console.error('❌ Login failed:', error);
+      
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Handle Firebase-specific errors
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+        const errorCode = (error as any).code;
+
+        if (errorCode === 'auth/user-not-found') {
+          throw new HttpException(
+            'No account found with this email address',
+            HttpStatus.UNAUTHORIZED
+          );
+        }
+
+        if (errorCode === 'auth/invalid-email') {
+          throw new HttpException(
+            'Please enter a valid email address',
+            HttpStatus.BAD_REQUEST
+          );
+        }
+
+        if (errorCode === 'auth/user-disabled') {
+          throw new HttpException(
+            'This account has been disabled',
+            HttpStatus.FORBIDDEN
+          );
+        }
+
+        console.error('Login error details:', {
+          code: errorCode,
+          message: errorMessage,
+          fullError: error
+        });
+
+        throw new HttpException(
+          'Invalid email or password',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      throw new HttpException(
+        'Login failed. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get current session
+   * GET /auth/session
+   */
+  @Get('session')
+  async getSession(@Req() request: any) {
+    try {
+      // Get sessionId from HttpOnly cookie
+      const sessionId = request.cookies?.session;
+      
+      if (!sessionId) {
+        return {
+          success: false,
+          message: 'No active session'
+        };
+      }
+
+      const sessionData = this.sessionService.getSession(sessionId);
+      
+      if (!sessionData) {
+        return {
+          success: false,
+          message: 'Session not found or expired'
+        };
+      }
+
+      return {
+        success: true,
+        user: sessionData.user,
+        sessionId: sessionData.sessionId
+      };
+    } catch (error) {
+      console.error('❌ Get session failed:', error);
+      
+      return {
+        success: false,
+        message: 'Failed to get session'
+      };
+    }
+  }
+
+  /**
+   * Logout - destroy session
+   * POST /auth/logout
+   */
+  @Post('logout')
+  async logout(@Req() request: any) {
+    try {
+      // Get sessionId from HttpOnly cookie
+      const sessionId = request.cookies?.session;
+      
+      if (sessionId) {
+        // Delete the session from storage
+        const deleted = this.sessionService.deleteSession(sessionId);
+        console.log('🔄 Session deleted:', { sessionId, deleted });
+      }
+
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+    } catch (error) {
+      console.error('❌ Logout failed:', error);
+      
+      return {
+        success: true, // Always return success for logout
+        message: 'Logged out'
+      };
     }
   }
 }

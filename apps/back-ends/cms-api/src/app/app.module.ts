@@ -7,6 +7,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { DatabaseModule } from '../database/database.module';
 import { CognitoAdminService } from '../services/cognito-admin.service'; // Soon to be removed
 import { EmailService } from '../services/email.service';
+import { SessionService } from '../services/session.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 
 @Module({
@@ -17,6 +18,6 @@ import { TenantAccessGuard } from '../guards/tenant-access.guard';
     DatabaseModule
   ],
   controllers: [AppController, TenantController, AuthController],
-  providers: [AppService, CognitoAdminService, TenantAccessGuard, EmailService],
+  providers: [AppService, CognitoAdminService, TenantAccessGuard, EmailService, SessionService],
 })
 export class AppModule { }

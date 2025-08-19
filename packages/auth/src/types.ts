@@ -52,6 +52,32 @@ export interface ActionCodeSettings {
   dynamicLinkDomain?: string;
 }
 
+// Session Management Types
+export interface UserSession {
+  uid: string;
+  email: string;
+  displayName: string | null;
+  emailVerified: boolean;
+  tenantId: string | null;
+  roles: string[];
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+export interface SessionData {
+  sessionId: string;
+  user: UserSession;
+  isValid: boolean;
+}
+
+export interface CookieOptions {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'strict' | 'lax' | 'none';
+  maxAge: number;
+  path: string;
+}
+
 export interface SignInParams {
   email: string;
   password: string;

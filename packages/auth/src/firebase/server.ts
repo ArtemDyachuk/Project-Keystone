@@ -56,8 +56,8 @@ export class FirebaseServerClient {
    */
   async createUserWithoutPassword(params: EmailLinkSignUpParams): Promise<FirebaseUser> {
     try {
-      const authInstance = params.tenantId 
-        ? this.auth.tenantManager().authForTenant(params.tenantId) 
+      const authInstance = params.tenantId
+        ? this.auth.tenantManager().authForTenant(params.tenantId)
         : this.auth;
 
       const userRecord = await authInstance.createUser({
@@ -93,13 +93,69 @@ export class FirebaseServerClient {
   }
 
   /**
+   * Verify user credentials for login using Firebase Auth REST API
+   */
+  async verifyUserCredentials(email: string, password: string, tenantId?: string): Promise<FirebaseUser> {
+    try {
+      // Use Firebase Auth REST API to verify password
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
+
+      if (!apiKey) {
+        throw new Error('Firebase API key not configured');
+      }
+
+      // Call Firebase Auth REST API to verify credentials
+      const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          returnSecureToken: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorCode = errorData.error?.message || 'UNKNOWN_ERROR';
+
+        // Map Firebase REST API errors to our error codes
+        if (errorCode.includes('EMAIL_NOT_FOUND')) {
+          throw new Error('No account found with this email address');
+        } else if (errorCode.includes('INVALID_PASSWORD')) {
+          throw new Error('Invalid password');
+        } else if (errorCode.includes('USER_DISABLED')) {
+          throw new Error('This account has been disabled');
+        } else if (errorCode.includes('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+          throw new Error('Too many failed attempts. Please try again later');
+        } else {
+          throw new Error('Invalid email or password');
+        }
+      }
+
+      await response.json(); // Password verification successful
+
+      // Get user details from Admin SDK using the verified email
+      const user = await this.getUserByEmail(email, tenantId);
+
+      console.log('✅ Password verification successful via Firebase Auth REST API');
+
+      return user;
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
    * Verify ID token from client
    */
   async verifyIdToken(idToken: string, tenantId?: string): Promise<FirebaseUser> {
     try {
       const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
       const decodedToken = await authInstance.verifyIdToken(idToken);
-      
+
       return {
         uid: decodedToken.uid,
         email: decodedToken.email || null,
@@ -119,8 +175,8 @@ export class FirebaseServerClient {
    */
   async createUser(params: SignUpParams): Promise<FirebaseUser> {
     try {
-      const authInstance = params.tenantId 
-        ? this.auth.tenantManager().authForTenant(params.tenantId) 
+      const authInstance = params.tenantId
+        ? this.auth.tenantManager().authForTenant(params.tenantId)
         : this.auth;
 
       const userRecord = await authInstance.createUser({
@@ -150,9 +206,9 @@ export class FirebaseServerClient {
   async generateEmailLinkForSignup(params: EmailLinkSignUpParams, actionCodeSettings: ActionCodeSettings): Promise<{ user: FirebaseUser; emailLink: string }> {
     try {
       console.log('🔄 Starting Firebase signup process...', { email: params.email, firstName: params.firstName });
-      
-      const authInstance = params.tenantId 
-        ? this.auth.tenantManager().authForTenant(params.tenantId) 
+
+      const authInstance = params.tenantId
+        ? this.auth.tenantManager().authForTenant(params.tenantId)
         : this.auth;
 
       console.log('✅ Firebase auth instance created');
@@ -209,8 +265,8 @@ export class FirebaseServerClient {
    */
   async verifyEmailAndEnablePasswordSetup(uid: string, tenantId?: string): Promise<FirebaseUser> {
     try {
-      const authInstance = tenantId 
-        ? this.auth.tenantManager().authForTenant(tenantId) 
+      const authInstance = tenantId
+        ? this.auth.tenantManager().authForTenant(tenantId)
         : this.auth;
 
       // Update user to mark email as verified
@@ -236,8 +292,8 @@ export class FirebaseServerClient {
    */
   async setUserPassword(uid: string, password: string, tenantId?: string): Promise<FirebaseUser> {
     try {
-      const authInstance = tenantId 
-        ? this.auth.tenantManager().authForTenant(tenantId) 
+      const authInstance = tenantId
+        ? this.auth.tenantManager().authForTenant(tenantId)
         : this.auth;
 
       const userRecord = await authInstance.updateUser(uid, {
@@ -395,7 +451,7 @@ export class FirebaseServerClient {
   private handleFirebaseError(error: unknown): FirebaseAuthError {
     const errorCode = (error as { code?: string }).code || "unknown";
     const errorMessage = (error as { message?: string }).message || "An unknown error occurred";
-    
+
     const firebaseError: FirebaseAuthError = {
       name: "FirebaseAuthError",
       code: errorCode,
@@ -431,12 +487,12 @@ export class FirebaseServerClient {
   async generateEmailLinkForExistingUser(params: EmailLinkSignUpParams, actionCodeSettings: ActionCodeSettings): Promise<{ user: FirebaseUser; emailLink: string }> {
     try {
       console.log('🔄 Generating verification link for existing user...', { email: params.email });
-      
+
       // Since Firebase Admin SDK doesn't have getUserByEmail, we'll generate a new link
       // In production, you'd want to implement proper user lookup and verification
       console.log('⚠️  Note: Firebase Admin SDK doesn\'t have getUserByEmail method');
       console.log('🔄 Generating new verification link for resend...');
-      
+
       // Generate a new verification link with a placeholder UID
       // In production, you'd get the actual UID from your user database
       const verificationCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

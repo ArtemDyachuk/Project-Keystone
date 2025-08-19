@@ -1,6 +1,8 @@
 "use server";
 
 import { AuthServiceClient } from "@/app/services/auth.service";
+import { setSessionCookie, deleteSessionCookie } from "@/lib/sessions/cookies";
+import { redirect } from "next/navigation";
 
 export interface SignupWithEmailLinkData {
   firstName: string;
@@ -224,5 +226,78 @@ export async function resetPasswordAction(email: string, password: string, oobCo
       success: false,
       error: error instanceof Error ? error.message : "Unknown error"
     };
+  }
+}
+
+/**
+ * Login with email and password
+ */
+export async function loginAction(email: string, password: string, redirectUrl: string = "/dashboard") {
+  try {
+    if (!email?.trim()) {
+      return {
+        success: false,
+        error: "Email is required"
+      };
+    }
+
+    if (!password?.trim()) {
+      return {
+        success: false,
+        error: "Password is required"
+      };
+    }
+
+    // Call the auth service
+    const result = await AuthServiceClient.login({ email, password });
+
+    if (!result.success) {
+      return result;
+    }
+
+    // Set HttpOnly session cookie
+    if (result.sessionId) {
+      await setSessionCookie(result.sessionId);
+    }
+
+    // Redirect using Next.js redirect (this will throw NEXT_REDIRECT - that's normal)
+    redirect(redirectUrl);
+  } catch (error) {
+    // Check if this is a Next.js redirect (which is expected)
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      // This is normal - redirect was successful, just re-throw it
+      throw error;
+    }
+    
+    console.error("❌ Login action error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Logout - destroy session and redirect
+ */
+export async function logoutAction() {
+  try {
+    // Call backend to destroy session
+    const response = await fetch(`http://localhost:3001/api/auth/logout`, {
+      method: "POST",
+      credentials: 'include', // Include cookies
+    });
+
+    // Delete the session cookie regardless of backend response
+    await deleteSessionCookie();
+
+    // Redirect to login page
+    redirect("/login");
+  } catch (error) {
+    console.error("❌ Logout error:", error);
+    
+    // Even if backend fails, still delete cookie and redirect
+    await deleteSessionCookie();
+    redirect("/login");
   }
 }

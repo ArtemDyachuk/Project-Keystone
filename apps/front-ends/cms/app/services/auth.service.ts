@@ -17,6 +17,12 @@ export interface SetPasswordRequest {
   tenantId?: string;
 }
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+  tenantId?: string;
+}
+
 export interface AuthResponse {
   success: boolean;
   user?: {
@@ -28,6 +34,7 @@ export interface AuthResponse {
   message?: string;
   error?: string;
   emailLink?: string;
+  sessionId?: string; // For login response
   data?: any; // For additional response data
 }
 
@@ -377,6 +384,90 @@ export class AuthServiceClient {
       };
     } catch (error) {
       console.error("Failed to reset password:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  }
+
+  /**
+   * Login with email and password
+   * @param data Login credentials
+   * @returns Promise<AuthResponse> Response with session data
+   */
+  static async login(data: LoginRequest): Promise<AuthResponse> {
+    try {
+      if (!data.email?.trim()) {
+        return {
+          success: false,
+          error: "Email is required"
+        };
+      }
+
+      if (!data.password?.trim()) {
+        return {
+          success: false,
+          error: "Password is required"
+        };
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email)) {
+        return {
+          success: false,
+          error: "Please enter a valid email address"
+        };
+      }
+
+      const response = await fetch(`${config.apiBaseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: data.email.trim().toLowerCase(),
+          password: data.password.trim(),
+          tenantId: data.tenantId
+        }),
+      });
+
+      let result;
+      
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
+        // Handle non-JSON responses (like rate limiting)
+        const text = await response.text();
+        result = { message: text };
+      }
+
+      if (!response.ok) {
+        // Handle different HTTP status codes with better error messages
+        if (response.status === 429) {
+          throw new Error("Too many login attempts. Please try again later.");
+        } else if (response.status === 401) {
+          throw new Error("Invalid email or password.");
+        } else if (response.status === 403) {
+          throw new Error(result.message || "Please verify your email before signing in.");
+        } else if (response.status === 400) {
+          throw new Error(result.message || "Invalid login request.");
+        } else {
+          throw new Error(result.message || "Failed to login");
+        }
+      }
+
+      return {
+        success: true,
+        message: result.message || "Login successful!",
+        sessionId: result.sessionId,
+        user: result.user
+      };
+    } catch (error) {
+      console.error("Failed to login:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error"
