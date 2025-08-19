@@ -11,6 +11,24 @@ interface PublicNavigationProps {
 }
 
 export function PublicNavigation({ user }: PublicNavigationProps) {
+  // Client-safe display name extraction
+  const getDisplayName = (user: UserData): string => {
+    if (user?.displayName) {
+      return user.displayName;
+    }
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.firstName) {
+      return user.firstName;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return "User";
+  };
+
+  const displayName = user ? getDisplayName(user) : "Guest";
 
   return (
     <nav className={styles.navbar}>
@@ -23,7 +41,7 @@ export function PublicNavigation({ user }: PublicNavigationProps) {
           {user ? (
             <div className={styles.userSection}>
               <span className={styles.welcome}>
-                Welcome, {user.firstName || user.email?.split("@")[0] || "User"}!
+                Hello, {displayName}! 👋
               </span>
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">

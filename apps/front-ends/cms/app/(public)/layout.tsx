@@ -1,17 +1,25 @@
 import { PublicNavigation } from '../components/navigation';
-import { getUserDataFromJWT } from '@/lib/auth-utils';
+import { getCurrentUserServer } from '@/lib/sessions/server';
 
 export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch user data server-side
-  const userData = await getUserDataFromJWT();
+  // Fetch current user from server-side session (for navigation)
+  const sessionUser = await getCurrentUserServer();
+
+  // Map to the shape expected by PublicNavigation (it uses displayName/email)
+  const userForNav = sessionUser
+    ? ({
+      email: sessionUser.email,
+      displayName: sessionUser.displayName,
+    } as any)
+    : null;
 
   return (
     <>
-      <PublicNavigation user={userData} />
+      <PublicNavigation user={userForNav} />
       {children}
     </>
   );

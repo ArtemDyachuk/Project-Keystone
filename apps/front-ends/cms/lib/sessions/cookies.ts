@@ -9,6 +9,7 @@ export interface CookieConfig {
   sameSite: 'strict' | 'lax' | 'none';
   maxAge: number;
   path: string;
+  domain?: string;
 }
 
 /**
@@ -16,13 +17,15 @@ export interface CookieConfig {
  */
 function getDefaultCookieConfig(): CookieConfig {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   return {
     httpOnly: true,
     secure: isProduction, // Only secure in production (HTTPS)
     sameSite: 'lax',
     maxAge: 24 * 60 * 60, // 24 hours in seconds
     path: '/',
+    // In development, set domain to localhost to allow cross-port access
+    ...(isProduction ? {} : { domain: 'localhost' }),
   };
 }
 
@@ -32,7 +35,7 @@ function getDefaultCookieConfig(): CookieConfig {
 export async function setSessionCookie(sessionId: string): Promise<void> {
   const cookieStore = await cookies();
   const config = getDefaultCookieConfig();
-  
+
   cookieStore.set(SESSION_COOKIE_NAME, sessionId, config);
 }
 
@@ -42,7 +45,7 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
 export async function getSessionCookie(): Promise<string | null> {
   const cookieStore = await cookies();
   const cookie = cookieStore.get(SESSION_COOKIE_NAME);
-  
+
   return cookie?.value || null;
 }
 
@@ -51,7 +54,7 @@ export async function getSessionCookie(): Promise<string | null> {
  */
 export async function deleteSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
-  
+
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
@@ -64,7 +67,7 @@ export async function setCSRFCookie(token: string): Promise<void> {
     ...getDefaultCookieConfig(),
     httpOnly: false, // CSRF token needs to be readable by JS
   };
-  
+
   cookieStore.set(CSRF_COOKIE_NAME, token, config);
 }
 
@@ -74,7 +77,7 @@ export async function setCSRFCookie(token: string): Promise<void> {
 export async function getCSRFCookie(): Promise<string | null> {
   const cookieStore = await cookies();
   const cookie = cookieStore.get(CSRF_COOKIE_NAME);
-  
+
   return cookie?.value || null;
 }
 
@@ -83,7 +86,7 @@ export async function getCSRFCookie(): Promise<string | null> {
  */
 export async function deleteCSRFCookie(): Promise<void> {
   const cookieStore = await cookies();
-  
+
   cookieStore.delete(CSRF_COOKIE_NAME);
 }
 

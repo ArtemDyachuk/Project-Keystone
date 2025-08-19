@@ -601,7 +601,7 @@ export class AuthController {
       };
     } catch (error) {
       console.error('❌ Login failed:', error);
-      
+
       if (error instanceof HttpException) {
         throw error;
       }
@@ -660,7 +660,7 @@ export class AuthController {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
-      
+
       if (!sessionId) {
         return {
           success: false,
@@ -669,7 +669,7 @@ export class AuthController {
       }
 
       const sessionData = this.sessionService.getSession(sessionId);
-      
+
       if (!sessionData) {
         return {
           success: false,
@@ -684,7 +684,7 @@ export class AuthController {
       };
     } catch (error) {
       console.error('❌ Get session failed:', error);
-      
+
       return {
         success: false,
         message: 'Failed to get session'
@@ -701,7 +701,7 @@ export class AuthController {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
-      
+
       if (sessionId) {
         // Delete the session from storage
         const deleted = this.sessionService.deleteSession(sessionId);
@@ -716,10 +716,38 @@ export class AuthController {
       };
     } catch (error) {
       console.error('❌ Logout failed:', error);
-      
+
       return {
         success: true, // Always return success for logout
         message: 'Logged out'
+      };
+    }
+  }
+
+  /**
+   * Debug: Get session count and IDs (development only)
+   * GET /auth/debug/sessions
+   */
+  @Get('debug/sessions')
+  async getSessionDebug() {
+    if (process.env.NODE_ENV === 'production') {
+      throw new HttpException('Not available in production', HttpStatus.FORBIDDEN);
+    }
+
+    try {
+      const sessionCount = this.sessionService.getSessionCount();
+      const sessionIds = this.sessionService.getAllSessionIds(); // We need to add this method
+      return {
+        success: true,
+        sessionCount,
+        sessionIds: sessionIds.map(id => id.substring(0, 8) + '...'), // Partial IDs for security
+        message: `Currently ${sessionCount} active sessions`
+      };
+    } catch (error) {
+      console.error('❌ Session debug failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get session debug info'
       };
     }
   }
@@ -733,7 +761,7 @@ export class AuthController {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
-      
+
       if (!sessionId) {
         throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
       }
@@ -753,7 +781,7 @@ export class AuthController {
       };
     } catch (error) {
       console.error('❌ Get CSRF token failed:', error);
-      
+
       if (error instanceof HttpException) {
         throw error;
       }

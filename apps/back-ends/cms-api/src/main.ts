@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   // Simple environment validation - only check critical vars
@@ -15,6 +16,9 @@ async function bootstrap() {
 
   // Basic security headers
   app.use(helmet());
+
+  // Cookie parsing middleware - CRITICAL for session management
+  app.use(cookieParser());
 
   // Simple CORS for Render.com backend
   const isDev = process.env.NODE_ENV !== 'production';

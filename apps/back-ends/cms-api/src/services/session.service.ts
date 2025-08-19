@@ -24,10 +24,10 @@ export class SessionService {
     };
 
     this.sessions.set(sessionId, session);
-    
+
     // Clean up expired sessions
     this.cleanupExpiredSessions();
-    
+
     return sessionId;
   }
 
@@ -36,7 +36,7 @@ export class SessionService {
    */
   getSession(sessionId: string): SessionData | null {
     const session = this.sessions.get(sessionId);
-    
+
     if (!session) {
       return null;
     }
@@ -66,14 +66,14 @@ export class SessionService {
    */
   updateSession(sessionId: string, updates: Partial<UserSession>): boolean {
     const session = this.sessions.get(sessionId);
-    
+
     if (!session) {
       return false;
     }
 
     // Extend expiry when updating
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    
+
     this.sessions.set(sessionId, {
       ...session,
       ...updates,
@@ -87,9 +87,9 @@ export class SessionService {
    * Generate secure session ID
    */
   private generateSessionId(): string {
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15) + 
-           Date.now().toString(36);
+    return Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15) +
+      Date.now().toString(36);
   }
 
   /**
@@ -97,7 +97,7 @@ export class SessionService {
    */
   private cleanupExpiredSessions(): void {
     const now = new Date();
-    
+
     for (const [sessionId, session] of this.sessions.entries()) {
       if (now > session.expiresAt) {
         this.sessions.delete(sessionId);
@@ -111,5 +111,13 @@ export class SessionService {
   getSessionCount(): number {
     this.cleanupExpiredSessions();
     return this.sessions.size;
+  }
+
+  /**
+   * Get all session IDs (for debugging)
+   */
+  getAllSessionIds(): string[] {
+    this.cleanupExpiredSessions();
+    return Array.from(this.sessions.keys());
   }
 }

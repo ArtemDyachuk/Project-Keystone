@@ -23,6 +23,7 @@ export interface UserData {
   email_verified?: boolean;
   firstName?: string;  // Cleaner than given_name
   lastName?: string;   // Cleaner than family_name
+  displayName?: string; // Firebase displayName field
   tenantIds?: string[];  // Array of tenant IDs
   selectedTenantId?: string;  // Single selected tenant ID
 }
@@ -62,6 +63,7 @@ export async function getUserDataFromJWT(): Promise<UserData | null> {
       email_verified: decoded.email_verified,
       firstName: decoded.given_name,      // Map given_name to firstName
       lastName: decoded.family_name,      // Map family_name to lastName
+      displayName: decoded.displayName, // Map displayName
       tenantIds: tenantIds,
       selectedTenantId: customSelectedTenantId,
     };
@@ -75,6 +77,10 @@ export async function getUserDataFromJWT(): Promise<UserData | null> {
  * Get user's display name from JWT data
  */
 export function getUserDisplayName(userData: UserData): string {
+  if (userData.displayName) {
+    return userData.displayName;
+  }
+
   if (userData.firstName && userData.lastName) {
     return `${userData.firstName} ${userData.lastName}`;
   }

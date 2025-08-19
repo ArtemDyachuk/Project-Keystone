@@ -1,9 +1,20 @@
 import styles from "./dashboard.module.css";
+import { getCurrentUserServer } from "@/lib/sessions/server";
 
 // Force dynamic rendering since layout uses cookies
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Fetch real session data via server-side cookie forwarding
+  let userData = null as any;
+  let error = null as any;
+
+  try {
+    userData = await getCurrentUserServer();
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Unknown error";
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -45,6 +56,48 @@ export default function DashboardPage() {
           <div className={styles.metric}>
             <span className={styles.metricLabel}>Status</span>
             <span className={`${styles.metricValue} ${styles.statusGood}`}>Healthy</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Real Session Data Display */}
+      <div className={styles.sessionData}>
+        <h2 className={styles.sessionTitle}>🔐 Session Data (Debug)</h2>
+        <div className={styles.sessionInfo}>
+          <p><strong>Note:</strong> This shows your current session data. In production, remove this section.</p>
+          <div className={styles.sessionDebug}>
+            {error ? (
+              <pre className={styles.jsonDisplay}>
+                {JSON.stringify({
+                  error: "Failed to fetch session data",
+                  message: error,
+                  timestamp: new Date().toISOString(),
+                }, null, 2)}
+              </pre>
+            ) : userData ? (
+              <pre className={styles.jsonDisplay}>
+                {JSON.stringify({
+                  message: "✅ Real session data loaded successfully",
+                  user: {
+                    uid: userData.uid,
+                    email: userData.email,
+                    displayName: userData.displayName,
+                    emailVerified: userData.emailVerified,
+                    tenantId: userData.tenantId,
+                    roles: userData.roles,
+                  },
+                  timestamp: new Date().toISOString(),
+                }, null, 2)}
+              </pre>
+            ) : (
+              <pre className={styles.jsonDisplay}>
+                {JSON.stringify({
+                  message: "❌ No session data found",
+                  note: "You may not be logged in or session has expired",
+                  timestamp: new Date().toISOString(),
+                }, null, 2)}
+              </pre>
+            )}
           </div>
         </div>
       </div>

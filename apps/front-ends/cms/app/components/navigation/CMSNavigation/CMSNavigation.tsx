@@ -12,6 +12,25 @@ interface CMSNavigationProps {
 }
 
 export function CMSNavigation({ className, userData, selectedTenant, userTenants }: CMSNavigationProps) {
+  // Client-safe display name extraction
+  const getDisplayName = (user: any): string => {
+    if (user?.displayName) {
+      return user.displayName;
+    }
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.firstName) {
+      return user.firstName;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return "User";
+  };
+
+  const displayName = userData ? getDisplayName(userData) : "User";
+
   return (
     <header className={`${styles.appHeader} ${className || ""}`}>
       <div className={styles.headerContent}>
@@ -22,7 +41,7 @@ export function CMSNavigation({ className, userData, selectedTenant, userTenants
             userTenants={userTenants}
           />
           <span className={styles.userInfo}>
-            {userData?.firstName || ""}
+            {displayName}
           </span>
           <form action={logoutAction} style={{ display: "inline" }}>
             <button type="submit" className={styles.logoutButton}>

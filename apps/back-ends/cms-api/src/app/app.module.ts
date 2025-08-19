@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantController } from '../controllers/tenant.controller';
 import { AuthController } from '../controllers/auth.controller';
+import { UserController } from '../controllers/user.controller';
 import { DatabaseModule } from '../database/database.module';
 import { EmailService } from '../services/email.service';
 import { SessionService } from '../services/session.service';
@@ -17,7 +18,7 @@ import { TenantAccessGuard } from '../guards/tenant-access.guard';
     }),
     DatabaseModule
   ],
-  controllers: [AppController, TenantController, AuthController],
+  controllers: [AppController, TenantController, AuthController, UserController],
   providers: [AppService, TenantAccessGuard, EmailService, SessionService, CSRFService],
 })
 export class AppModule { }
