@@ -1,7 +1,7 @@
 "use server";
 
 import { AuthServiceClient } from "@/app/services/auth.service";
-import { setSessionCookie, deleteSessionCookie } from "@/lib/sessions/cookies";
+import { setSessionCookie, deleteSessionCookie, setCSRFCookie, deleteCSRFCookie } from "@/lib/sessions/cookies";
 import { redirect } from "next/navigation";
 
 export interface SignupWithEmailLinkData {
@@ -255,9 +255,13 @@ export async function loginAction(email: string, password: string, redirectUrl: 
       return result;
     }
 
-    // Set HttpOnly session cookie
+    // Set HttpOnly session cookie and CSRF token cookie
     if (result.sessionId) {
       await setSessionCookie(result.sessionId);
+    }
+    
+    if (result.csrfToken) {
+      await setCSRFCookie(result.csrfToken);
     }
 
     // Redirect using Next.js redirect (this will throw NEXT_REDIRECT - that's normal)
@@ -268,7 +272,7 @@ export async function loginAction(email: string, password: string, redirectUrl: 
       // This is normal - redirect was successful, just re-throw it
       throw error;
     }
-    
+
     console.error("❌ Login action error:", error);
     return {
       success: false,
@@ -283,21 +287,29 @@ export async function loginAction(email: string, password: string, redirectUrl: 
 export async function logoutAction() {
   try {
     // Call backend to destroy session
-    const response = await fetch(`http://localhost:3001/api/auth/logout`, {
+    await fetch(`http://localhost:3001/api/auth/logout`, {
       method: "POST",
       credentials: 'include', // Include cookies
     });
 
-    // Delete the session cookie regardless of backend response
+    // Delete both session and CSRF cookies
     await deleteSessionCookie();
+    await deleteCSRFCookie();
 
-    // Redirect to login page
-    redirect("/login");
+    // Redirect to home page
+    redirect("/");
   } catch (error) {
+    // Check if this is a Next.js redirect (which is expected)
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      // This is normal - redirect was successful, just re-throw it
+      throw error;
+    }
+
     console.error("❌ Logout error:", error);
-    
-    // Even if backend fails, still delete cookie and redirect
+
+    // Even if backend fails, still delete both cookies and redirect
     await deleteSessionCookie();
-    redirect("/login");
+    await deleteCSRFCookie();
+    redirect("/");
   }
 }

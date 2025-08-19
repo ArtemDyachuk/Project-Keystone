@@ -38,9 +38,67 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Simple rate limiting
-  app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }));
-  app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+  // Enhanced rate limiting with different tiers
+  
+  // Strict rate limiting for sensitive auth endpoints
+  app.use('/api/auth/login', rateLimit({ 
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per 15 minutes
+    message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  app.use('/api/auth/signup-email-link', rateLimit({ 
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // 3 signups per hour per IP
+    message: { error: 'Too many signup attempts. Please try again in 1 hour.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  app.use('/api/auth/forgot-password', rateLimit({ 
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // 3 password reset requests per hour
+    message: { error: 'Too many password reset attempts. Please try again in 1 hour.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  // Moderate rate limiting for other auth endpoints
+  app.use('/api/auth', rateLimit({ 
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // 20 requests per 15 minutes
+    message: { error: 'Too many authentication requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  // Strict rate limiting for import endpoints (when they exist)
+  app.use('/api/import', rateLimit({ 
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // 10 imports per hour
+    message: { error: 'Too many import requests. Please try again in 1 hour.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  app.use('/api/upload', rateLimit({ 
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 50, // 50 uploads per hour
+    message: { error: 'Too many upload requests. Please try again in 1 hour.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
+
+  // General API rate limiting
+  app.use('/api', rateLimit({ 
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per 15 minutes
+    message: { error: 'Too many API requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  }));
 
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);

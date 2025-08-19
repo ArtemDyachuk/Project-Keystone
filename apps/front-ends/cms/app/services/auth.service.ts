@@ -35,6 +35,7 @@ export interface AuthResponse {
   error?: string;
   emailLink?: string;
   sessionId?: string; // For login response
+  csrfToken?: string; // For login response
   data?: any; // For additional response data
 }
 
@@ -464,6 +465,7 @@ export class AuthServiceClient {
         success: true,
         message: result.message || "Login successful!",
         sessionId: result.sessionId,
+        csrfToken: result.csrfToken,
         user: result.user
       };
     } catch (error) {

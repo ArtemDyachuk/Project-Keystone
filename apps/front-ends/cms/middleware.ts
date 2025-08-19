@@ -48,8 +48,6 @@ export async function middleware(request: NextRequest) {
 
   // Check authentication once (simple cookie check for now)
   const authenticated = await isAuthenticated();
-  
-  console.log('🔍 Middleware check:', { pathname, authenticated });
 
   // If not authenticated and not on public routes, redirect to login
   if (!authenticated && !isPublicRoute(pathname)) {

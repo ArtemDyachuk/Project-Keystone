@@ -1,7 +1,8 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Get, Query, Req } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Get, Req } from '@nestjs/common';
 import { FirebaseServerClient, EmailLinkSignUpParams, ActionCodeSettings } from '@keystone/auth';
 import { EmailService } from '../services/email.service';
 import { SessionService } from '../services/session.service';
+import { CSRFService } from '../services/csrf.service';
 
 // DTOs for request validation
 export class SignupWithEmailLinkDto {
@@ -22,9 +23,7 @@ export class SetPasswordDto {
   tenantId?: string;
 }
 
-export class CheckEmailVerificationDto {
-  actionCode!: string;
-}
+
 
 export class ForgotPasswordDto {
   email!: string;
@@ -50,7 +49,8 @@ export class AuthController {
 
   constructor(
     private readonly emailService: EmailService,
-    private readonly sessionService: SessionService
+    private readonly sessionService: SessionService,
+    private readonly csrfService: CSRFService
   ) {
     this.firebaseClient = new FirebaseServerClient();
   }
@@ -304,131 +304,7 @@ export class AuthController {
     }
   }
 
-  /**
-   * Check if email verification code is valid
-   * POST /auth/check-email-verification
-   */
-  @Post('check-email-verification')
-  async checkEmailVerificationCode(@Body() checkDto: CheckEmailVerificationDto) {
-    try {
-      if (!checkDto.actionCode) {
-        throw new HttpException('Action code is required', HttpStatus.BAD_REQUEST);
-      }
 
-      // Note: Firebase Admin SDK doesn't have a direct method to verify action codes
-      // This would typically be done on the client side with Firebase Auth
-      // For now, we'll return a success response and let the client handle the verification
-
-      return {
-        success: true,
-        message: 'Verification code is valid',
-        actionCode: checkDto.actionCode
-      };
-    } catch (error) {
-      console.error('❌ Check email verification code failed:', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        `Failed to check verification code: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  /**
-   * Get user by email (for development/testing)
-   * GET /auth/user-by-email
-   */
-  @Get('user-by-email')
-  async getUserByEmail(@Query('email') email: string) {
-    try {
-      if (!email) {
-        throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
-      }
-
-      // This is a development endpoint - you might want to restrict this in production
-      if (process.env.NODE_ENV === 'production') {
-        throw new HttpException('This endpoint is not available in production', HttpStatus.FORBIDDEN);
-      }
-
-      // Note: Firebase Admin SDK doesn't have getUserByEmail, but we can use other methods
-      // For now, return a placeholder response
-      return {
-        success: true,
-        message: 'This is a development endpoint for testing email verification flow'
-      };
-    } catch (error) {
-      console.error('❌ Get user by email failed:', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        `Failed to get user: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  /**
-   * Test Firebase configuration (development only)
-   * GET /auth/test-firebase
-   */
-  @Get('test-firebase')
-  async testFirebase() {
-    try {
-      // This is a development endpoint for debugging Firebase configuration
-      if (process.env.NODE_ENV === 'production') {
-        throw new HttpException('This endpoint is not available in production', HttpStatus.FORBIDDEN);
-      }
-
-      // Test Firebase Admin SDK initialization
-      try {
-        // Try to create a simple Firebase client to test configuration
-        new FirebaseServerClient();
-
-        return {
-          success: true,
-          message: 'Firebase Admin SDK initialized successfully',
-          environment: {
-            NODE_ENV: process.env.NODE_ENV,
-            FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID ? '✅ Set' : '❌ Missing',
-            FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL ? '✅ Set' : '❌ Missing',
-            FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY ? '✅ Set' : '❌ Missing',
-            FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000 (default)'
-          }
-        };
-      } catch (firebaseError) {
-        return {
-          success: false,
-          message: 'Firebase Admin SDK initialization failed',
-          error: firebaseError instanceof Error ? firebaseError.message : 'Unknown error',
-          environment: {
-            NODE_ENV: process.env.NODE_ENV,
-            FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID ? '✅ Set' : '❌ Missing',
-            FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL ? '✅ Set' : '❌ Missing',
-            FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY ? '✅ Set' : '❌ Missing',
-            FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000 (default)'
-          }
-        };
-      }
-    } catch (error) {
-      console.error('❌ Test Firebase failed:', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        `Failed to test Firebase: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
 
   /**
    * Send password reset email
@@ -708,10 +584,14 @@ export class AuthController {
         roles: [], // Will be populated from database later
       });
 
+      // Generate CSRF token for this session
+      const csrfToken = this.csrfService.generateToken(sessionId);
+
       return {
         success: true,
         message: 'Login successful',
         sessionId, // Frontend will set this as HttpOnly cookie
+        csrfToken, // Frontend will set this as readable cookie
         user: {
           uid: user.uid,
           email: user.email,
@@ -825,7 +705,9 @@ export class AuthController {
       if (sessionId) {
         // Delete the session from storage
         const deleted = this.sessionService.deleteSession(sessionId);
-        console.log('🔄 Session deleted:', { sessionId, deleted });
+        // Delete the CSRF token for this session
+        this.csrfService.deleteToken(sessionId);
+        console.log('🔄 Session and CSRF token deleted:', { sessionId, deleted });
       }
 
       return {
@@ -839,6 +721,47 @@ export class AuthController {
         success: true, // Always return success for logout
         message: 'Logged out'
       };
+    }
+  }
+
+  /**
+   * Get CSRF token for authenticated session
+   * GET /auth/csrf-token
+   */
+  @Get('csrf-token')
+  async getCSRFToken(@Req() request: any) {
+    try {
+      // Get sessionId from HttpOnly cookie
+      const sessionId = request.cookies?.session;
+      
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Validate session exists
+      const sessionData = this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Generate CSRF token for this session
+      const csrfToken = this.csrfService.generateToken(sessionId);
+
+      return {
+        success: true,
+        csrfToken
+      };
+    } catch (error) {
+      console.error('❌ Get CSRF token failed:', error);
+      
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to generate CSRF token',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 }

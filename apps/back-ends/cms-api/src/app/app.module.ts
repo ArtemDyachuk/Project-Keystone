@@ -8,6 +8,7 @@ import { DatabaseModule } from '../database/database.module';
 import { CognitoAdminService } from '../services/cognito-admin.service'; // Soon to be removed
 import { EmailService } from '../services/email.service';
 import { SessionService } from '../services/session.service';
+import { CSRFService } from '../services/csrf.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 
 @Module({
@@ -18,6 +19,6 @@ import { TenantAccessGuard } from '../guards/tenant-access.guard';
     DatabaseModule
   ],
   controllers: [AppController, TenantController, AuthController],
-  providers: [AppService, CognitoAdminService, TenantAccessGuard, EmailService, SessionService],
+  providers: [AppService, CognitoAdminService, TenantAccessGuard, EmailService, SessionService, CSRFService],
 })
 export class AppModule { }
