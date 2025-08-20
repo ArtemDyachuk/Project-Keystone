@@ -29,7 +29,6 @@ export async function connectToDatabase(): Promise<void> {
       }
     });
 
-    console.log(`✅ Connected to MongoDB: ${mongoose.connection.db?.databaseName}`);
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
     throw error;

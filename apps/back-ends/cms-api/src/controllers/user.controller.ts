@@ -24,8 +24,6 @@ export class UserController {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
 
-      console.log('🔑 Session ID from cookie:', sessionId);
-
       if (!sessionId) {
         return {
           success: false,

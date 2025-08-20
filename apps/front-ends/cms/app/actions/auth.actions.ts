@@ -287,7 +287,7 @@ export async function loginAction(email: string, password: string, redirectUrl: 
 export async function logoutAction() {
   try {
     // Call backend to destroy session
-    await fetch(`http://localhost:3001/api/auth/logout`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
       method: "POST",
       credentials: 'include', // Include cookies
     });
