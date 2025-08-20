@@ -93,6 +93,7 @@ export function getFirebaseAdminConfig() {
         projectId,
       };
     } catch (error) {
+      console.error('❌ Error parsing FIREBASE_SERVICE_ACCOUNT_KEY:', error);
       throw new Error(
         "Invalid FIREBASE_SERVICE_ACCOUNT_KEY. Please ensure it's valid JSON."
       );
