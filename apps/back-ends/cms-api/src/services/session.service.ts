@@ -56,6 +56,14 @@ export class SessionService {
     if (redisData) {
       try {
         const session = JSON.parse(redisData) as UserSession;
+        
+        // Extend TTL on each access (activity-based session renewal)
+        await this.redisService.set(
+          `session:${sessionId}`,
+          redisData,
+          this.sessionTTL
+        );
+        
         return {
           sessionId,
           user: {

@@ -33,7 +33,7 @@ export class RedisService implements OnModuleInit {
   }
 
   isConnected(): boolean {
-    return this.client !== null;
+    return this.client !== null && this.client.status === "ready";
   }
 
   getClient(): Redis | null {

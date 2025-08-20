@@ -12,6 +12,7 @@ import { SessionService } from '../services/session.service';
 import { CSRFService } from '../services/csrf.service';
 import { RedisService } from '../services/redis.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
+import { SessionGuard } from '../guards/session.guard';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TenantAccessGuard } from '../guards/tenant-access.guard';
   providers: [
     AppService,
     TenantAccessGuard,
+    SessionGuard,
     EmailService,
     RedisService,
     SessionService,

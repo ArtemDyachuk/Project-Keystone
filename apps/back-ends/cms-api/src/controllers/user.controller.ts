@@ -1,6 +1,7 @@
-import { Controller, Get, Req, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Req, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { SessionService } from '../services/session.service';
+import { SessionGuard } from '../guards/session.guard';
 
 /**
  * User Controller - handles user data and session recovery
@@ -17,8 +18,9 @@ export class UserController {
    * Get current user data with session recovery
    * GET /user/me
    */
+  @UseGuards(SessionGuard)
   @Get('me')
-  async getCurrentUser(@Req() request: Request & { cookies?: Record<string, string> }) {
+  async getCurrentUser(@Req() request: Request & { user?: any; sessionId?: string }) {
     try {
       // Debug: Log all cookies received
       console.log('🍪 All cookies received:', request.cookies);
