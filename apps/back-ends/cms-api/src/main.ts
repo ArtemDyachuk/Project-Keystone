@@ -14,6 +14,9 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // Trust proxy headers (required for Render.com deployment)
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
+
   // Basic security headers
   app.use(helmet());
 
