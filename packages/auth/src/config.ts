@@ -19,14 +19,10 @@ export function getFirebaseConfig(environment?: string): FirebaseConfig {
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-    const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-    const measurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
 
-    if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
+    if (!apiKey || !authDomain || !projectId) {
       throw new Error(
-        "Missing required Firebase environment variables. Please set NEXT_PUBLIC_FIREBASE_* variables in your .env.local file."
+        "Missing required Firebase environment variables. Please set NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, and NEXT_PUBLIC_FIREBASE_PROJECT_ID in your .env.local file."
       );
     }
 
@@ -34,26 +30,18 @@ export function getFirebaseConfig(environment?: string): FirebaseConfig {
       apiKey,
       authDomain,
       projectId,
-      storageBucket,
-      messagingSenderId,
-      appId,
-      measurementId,
     };
     return cachedConfig;
   }
 
-  // For server-side, use environment variables
-  const apiKey = process.env.FIREBASE_API_KEY;
-  const authDomain = process.env.FIREBASE_AUTH_DOMAIN;
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
-  const messagingSenderId = process.env.FIREBASE_MESSAGING_SENDER_ID;
-  const appId = process.env.FIREBASE_APP_ID;
-  const measurementId = process.env.FIREBASE_MEASUREMENT_ID;
+  // For server-side, use environment variables (same as client-side)
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
+  if (!apiKey || !authDomain || !projectId) {
     throw new Error(
-      `Firebase environment variables not found for ${env}. Please check your .env file contains FIREBASE_* variables.`
+      `Firebase environment variables not found for ${env}. Please check your .env file contains required NEXT_PUBLIC_FIREBASE_* variables.`
     );
   }
 
@@ -61,10 +49,6 @@ export function getFirebaseConfig(environment?: string): FirebaseConfig {
     apiKey,
     authDomain,
     projectId,
-    storageBucket,
-    messagingSenderId,
-    appId,
-    measurementId,
   };
 
   console.log("✅ Using Firebase environment variables config");
@@ -76,11 +60,11 @@ export function getFirebaseConfig(environment?: string): FirebaseConfig {
  * Supports both individual environment variables and JSON service account key
  */
 export function getFirebaseAdminConfig() {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
   if (!projectId) {
     throw new Error(
-      "Missing Firebase Admin SDK configuration. Please set FIREBASE_PROJECT_ID."
+      "Missing Firebase Admin SDK configuration. Please set NEXT_PUBLIC_FIREBASE_PROJECT_ID."
     );
   }
 
@@ -103,7 +87,7 @@ export function getFirebaseAdminConfig() {
   // Check if we have individual service account components
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  
+
   if (!clientEmail || !privateKey) {
     throw new Error(
       "Missing Firebase Admin SDK configuration. Please set either FIREBASE_SERVICE_ACCOUNT_KEY (JSON) or both FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY."

@@ -98,7 +98,7 @@ export class FirebaseServerClient {
   async verifyUserCredentials(email: string, password: string, tenantId?: string): Promise<FirebaseUser> {
     try {
       // Use Firebase Auth REST API to verify password
-      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 
       if (!apiKey) {
         throw new Error('Firebase API key not configured');
@@ -139,8 +139,6 @@ export class FirebaseServerClient {
 
       // Get user details from Admin SDK using the verified email
       const user = await this.getUserByEmail(email, tenantId);
-
-      console.log('✅ Password verification successful via Firebase Auth REST API');
 
       return user;
     } catch (error: unknown) {
