@@ -33,15 +33,6 @@ export default async function DashboardPage() {
         </div>
 
         <div className={styles.card}>
-          <h3 className={styles.cardTitle}>📝 Recent Content</h3>
-          <p className={styles.cardContent}>Manage your latest posts and pages.</p>
-          <div className={styles.metric}>
-            <span className={styles.metricLabel}>Published Posts</span>
-            <span className={styles.metricValue}>23</span>
-          </div>
-        </div>
-
-        <div className={styles.card}>
           <h3 className={styles.cardTitle}>👥 Users</h3>
           <p className={styles.cardContent}>Manage user accounts and permissions.</p>
           <div className={styles.metric}>

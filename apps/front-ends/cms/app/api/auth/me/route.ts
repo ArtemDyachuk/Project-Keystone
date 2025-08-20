@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthCookies } from "@/lib/auth-cookies";
 import { getUserDataFromJWT } from "@/lib/auth-utils";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const cookies = await getAuthCookies();
     const accessToken = cookies.accessToken;

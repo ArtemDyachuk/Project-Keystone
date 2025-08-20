@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Since auth is temporarily disabled, return an error
     throw new Error("Cognito not configured - auth temporarily disabled");

@@ -1,30 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Since auth is temporarily disabled, return an error
     throw new Error("Cognito not configured - auth temporarily disabled");
 
-    // Original code commented out:
-    // const { email, confirmationCode, newPassword } = await request.json();
-    // const config = await getCognitoConfig();
-    // const authClient = new CognitoAuthClient(config);
-    // await authClient.confirmForgotPassword({
-    //   email,
-    //   confirmationCode,
-    //   newPassword,
-    // });
-
-    // return NextResponse.json({ 
-    //   success: true,
-    //   message: "Password reset successfully"
-    // });
   } catch (error) {
     console.error("Confirm reset password error:", error);
-    
+
     // Handle specific Cognito errors with user-friendly messages
     let errorMessage = "Failed to reset password";
-    
+
     if (error instanceof Error) {
       if (error.message.includes("CodeMismatchException")) {
         errorMessage = "Invalid verification code. Please check the code from your email.";

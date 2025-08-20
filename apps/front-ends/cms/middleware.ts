@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "./lib/sessions/cookies";
-import { getCurrentUser } from "./lib/sessions/utils";
+// import { getCurrentUser } from "./lib/sessions/utils";
 
 // Routes that don't require authentication
 // Route groups (auth) and (public) are organizational only - they don't appear in URLs
@@ -31,18 +31,18 @@ function isAuthPage(pathname: string): boolean {
 }
 
 // Helper function to validate tenant access
-async function validateTenantAccess(pathname: string, userData: any, request: NextRequest): Promise<NextResponse | null> {
-  // For now, skip tenant validation since we're focusing on basic auth
-  // This will be implemented later with proper tenant management
-  console.log('🔄 Tenant validation skipped for now:', { pathname, userId: userData?.uid });
-  return null;
-}
+// async function validateTenantAccess(pathname: string, userData: any, request: NextRequest): Promise<NextResponse | null> {
+//   // For now, skip tenant validation since we're focusing on basic auth
+//   // This will be implemented later with proper tenant management
+//   console.log('🔄 Tenant validation skipped for now:', { pathname, userId: userData?.uid });
+//   return null;
+// }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip API routes and static files
-  if (pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+  // Skip API routes, static files, and UI test page
+  if (pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname === "/favicon.ico" || pathname === "/ui-test") {
     return NextResponse.next();
   }
 

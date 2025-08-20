@@ -1,37 +1,6 @@
 import styles from './page.module.css';
-import { config } from '../../lib/config';
-import ConnectionTest from '../components/ConnectionTest';
-import { connectToDatabase } from '@keystone/database';
 
-export default async function HomePage() {
-  // Server-side data fetching using shared TenantService
-  let serverSideData = {
-    success: false,
-    tenantCount: 0,
-    responseTime: 0,
-    error: null as string | null
-  };
-
-  const startTime = Date.now();
-  try {
-    // Connect to database - removed tenant count for security
-    // In multi-tenant systems, public pages should not expose tenant information
-    await connectToDatabase();
-
-    serverSideData = {
-      success: true,
-      tenantCount: 0, // Hidden for security in multi-tenant system
-      responseTime: Date.now() - startTime,
-      error: null
-    };
-  } catch (error) {
-    serverSideData = {
-      success: false,
-      tenantCount: 0,
-      responseTime: Date.now() - startTime,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
+export default function HomePage() {
   return (
     <div className={styles.container}>
       <main className={styles.main}>
@@ -44,43 +13,19 @@ export default async function HomePage() {
         </p>
 
         <div className={styles.grid}>
-          {/* Server-side data fetching result */}
           <div className={styles.card}>
-            <h2>🗄️ Server-Side Database Test</h2>
-            <p>Direct database access from server component using shared TenantService:</p>
-            <div style={{
-              padding: '1rem',
-              backgroundColor: serverSideData.success ? '#f0f9ff' : '#fef2f2',
-              borderRadius: '4px',
-              border: `1px solid ${serverSideData.success ? '#0ea5e9' : '#ef4444'}`,
-              marginTop: '0.5rem'
-            }}>
-              <p><strong>Status:</strong> {serverSideData.success ? '✅ Success' : '❌ Failed'}</p>
-              <p><strong>Tenant Count:</strong> {serverSideData.tenantCount}</p>
-              <p><strong>Response Time:</strong> {serverSideData.responseTime}ms</p>
-              {serverSideData.error && (
-                <p style={{ color: '#ef4444' }}><strong>Error:</strong> {serverSideData.error}</p>
-              )}
-              <small style={{ color: '#6b7280' }}>
-                💡 This data was fetched on the server using the shared @keystone/database package
-              </small>
-            </div>
-          </div>
-
-          <ConnectionTest serverData={serverSideData} />
-
-          <div className={styles.card}>
-            <h2>🚀 Quick Links</h2>
-            <ul className={styles.links}>
-              <li><a href="/ui-test">UI Components Test</a></li>
-              <li><a href="/api/database/status" target="_blank">API: Database Status</a></li>
-              <li><a href={`${config.apiBaseUrl}/api/health`} target="_blank">API: Health Check</a></li>
+            <h2>🚀 Quick Start</h2>
+            <p>Get started with your multi-tenant CMS:</p>
+            <ul className={styles.features}>
+              <li>📝 <a href="/login">Sign in</a> to access your dashboard</li>
+              <li>🏢 <a href="/signup">Create an account</a> to get started</li>
+              <li>⚙️ <a href="/settings">Access settings</a> once authenticated</li>
             </ul>
           </div>
 
           <div className={styles.card}>
             <h2>🏗️ Architecture</h2>
-            <p>Frontend (Vercel) → Backend (Render.com) → MongoDB Atlas</p>
+            <p>Modern, scalable architecture:</p>
             <ul className={styles.features}>
               <li>✅ Turborepo monorepo</li>
               <li>✅ Shared database package</li>

@@ -17,8 +17,8 @@ export default async function DashboardLayout({
   const userData = await getCurrentUserServer();
 
   // Get user's tenants from database (only if user has tenant IDs)
-  const userTenants = [] as any[]; // tenants integration later
-  let selectedTenant = null as any;
+  const userTenants: Array<{ _id: string; name: string }> = []; // tenants integration later
+  const selectedTenant: { _id: string; name: string } | null = null;
 
   return (
     <ThemeProvider>

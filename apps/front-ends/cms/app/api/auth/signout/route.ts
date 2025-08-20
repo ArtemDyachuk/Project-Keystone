@@ -42,6 +42,7 @@ async function handleSignout(request: NextRequest) {
 
     return redirectResponse;
   } catch (error) {
+    console.error("Signout error:", error);
     // If something goes wrong, still try to redirect
     return NextResponse.redirect(new URL("/", request.url));
   }

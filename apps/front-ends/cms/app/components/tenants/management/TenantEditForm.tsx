@@ -28,6 +28,7 @@ export function TenantEditForm({ tenant }: TenantEditFormProps) {
         toast.error(`${result.error || "Failed to update organization"}`);
       }
     } catch (error) {
+      console.error("Failed to update organization:", error);
       toast.error("Failed to update organization");
     } finally {
       setIsLoading(false);

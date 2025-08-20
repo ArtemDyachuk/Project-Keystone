@@ -14,6 +14,7 @@ export interface NavItem {
 const navigationItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/tenants", label: "Tenants", icon: "🏢" },
+  { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 export async function Sidebar({ className }: SidebarProps) {
