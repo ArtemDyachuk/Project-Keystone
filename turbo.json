@@ -2,7 +2,14 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalEnv": [
-    "MONGODB_URI"
+    "MONGODB_URI",
+    "LOGTAIL_URL",
+    "LOGTAIL_SOURCE_TOKEN",
+    "FIREBASE_CLIENT_EMAIL",
+    "FIREBASE_PROJECT_ID",
+    "FIREBASE_PRIVATE_KEY",
+    "RESEND_API_KEY",
+    "RESEND_FROM"
   ],
   "tasks": {
     "build": {
