@@ -2,10 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalEnv": [
-    "NODE_ENV",
-    "MONGODB_URI",
-    "LOGTAIL_URL", 
-    "LOGTAIL_SOURCE_TOKEN"
+    "MONGODB_URI"
   ],
   "tasks": {
     "build": {
