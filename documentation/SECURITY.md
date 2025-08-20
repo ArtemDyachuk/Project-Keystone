@@ -5,6 +5,7 @@
 Project Keystone implements **enterprise-grade security** with a **server-side first** approach, designed for multi-tenant SaaS applications.
 
 ### **🔐 Core Security Principles**
+
 1. **Server-side sessions** (no tokens in JavaScript)
 2. **HttpOnly cookies** (immune to XSS)
 3. **CSRF protection** (prevents cross-site attacks)
@@ -33,6 +34,7 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ```
 
 ### **🍪 Cookie Strategy**
+
 - **`session`** (HttpOnly): Contains session ID, inaccessible to JavaScript
 - **`csrfToken`** (Readable): Contains CSRF token for form submissions
 - **Secure in production**: HTTPS-only cookies
@@ -43,6 +45,7 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ## 🔐 **Authentication Flow**
 
 ### **📧 Signup Process**
+
 1. **User enters** first name, last name, email
 2. **Backend creates** Firebase user (unverified)
 3. **Email sent** via Resend with verification link
@@ -51,6 +54,7 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 6. **Ready to login** with email + password
 
 ### **🚪 Login Process**
+
 1. **User enters** email + password
 2. **Backend verifies** credentials with Firebase Auth REST API
 3. **Session created** server-side with unique session ID
@@ -59,6 +63,7 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 6. **User redirected** to dashboard
 
 ### **🚪 Logout Process**
+
 1. **User clicks logout** button
 2. **Backend destroys** session from memory
 3. **Both cookies deleted** (session + CSRF)
@@ -69,12 +74,14 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ## 🛡️ **Security Layers**
 
 ### **1. 🔥 Firebase Authentication**
+
 - **Email/password verification** via Firebase Auth REST API
 - **Email verification required** before login
 - **Password strength enforcement** (8+ chars, mixed case, numbers, symbols)
 - **Account lockout** via Firebase's built-in protection
 
 ### **2. 🍪 HttpOnly Cookies**
+
 ```typescript
 // Session cookie (HttpOnly - immune to XSS)
 {
@@ -98,6 +105,7 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ```
 
 ### **3. 🔄 Server-side Session Management**
+
 ```typescript
 // Session storage (in-memory, Redis-ready)
 {
@@ -116,12 +124,14 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ```
 
 ### **4. 🛡️ CSRF Protection**
+
 - **Token generation**: Cryptographically secure random tokens
 - **Session-linked**: Each session gets unique CSRF token
 - **Header validation**: `X-CSRF-Token` required for mutations
 - **Auto-cleanup**: Tokens deleted on logout
 
 ### **5. ⚡ Rate Limiting**
+
 ```typescript
 // Strict limits for sensitive endpoints
 '/api/auth/login':        5 attempts per 15 minutes
@@ -144,21 +154,25 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ## 🎯 **Security Benefits**
 
 ### **✅ XSS Protection**
+
 - **HttpOnly cookies**: JavaScript cannot access session data
 - **No tokens in localStorage**: Nothing for XSS to steal
 - **Server-side validation**: All auth happens server-side
 
-### **✅ CSRF Protection** 
+### **✅ CSRF Protection**
+
 - **CSRF tokens**: Required for all mutations
 - **SameSite cookies**: Browser-level CSRF protection
 - **Origin validation**: Server validates request origins
 
 ### **✅ Brute Force Protection**
+
 - **Rate limiting**: Prevents password cracking
 - **Account lockout**: Firebase handles repeated failures
 - **IP-based limits**: Per-IP request tracking
 
 ### **✅ Session Security**
+
 - **Server-side storage**: Sessions stored server-side only
 - **Automatic expiry**: 24-hour session lifetime
 - **Secure cleanup**: Sessions deleted on logout
@@ -169,6 +183,7 @@ Project Keystone implements **enterprise-grade security** with a **server-side f
 ## 🚀 **Production Readiness**
 
 ### **🔧 Environment Configuration**
+
 ```bash
 # Firebase (Required)
 FIREBASE_PROJECT_ID=your-project-id
@@ -181,7 +196,7 @@ RESEND_API_KEY=your-resend-key
 RESEND_FROM=noreply@yourdomain.com
 
 # URLs (Required)
-FRONTEND_URL=https://yourdomain.com
+FRONTEND_CMS_URL=https://yourdomain.com
 NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 
 # Database (Required)
@@ -189,6 +204,7 @@ MONGODB_URI=mongodb://localhost:27017/keystone
 ```
 
 ### **🛡️ Production Security Checklist**
+
 - ✅ **HTTPS enabled** (secure cookies)
 - ✅ **Environment variables set** (no hardcoded secrets)
 - ✅ **Rate limiting active** (DDoS protection)
@@ -201,6 +217,7 @@ MONGODB_URI=mongodb://localhost:27017/keystone
 ## 🧪 **Security Testing**
 
 ### **🔍 Automated Tests**
+
 ```bash
 # Run auth security tests
 npm test practical-auth
@@ -213,6 +230,7 @@ npm run test:watch
 ```
 
 ### **📋 Manual Security Testing**
+
 1. **Login/Logout Flow**: Test complete authentication cycle
 2. **Session Persistence**: Verify sessions work across page refreshes
 3. **Rate Limiting**: Try multiple failed login attempts
@@ -224,6 +242,7 @@ npm run test:watch
 ## 🎯 **Security Compliance**
 
 ### **✅ OWASP Top 10 Coverage**
+
 - **A01 Broken Access Control**: ✅ Session-based access control
 - **A02 Cryptographic Failures**: ✅ HttpOnly cookies, secure storage
 - **A03 Injection**: ✅ Input validation, parameterized queries
@@ -232,6 +251,7 @@ npm run test:watch
 - **A08 Software/Data Integrity**: ✅ CSRF protection
 
 ### **✅ Multi-tenant Security Standards**
+
 - **Tenant isolation**: ✅ Server-side session validation
 - **Data segregation**: ✅ Tenant-scoped queries (ready)
 - **Access control**: ✅ Role-based permissions (ready)
@@ -242,6 +262,7 @@ npm run test:watch
 ## 🚨 **Threat Model**
 
 ### **🛡️ Protected Against**
+
 - ✅ **XSS attacks**: HttpOnly cookies immune to JavaScript theft
 - ✅ **CSRF attacks**: CSRF tokens + SameSite cookies
 - ✅ **Session hijacking**: Secure cookies + server-side validation
@@ -250,6 +271,7 @@ npm run test:watch
 - ✅ **Token theft**: No tokens in client-side storage
 
 ### **⚠️ Future Considerations**
+
 - 🔄 **TOTP MFA**: Second factor authentication
 - 🔄 **Redis sessions**: Horizontal scaling
 - 🔄 **Audit logging**: Security event tracking
@@ -260,24 +282,28 @@ npm run test:watch
 ## 📚 **Security Best Practices Implemented**
 
 ### **🔐 Authentication**
+
 - **Strong passwords**: Enforced complexity requirements
 - **Email verification**: Required before account activation
 - **Secure password reset**: Time-limited reset tokens
 - **Real password validation**: Firebase Auth REST API verification
 
 ### **🍪 Session Management**
+
 - **HttpOnly cookies**: Immune to XSS attacks
 - **Secure cookies**: HTTPS-only in production
 - **Session expiry**: 24-hour automatic cleanup
 - **Server-side storage**: No client-side session data
 
 ### **🛡️ Request Security**
+
 - **CSRF protection**: Tokens required for mutations
 - **Rate limiting**: Tiered limits based on endpoint sensitivity
 - **Input validation**: All inputs validated and sanitized
 - **Error handling**: No sensitive data in error messages
 
 ### **🏢 Multi-tenant Security**
+
 - **Tenant isolation**: Session-based tenant scoping
 - **Access validation**: Server-side tenant membership checks
 - **Data segregation**: Ready for tenant-scoped database queries
@@ -288,12 +314,14 @@ npm run test:watch
 ## 🎯 **Security Monitoring**
 
 ### **📊 Metrics to Track**
+
 - **Failed login attempts**: Monitor for brute force
 - **Session creation rate**: Monitor for unusual activity
 - **CSRF token failures**: Monitor for attack attempts
 - **Rate limit hits**: Monitor for abuse patterns
 
 ### **🚨 Security Alerts**
+
 - **Multiple failed logins**: Potential brute force
 - **Invalid session access**: Potential session hijacking
 - **CSRF token mismatches**: Potential CSRF attacks
@@ -319,6 +347,7 @@ Project Keystone implements **production-ready security** with:
 ## 📞 **Security Incident Response**
 
 ### **🚨 If Security Issue Detected**
+
 1. **Immediate**: Review logs for scope of issue
 2. **Assess**: Determine if user data was accessed
 3. **Contain**: Revoke affected sessions if needed
@@ -327,6 +356,7 @@ Project Keystone implements **production-ready security** with:
 6. **Monitor**: Watch for similar patterns
 
 ### **🔧 Security Updates**
+
 - **Regular updates**: Keep dependencies updated
 - **Security patches**: Apply Firebase/NestJS security updates
 - **Test after changes**: Always run security tests

@@ -84,7 +84,7 @@ export class AuthController {
       // Configure action code settings for email verification
       // For development, use a simple URL that Firebase will accept
       const actionCodeSettings: ActionCodeSettings = {
-        url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/verify-email`,
+        url: `${process.env.FRONTEND_CMS_URL || 'http://localhost:3000'}/auth/verify-email`,
         handleCodeInApp: false, // Set to false to avoid domain validation issues
       };
 
@@ -116,7 +116,7 @@ export class AuthController {
       if (process.env.NODE_ENV === 'development') {
         // Simple development verification link
         const verificationCode = Math.random().toString(36).substring(2, 15);
-        emailLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/verify-email?oobCode=${verificationCode}&mode=verifyEmail&email=${encodeURIComponent(params.email)}&uid=${userUid}`;
+        emailLink = `${process.env.FRONTEND_CMS_URL || 'http://localhost:3000'}/auth/verify-email?oobCode=${verificationCode}&mode=verifyEmail&email=${encodeURIComponent(params.email)}&uid=${userUid}`;
         console.log('🔗 Development verification link:', emailLink);
       } else {
         // Production: use Firebase's email verification link
@@ -346,11 +346,11 @@ export class AuthController {
       if (process.env.NODE_ENV === 'development') {
         // For development, generate a simple reset link
         const resetCode = Math.random().toString(36).substring(2, 15);
-        resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password?oobCode=${resetCode}&mode=resetPassword&email=${encodeURIComponent(email)}`;
+        resetLink = `${process.env.FRONTEND_CMS_URL || 'http://localhost:3000'}/auth/reset-password?oobCode=${resetCode}&mode=resetPassword&email=${encodeURIComponent(email)}`;
       } else {
         // Production: use Firebase's password reset link
         const actionCodeSettings = {
-          url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`,
+          url: `${process.env.FRONTEND_CMS_URL || 'http://localhost:3000'}/auth/reset-password`,
           handleCodeInApp: false,
         };
         resetLink = await this.firebaseClient.generatePasswordResetLink(email, actionCodeSettings, forgotPasswordDto.tenantId);
