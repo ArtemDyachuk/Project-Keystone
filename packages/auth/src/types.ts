@@ -55,6 +55,7 @@ export interface UserSession {
   displayName: string | null;
   emailVerified: boolean;
   tenantId: string | null;
+  selectedTenantId: string | null; // Current active tenant for multi-tenant users
   roles: string[];
   createdAt: Date;
   expiresAt: Date;
@@ -83,6 +84,24 @@ export interface SignInParams {
 export interface ResetPasswordParams {
   email: string;
   tenantId?: string;
+}
+
+// Redis Session Types
+export interface RedisSessionData {
+  uid: string;
+  email: string;
+  displayName: string | null;
+  tenantId: string | null;
+  selectedTenantId: string | null;
+  roles: string[];
+  createdAt: number; // Unix timestamp for Redis efficiency
+  lastActivity: number; // Unix timestamp for activity tracking
+}
+
+export interface SessionManagerConfig {
+  redisUrl?: string;
+  sessionTTL: number; // in seconds
+  fallbackToMemory: boolean;
 }
 
 export interface UpdateProfileParams {

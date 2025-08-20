@@ -1,4 +1,5 @@
 import { Controller, Get, Req, HttpException, HttpStatus } from '@nestjs/common';
+import { Request } from 'express';
 import { SessionService } from '../services/session.service';
 
 /**
@@ -6,7 +7,9 @@ import { SessionService } from '../services/session.service';
  */
 @Controller('user')
 export class UserController {
-  constructor(private readonly sessionService: SessionService) {
+  constructor(
+    private readonly sessionService: SessionService
+  ) {
     // Simple controller focused on session management
   }
 
@@ -15,11 +18,10 @@ export class UserController {
    * GET /user/me
    */
   @Get('me')
-  async getCurrentUser(@Req() request: any) {
+  async getCurrentUser(@Req() request: Request & { cookies?: Record<string, string> }) {
     try {
       // Debug: Log all cookies received
       console.log('🍪 All cookies received:', request.cookies);
-      console.log('🍪 Headers:', request.headers.cookie);
 
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
@@ -37,7 +39,7 @@ export class UserController {
       }
 
       // Try to get existing session first
-      const sessionData = this.sessionService.getSession(sessionId);
+      const sessionData = await this.sessionService.getSession(sessionId);
 
       if (sessionData) {
         // Session exists and is valid
@@ -85,7 +87,7 @@ export class UserController {
    * GET /user/profile
    */
   @Get('profile')
-  async getUserProfile(@Req() request: any) {
+  async getUserProfile(@Req() request: Request & { cookies?: Record<string, string> }) {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
@@ -95,7 +97,7 @@ export class UserController {
       }
 
       // Get session data
-      const sessionData = this.sessionService.getSession(sessionId);
+      const sessionData = await this.sessionService.getSession(sessionId);
 
       if (!sessionData) {
         throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);

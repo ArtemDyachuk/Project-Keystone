@@ -3,9 +3,11 @@ import { CSRFService } from '../services/csrf.service';
 
 @Injectable()
 export class CSRFGuard implements CanActivate {
-  constructor(private readonly csrfService: CSRFService) {}
+  constructor(
+    private readonly csrfService: CSRFService
+  ) { }
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const method = request.method;
 
@@ -33,7 +35,7 @@ export class CSRFGuard implements CanActivate {
     }
 
     // Validate CSRF token
-    const isValid = this.csrfService.validateToken(sessionId, csrfToken);
+    const isValid = await this.csrfService.validateToken(sessionId, csrfToken);
     if (!isValid) {
       throw new HttpException('Invalid CSRF token', HttpStatus.FORBIDDEN);
     }

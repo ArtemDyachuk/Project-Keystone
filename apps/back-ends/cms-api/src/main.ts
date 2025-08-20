@@ -26,13 +26,11 @@ async function bootstrap() {
   // Cookie parsing middleware - CRITICAL for session management
   app.use(cookieParser());
 
-  // CORS configuration (environment-aware)
-  const isDev = process.env.NODE_ENV !== 'production';
-
+  // CORS configuration - handles main domain + preview deployments
   const allowed = [
-    process.env.FRONTEND_CMS_URL,            // e.g. https://your-prod.example
-    /\.vercel\.app$/,                         // preview deploys
-    ...(isDev ? [/^http:\/\/localhost:\d+$/] : []),
+    process.env.FRONTEND_CMS_URL,            // Local: http://localhost:3000, Prod: https://your-domain.com
+    /\.vercel\.app$/,                        // Vercel preview deployments
+    /\.render\.com$/,                        // Render preview deployments
   ];
 
   app.enableCors({

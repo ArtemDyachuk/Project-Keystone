@@ -1,69 +1,76 @@
-import { Injectable } from '@nestjs/common';
-import { randomBytes } from 'crypto';
+import { Injectable, Logger } from "@nestjs/common";
+import { randomBytes } from "crypto";
+import { RedisService } from "./redis.service";
 
 @Injectable()
 export class CSRFService {
-  private tokens = new Map<string, { token: string; expiresAt: Date }>();
+  private readonly logger = new Logger(CSRFService.name);
+  private readonly tokenTTL = 60 * 60; // 1 hour
 
-  /**
-   * Generate CSRF token for a session
-   */
-  generateToken(sessionId: string): string {
-    const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  // Memory fallback when Redis unavailable
+  private memoryFallback = new Map<string, { token: string; expiresAt: Date }>();
 
-    this.tokens.set(sessionId, { token, expiresAt });
-    
-    // Clean up expired tokens
-    this.cleanupExpiredTokens();
-    
+  constructor(private readonly redisService: RedisService) {
+    // Clean up memory fallback every 5 minutes
+    setInterval(() => this.cleanupMemory(), 5 * 60 * 1000);
+  }
+
+  async generateToken(sessionId: string): Promise<string> {
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + this.tokenTTL * 1000);
+
+    // Try Redis first
+    const success = await this.redisService.set(`csrf:${sessionId}`, token, this.tokenTTL);
+
+    if (!success) {
+      // Fallback to memory
+      this.memoryFallback.set(sessionId, { token, expiresAt });
+      this.logger.warn(`CSRF token stored in memory fallback: ${sessionId.substring(0, 8)}...`);
+    }
+
     return token;
   }
 
-  /**
-   * Validate CSRF token for a session
-   */
-  validateToken(sessionId: string, token: string): boolean {
-    const storedToken = this.tokens.get(sessionId);
-    
-    if (!storedToken) {
-      return false;
+  async validateToken(sessionId: string, token: string): Promise<boolean> {
+    // Try Redis first
+    const redisToken = await this.redisService.get(`csrf:${sessionId}`);
+    if (redisToken === token) {
+      return true;
     }
 
-    // Check if token is expired
-    if (new Date() > storedToken.expiresAt) {
-      this.tokens.delete(sessionId);
-      return false;
+    // Fallback to memory
+    const memoryData = this.memoryFallback.get(sessionId);
+    if (memoryData) {
+      // Check if expired
+      if (Date.now() > memoryData.expiresAt.getTime()) {
+        this.memoryFallback.delete(sessionId);
+        return false;
+      }
+      return memoryData.token === token;
     }
 
-    return storedToken.token === token;
+    return false;
   }
 
-  /**
-   * Delete CSRF token for a session (logout)
-   */
-  deleteToken(sessionId: string): boolean {
-    return this.tokens.delete(sessionId);
+  async deleteToken(sessionId: string): Promise<boolean> {
+    const redisSuccess = await this.redisService.del(`csrf:${sessionId}`);
+    const memorySuccess = this.memoryFallback.delete(sessionId);
+    return redisSuccess || memorySuccess;
   }
 
-  /**
-   * Clean up expired tokens
-   */
-  private cleanupExpiredTokens(): void {
-    const now = new Date();
-    
-    for (const [sessionId, tokenData] of this.tokens.entries()) {
-      if (now > tokenData.expiresAt) {
-        this.tokens.delete(sessionId);
+  private cleanupMemory(): void {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [sessionId, tokenData] of this.memoryFallback.entries()) {
+      if (now > tokenData.expiresAt.getTime()) {
+        this.memoryFallback.delete(sessionId);
+        cleaned++;
       }
     }
-  }
 
-  /**
-   * Get token count (for monitoring)
-   */
-  getTokenCount(): number {
-    this.cleanupExpiredTokens();
-    return this.tokens.size;
+    if (cleaned > 0) {
+      this.logger.log(`Cleaned up ${cleaned} expired CSRF tokens from memory`);
+    }
   }
 }

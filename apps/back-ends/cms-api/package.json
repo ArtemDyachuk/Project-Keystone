@@ -6,7 +6,8 @@
     "prebuild": "cd ../../../packages/database && npm run build && cd ../auth && npm run build",
     "build": "tsc",
     "start": "node dist/main.js",
-    "dev": "ts-node src/main.ts",
+    "dev": "docker-compose up -d redis && ts-node src/main.ts",
+    "redis:logs": "docker-compose logs -f redis",
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
     "test": "jest",
@@ -25,6 +26,7 @@
     "cookie-parser": "^1.4.7",
     "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",
+    "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.0.1",
     "rxjs": "^7.8.0"

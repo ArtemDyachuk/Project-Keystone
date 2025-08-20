@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpException, HttpStatus, Get, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { FirebaseServerClient, EmailLinkSignUpParams, ActionCodeSettings } from '@keystone/auth';
 import { EmailService } from '../services/email.service';
 import { SessionService } from '../services/session.service';
@@ -574,17 +575,18 @@ export class AuthController {
       }
 
       // Create session
-      const sessionId = this.sessionService.createSession({
+      const sessionId = await this.sessionService.createSession({
         uid: user.uid,
         email: user.email || email,
         displayName: user.displayName,
         emailVerified: user.emailVerified,
         tenantId: user.tenantId || null,
-        roles: [], // Will be populated from database later
+        selectedTenantId: user.tenantId || null,
+        roles: [],
       });
 
       // Generate CSRF token for this session
-      const csrfToken = this.csrfService.generateToken(sessionId);
+      const csrfToken = await this.csrfService.generateToken(sessionId);
 
       return {
         success: true,
@@ -655,7 +657,7 @@ export class AuthController {
    * GET /auth/session
    */
   @Get('session')
-  async getSession(@Req() request: any) {
+  async getSession(@Req() request: Request & { cookies?: Record<string, string> }) {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
@@ -667,7 +669,7 @@ export class AuthController {
         };
       }
 
-      const sessionData = this.sessionService.getSession(sessionId);
+      const sessionData = await this.sessionService.getSession(sessionId);
 
       if (!sessionData) {
         return {
@@ -696,16 +698,16 @@ export class AuthController {
    * POST /auth/logout
    */
   @Post('logout')
-  async logout(@Req() request: any) {
+  async logout(@Req() request: Request & { cookies?: Record<string, string> }) {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
 
       if (sessionId) {
         // Delete the session from storage
-        const deleted = this.sessionService.deleteSession(sessionId);
+        const deleted = await this.sessionService.deleteSession(sessionId);
         // Delete the CSRF token for this session
-        this.csrfService.deleteToken(sessionId);
+        await this.csrfService.deleteToken(sessionId);
         console.log('🔄 Session and CSRF token deleted:', { sessionId, deleted });
       }
 
@@ -734,13 +736,12 @@ export class AuthController {
     }
 
     try {
-      const sessionCount = this.sessionService.getSessionCount();
-      const sessionIds = this.sessionService.getAllSessionIds(); // We need to add this method
+      const sessionCounts = await this.sessionService.getSessionCount();
+      // Don't expose actual session IDs for security
       return {
         success: true,
-        sessionCount,
-        sessionIds: sessionIds.map(id => id.substring(0, 8) + '...'), // Partial IDs for security
-        message: `Currently ${sessionCount} active sessions`
+        sessionCounts,
+        message: `Currently ${sessionCounts.total} active sessions (Redis: ${sessionCounts.redis}, Memory: ${sessionCounts.memory})`
       };
     } catch (error) {
       console.error('❌ Session debug failed:', error);
@@ -756,7 +757,7 @@ export class AuthController {
    * GET /auth/csrf-token
    */
   @Get('csrf-token')
-  async getCSRFToken(@Req() request: any) {
+  async getCSRFToken(@Req() request: Request & { cookies?: Record<string, string> }) {
     try {
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
@@ -766,13 +767,13 @@ export class AuthController {
       }
 
       // Validate session exists
-      const sessionData = this.sessionService.getSession(sessionId);
+      const sessionData = await this.sessionService.getSession(sessionId);
       if (!sessionData) {
         throw new HttpException('Invalid session', HttpStatus.UNAUTHORIZED);
       }
 
       // Generate CSRF token for this session
-      const csrfToken = this.csrfService.generateToken(sessionId);
+      const csrfToken = await this.csrfService.generateToken(sessionId);
 
       return {
         success: true,
