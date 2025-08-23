@@ -29,7 +29,7 @@ export default function VerifyEmailPage() {
         const mode = searchParams.get("mode");
         const email = searchParams.get("email");
         const uid = searchParams.get("uid");
-        
+
         if (!oobCode || mode !== "verifyEmail" || !email || !uid) {
           setError("Invalid or expired verification link");
           setStep("error");
@@ -42,14 +42,14 @@ export default function VerifyEmailPage() {
 
         // Verify the email with our backend
         const result = await verifyEmailAction(uid);
-        
+
         if (!result.success) {
           throw new Error(result.error || "Failed to verify email");
         }
 
         console.log("✅ Email verified successfully");
         setStep("set-password");
-        
+
       } catch (err) {
         console.error("Email verification failed:", err);
         setError(err instanceof Error ? err.message : "Failed to verify email. Please try again.");
@@ -101,30 +101,31 @@ export default function VerifyEmailPage() {
         throw new Error(result.error);
       }
 
-      console.log("✅ Password set successfully");
-
       // Check if user needs to create a tenant
       if (result.needsTenant && result.redirectUrl) {
-        console.log("🔄 User needs to create tenant, redirecting...");
         router.push(result.redirectUrl);
         return;
       }
 
-      // If no tenant needed, continue with normal flow
-      console.log("✅ Password set successfully, moving to complete step");
+      // Check if user should go to dashboard
+      if (result.redirectUrl && result.redirectUrl === "/dashboard") {
+        router.push(result.redirectUrl);
+        return;
+      }
+
+      // If no specific redirect, continue with normal flow
       setStep("complete");
-      
-      // Start countdown and auto-redirect
+
+      // Start countdown and auto-redirect to login as fallback
       let timeLeft = 3;
       setCountdown(timeLeft);
-      
+
       const countdownInterval = setInterval(() => {
         timeLeft -= 1;
         setCountdown(timeLeft);
-        
+
         if (timeLeft <= 0) {
           clearInterval(countdownInterval);
-          console.log("🔄 Auto-redirecting to login...");
           router.push("/login");
         }
       }, 1000);
@@ -197,12 +198,12 @@ export default function VerifyEmailPage() {
             <h2>Account Setup Complete!</h2>
             <p>Welcome to Keystone CMS!</p>
             <p>Your account has been created and verified successfully.</p>
-            
+
             <div className={styles.redirectInfo}>
               <p>Redirecting to login in {countdown} seconds...</p>
             </div>
 
-            <Button 
+            <Button
               onClick={() => router.push("/login")}
               className={styles.submitButton}
             >
@@ -217,17 +218,17 @@ export default function VerifyEmailPage() {
             <div className={styles.errorIcon}>❌</div>
             <h2>Verification Failed</h2>
             <p>{error || "Something went wrong during email verification."}</p>
-            
+
             <div className={styles.errorActions}>
-              <Button 
+              <Button
                 onClick={() => router.push("/signup")}
                 variant="secondary"
                 className={styles.submitButton}
               >
                 Try Signing Up Again
               </Button>
-              
-              <Button 
+
+              <Button
                 onClick={() => router.push("/login")}
                 className={styles.submitButton}
               >

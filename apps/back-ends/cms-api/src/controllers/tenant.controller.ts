@@ -44,6 +44,39 @@ export class TenantController {
   }
 
   /**
+   * Check if user needs to create a tenant
+   * GET /tenants/check-requirement
+   */
+  @UseGuards(SessionGuard)
+  @Get('check-requirement')
+  async checkTenantRequirement(@Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      const result = await this.tenantService.checkTenantRequirement(request.user.uid);
+
+      return {
+        success: true,
+        needsTenant: result.needsTenant,
+        existingTenantId: result.existingTenantId
+      };
+    } catch (error) {
+      console.error("❌ Check tenant requirement failed:", error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        "Failed to check tenant requirement",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
    * Get tenant by ID
    * GET /tenants/:id
    */
@@ -139,39 +172,6 @@ export class TenantController {
       throw new HttpException(
         `Failed to create tenant: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.BAD_REQUEST
-      );
-    }
-  }
-
-  /**
-   * Check if user needs to create a tenant
-   * GET /tenants/check-requirement
-   */
-  @UseGuards(SessionGuard)
-  @Get('check-requirement')
-  async checkTenantRequirement(@Req() request: Request & { user?: any; sessionId?: string }) {
-    try {
-      if (!request.user?.uid) {
-        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
-      }
-
-      const result = await this.tenantService.checkTenantRequirement(request.user.uid);
-
-      return {
-        success: true,
-        needsTenant: result.needsTenant,
-        existingTenantId: result.existingTenantId
-      };
-    } catch (error) {
-      console.error("❌ Check tenant requirement failed:", error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        "Failed to check tenant requirement",
-        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

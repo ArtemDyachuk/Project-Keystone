@@ -136,25 +136,84 @@ export async function setPasswordAction(data: SetPasswordData) {
     }
 
     const result = await AuthServiceClient.setPassword(data);
-    
-    if (result.success) {
-      // Check if user needs to create a tenant
+
+    if (result.success && result.user) {
+      // Auto-login the user after setting password
       try {
-        // Use the tenant service to check requirement instead of direct API call
-        const { checkTenantRequirement } = await import("./tenant.actions");
-        const tenantCheck = await checkTenantRequirement(data.uid);
-        
-        if (tenantCheck.needsTenant) {
-          // User needs to create a tenant
-          return {
-            ...result,
-            needsTenant: true,
-            redirectUrl: `/tenants/create?uid=${data.uid}&email=${encodeURIComponent(data.email || "")}`
-          };
+        // Call the login endpoint to create a session
+        const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: data.email || result.user.email,
+            password: data.password,
+          }),
+        });
+
+        if (loginResponse.ok) {
+          const loginResult = await loginResponse.json();
+
+          // Set session cookies
+          if (loginResult.sessionId) {
+            await setSessionCookie(loginResult.sessionId);
+          }
+
+          if (loginResult.csrfToken) {
+            await setCSRFCookie(loginResult.csrfToken);
+          }
+
+          // Check if user needs to create a tenant
+          if (loginResult.user?.uid) {
+            console.log("🔍 Checking tenant requirement for user:", loginResult.user.uid);
+
+            const tenantResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/check-requirement`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Cookie: `session=${loginResult.sessionId}`,
+              },
+            });
+
+            if (tenantResponse.ok) {
+              const tenantCheck = await tenantResponse.json();
+
+              if (tenantCheck.needsTenant) {
+                // User needs to create a tenant
+                return {
+                  ...result,
+                  needsTenant: true,
+                  redirectUrl: "/tenants/create",
+                };
+              } else {
+                // User has a tenant, return dashboard redirect
+                return {
+                  ...result,
+                  needsTenant: false,
+                  redirectUrl: "/dashboard",
+                };
+              }
+            } else {
+              console.error("❌ Tenant check failed:", tenantResponse.status, await tenantResponse.text());
+              // If tenant check fails, default to requiring tenant creation for new users
+              return {
+                ...result,
+                needsTenant: true,
+                redirectUrl: "/tenants/create",
+              };
+            }
+          }
         }
       } catch (error) {
-        console.warn("Failed to check tenant requirement:", error);
-        // Continue with normal flow if tenant check fails
+        console.error("Auto-login failed:", error);
+        // Fallback: return login redirect
+        return {
+          ...result,
+          needsTenant: false,
+          redirectUrl: "/login",
+          error: "Auto-login failed, please login manually",
+        };
       }
     }
 
@@ -283,12 +342,32 @@ export async function loginAction(email: string, password: string, redirectUrl: 
     if (result.sessionId) {
       await setSessionCookie(result.sessionId);
     }
-    
+
     if (result.csrfToken) {
       await setCSRFCookie(result.csrfToken);
     }
 
-    // Redirect using Next.js redirect (this will throw NEXT_REDIRECT - that's normal)
+    // Check if user needs to create a tenant
+    if (result.user?.uid) {
+      // Make a direct API call to check tenant requirement
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/check-requirement`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `session=${result.sessionId}`, // Use the session ID from login response
+        },
+      });
+
+      if (response.ok) {
+        const tenantCheck = await response.json();
+        if (tenantCheck.needsTenant) {
+          // User needs to create a tenant, redirect to tenant creation
+          redirect("/tenants/create");
+        }
+      }
+    }
+
+    // User has a tenant, continue to dashboard
     redirect(redirectUrl);
   } catch (error) {
     // Check if this is a Next.js redirect (which is expected)
