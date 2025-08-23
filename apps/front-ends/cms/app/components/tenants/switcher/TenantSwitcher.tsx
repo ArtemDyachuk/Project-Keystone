@@ -1,16 +1,16 @@
-import { Tenant } from "../types";
+import { Corporation } from "../../corporations/types";
 import { TenantSwitcherClient } from "./TenantSwitcherClient";
 
 interface TenantSwitcherProps {
-  selectedTenant: Tenant | null;
-  userTenants: Tenant[];
+  selectedCorporation: Corporation | null;
+  userCorporations: Corporation[];
 }
 
-export function TenantSwitcher({ selectedTenant, userTenants }: TenantSwitcherProps) {
+export function TenantSwitcher({ selectedCorporation, userCorporations }: TenantSwitcherProps) {
   return (
     <TenantSwitcherClient
-      selectedTenant={selectedTenant}
-      userTenants={userTenants}
+      selectedCorporation={selectedCorporation}
+      userCorporations={userCorporations}
     />
   );
 }

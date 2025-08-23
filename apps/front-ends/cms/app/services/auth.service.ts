@@ -37,6 +37,8 @@ export interface AuthResponse {
   sessionId?: string; // For login response
   csrfToken?: string; // For login response
   data?: any; // For additional response data
+  needsTenant?: boolean; // For tenant creation flow
+  redirectUrl?: string; // For tenant creation redirect
 }
 
 /**
@@ -435,7 +437,7 @@ export class AuthServiceClient {
       });
 
       let result;
-      
+
       // Check if response is JSON
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {

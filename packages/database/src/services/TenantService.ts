@@ -8,10 +8,14 @@ export class TenantService {
   /**
    * Create a new tenant with validation
    */
-  static async createTenant(name: string): Promise<ITenant> {
+  static async createTenant(name: string, gipTenantId: string): Promise<ITenant> {
     // Business logic: Validate name
     if (!name || name.trim().length === 0) {
       throw new Error("Tenant name is required");
+    }
+
+    if (!gipTenantId) {
+      throw new Error("Google Identity Platform tenant ID is required");
     }
 
     const trimmedName = name.trim();
@@ -22,17 +26,11 @@ export class TenantService {
       throw new Error(`Tenant with name "${trimmedName}" already exists`);
     }
 
-    return await this.tenantRepository.create({ name: trimmedName });
+    return await this.tenantRepository.create({
+      name: trimmedName,
+      gipTenantId
+    });
   }
-
-  /**
-   * Get all tenants - REMOVED FOR SECURITY
-   * In a multi-tenant system, users should only access their assigned tenants
-   * Use getTenantsByIds() instead with proper user tenant filtering
-   */
-  // static async getAllTenants(): Promise<ITenant[]> {
-  //   return await this.tenantRepository.findAll();
-  // }
 
   /**
    * Get tenants by IDs (for filtering user's tenants)
@@ -63,6 +61,16 @@ export class TenantService {
       throw new Error("Tenant name is required");
     }
     return await this.tenantRepository.findByName(name.trim());
+  }
+
+  /**
+   * Get tenant by GIP tenant ID
+   */
+  static async getTenantByGipId(gipTenantId: string): Promise<ITenant | null> {
+    if (!gipTenantId) {
+      throw new Error("GIP tenant ID is required");
+    }
+    return await this.tenantRepository.findByGipId(gipTenantId);
   }
 
   /**
@@ -109,5 +117,15 @@ export class TenantService {
       return false;
     }
     return await this.tenantRepository.existsByName(name.trim());
+  }
+
+  /**
+   * Check if GIP tenant ID exists
+   */
+  static async gipTenantExists(gipTenantId: string): Promise<boolean> {
+    if (!gipTenantId) {
+      return false;
+    }
+    return await this.tenantRepository.existsByGipId(gipTenantId);
   }
 }

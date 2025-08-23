@@ -1,0 +1,30 @@
+.deleteButton {
+  padding: 8px 16px;
+  background: var(--danger-bg, #dc2626);
+  color: var(--danger-text, #ffffff);
+  border: 1px solid var(--danger-border, #dc2626);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: var(--danger-hover, #b91c1c);
+  border-color: var(--danger-hover, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.deleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.deleteButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--danger-shadow, rgba(220, 38, 38, 0.3));
+}

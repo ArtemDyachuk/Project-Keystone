@@ -1,0 +1,77 @@
+.container {
+   max-width: 800px;
+   margin: 0 auto;
+   padding: 24px;
+}
+
+.header {
+   margin-bottom: 32px;
+}
+
+.breadcrumb {
+   margin-bottom: 16px;
+}
+
+.breadcrumbLink {
+   color: var(--text-secondary);
+   text-decoration: none;
+   font-size: 14px;
+   transition: color 0.2s ease;
+}
+
+.breadcrumbLink:hover {
+   color: var(--text-primary);
+}
+
+.header h1 {
+   margin: 0 0 8px 0;
+   font-size: 32px;
+   font-weight: 700;
+   color: var(--text-primary);
+}
+
+.header p {
+   margin: 0;
+   font-size: 16px;
+   color: var(--text-secondary);
+}
+
+.content {
+   background: var(--surface-primary);
+   border: 1px solid var(--border-primary);
+   border-radius: 12px;
+   padding: 24px;
+}
+
+.error {
+   text-align: center;
+   padding: 48px 24px;
+}
+
+.error h1 {
+   margin: 0 0 16px 0;
+   font-size: 24px;
+   color: var(--text-primary);
+}
+
+.error p {
+   margin: 0 0 24px 0;
+   color: var(--text-secondary);
+   font-size: 16px;
+}
+
+.createTenantButton {
+   display: inline-block;
+   padding: 12px 24px;
+   background: var(--accent-bg);
+   color: var(--accent-text);
+   text-decoration: none;
+   border-radius: 8px;
+   font-weight: 500;
+   transition: all 0.2s ease;
+}
+
+.createTenantButton:hover {
+   background: var(--accent-hover);
+   transform: translateY(-1px);
+}

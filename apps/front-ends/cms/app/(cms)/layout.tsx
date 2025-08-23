@@ -16,9 +16,33 @@ export default async function DashboardLayout({
   // Get user data from session
   const userData = await getCurrentUserServer();
 
-  // Get user's tenants from database (only if user has tenant IDs)
-  const userTenants: Array<{ _id: string; name: string }> = []; // tenants integration later
-  const selectedTenant: { _id: string; name: string } | null = null;
+  // Get user's corporations from database
+  let userCorporations: Array<{ _id: string; name: string }> = [];
+  let selectedCorporation: { _id: string; name: string } | null = null;
+
+  if (userData) {
+    try {
+      const { cookies } = await import("next/headers");
+      const cookieStore = await cookies();
+      const sessionId = cookieStore.get("session")?.value || '';
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/user/me`, {
+        method: "GET",
+        headers: {
+          Cookie: `session=${sessionId}`,
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        userCorporations = data.corporations || [];
+        selectedCorporation = userCorporations.find((c: any) => c._id === userData.selectedCorporationId) || null;
+      }
+    } catch (error) {
+      console.error("Failed to fetch user corporations:", error);
+    }
+  }
 
   return (
     <ThemeProvider>
@@ -26,8 +50,8 @@ export default async function DashboardLayout({
         {/* Application Header - Full Width */}
         <CMSNavigation
           userData={userData}
-          selectedTenant={selectedTenant}
-          userTenants={userTenants}
+          selectedCorporation={selectedCorporation}
+          userCorporations={userCorporations}
         />
 
         {/* Application Body - Sidebar + Main Content */}

@@ -7,6 +7,7 @@ export interface CurrentUser {
   displayName: string | null;
   emailVerified: boolean;
   tenantId: string | null;
+  selectedCorporationId: string | null;
   roles: string[];
 }
 

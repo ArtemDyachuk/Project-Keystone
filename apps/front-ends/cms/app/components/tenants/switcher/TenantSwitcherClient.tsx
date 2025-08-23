@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Tenant } from "../types";
-import { updateSelectedTenantAndRedirect } from "@/app/actions/tenant.actions";
+import { Corporation } from "../../corporations/types";
+import { updateSelectedCorporationAndRedirect } from "@/app/actions/corporation.actions";
 import { FullPageLoader } from "@/app/components/loaders";
 import { useRouter } from "next/navigation";
 import styles from "./TenantSwitcher.module.css";
 
 interface TenantSwitcherClientProps {
-  selectedTenant: Tenant | null;
-  userTenants: Tenant[];
+  selectedCorporation: Corporation | null;
+  userCorporations: Corporation[];
 }
 
-export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwitcherClientProps) {
+export function TenantSwitcherClient({ selectedCorporation, userCorporations }: TenantSwitcherClientProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -30,9 +30,9 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleTenantSelect = async (tenant: Tenant) => {
+  const handleCorporationSelect = async (corporation: Corporation) => {
     // Don't update if it's already selected
-    if (selectedTenant?._id === tenant._id) {
+    if (selectedCorporation?._id === corporation._id) {
       setIsOpen(false);
       return;
     }
@@ -40,20 +40,20 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
     try {
       setIsUpdating(true);
 
-      const result = await updateSelectedTenantAndRedirect(tenant._id!);
+      const result = await updateSelectedCorporationAndRedirect(corporation._id!);
 
       if (result?.success) {
         // Clear loading state before navigation
         setIsUpdating(false);
         setIsOpen(false);
 
-        // Navigate to dashboard with fresh tenant context
+        // Navigate to dashboard with fresh corporation context
         router.push("/dashboard");
       } else {
         throw new Error("Server action did not complete successfully");
       }
     } catch (error) {
-      console.error("Failed to update selected tenant:", error);
+      console.error("Failed to update selected corporation:", error);
       setIsUpdating(false);
       setIsOpen(false);
     }
@@ -65,7 +65,7 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
     <>
       <FullPageLoader
         isVisible={isUpdating}
-        title="Switching Organization"
+        title="Switching Corporation"
         description="Updating your workspace data..."
       />
 
@@ -74,11 +74,11 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
         <button
           className={styles.dropdownButton}
           onClick={() => setIsOpen(!isOpen)}
-          aria-label="Switch organizations"
+          aria-label="Switch corporations"
           disabled={isUpdating}
         >
-          <span className={styles.selectedTenant}>
-            {userTenants.length === 0 ? "No Organizations" : (selectedTenant ? selectedTenant.name : "Select Organization")}
+          <span className={styles.selectedCorporation}>
+            {userCorporations.length === 0 ? "No Corporations" : (selectedCorporation ? selectedCorporation.name : "Select Corporation")}
           </span>
           <span className={`${styles.dropdownArrow} ${isOpen ? styles.arrowUp : ""}`}>
             ▼
@@ -90,29 +90,29 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
           <div className={styles.dropdownMenu}>
             {/* Header */}
             <div className={styles.dropdownHeader}>
-              <h3>Switch Organizations</h3>
-              {userTenants.length > 0 && (
-                <p>Select an organization to work with</p>
+              <h3>Switch Corporations</h3>
+              {userCorporations.length > 0 && (
+                <p>Select a corporation to work with</p>
               )}
             </div>
 
-            {/* Tenant List */}
-            <div className={styles.tenantList}>
-              {userTenants.length === 0 ? (
-                <div className={styles.noTenants}>
-                  Create your first organization to get started
+            {/* Corporation List */}
+            <div className={styles.corporationList}>
+              {userCorporations.length === 0 ? (
+                <div className={styles.noCorporations}>
+                  Create your first corporation to get started
                 </div>
               ) : (
-                userTenants.map((tenant) => (
+                userCorporations.map((corporation) => (
                   <button
-                    key={tenant._id || 'unknown'}
-                    className={`${styles.tenantOption} ${selectedTenant?._id === tenant._id ? styles.selected : ""
+                    key={corporation._id || 'unknown'}
+                    className={`${styles.corporationOption} ${selectedCorporation?._id === corporation._id ? styles.selected : ""
                       }`}
-                    onClick={() => handleTenantSelect(tenant)}
+                    onClick={() => handleCorporationSelect(corporation)}
                     disabled={isUpdating}
                   >
-                    <span className={styles.tenantName}>{tenant.name}</span>
-                    {selectedTenant?._id === tenant._id && (
+                    <span className={styles.corporationName}>{corporation.name}</span>
+                    {selectedCorporation?._id === corporation._id && (
                       <span className={styles.checkmark}>✓</span>
                     )}
                   </button>
@@ -122,8 +122,8 @@ export function TenantSwitcherClient({ selectedTenant, userTenants }: TenantSwit
 
             {/* Footer */}
             <div className={styles.dropdownFooter}>
-              <a href="/tenants" className={styles.manageButton}>
-                Manage Tenants
+              <a href="/corporations" className={styles.manageButton}>
+                Manage Corporations
               </a>
             </div>
           </div>

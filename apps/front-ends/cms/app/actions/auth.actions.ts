@@ -14,6 +14,8 @@ export interface SetPasswordData {
   uid: string;
   password: string;
   tenantId?: string;
+  email?: string;
+  sessionId?: string;
 }
 
 /**
@@ -134,6 +136,28 @@ export async function setPasswordAction(data: SetPasswordData) {
     }
 
     const result = await AuthServiceClient.setPassword(data);
+    
+    if (result.success) {
+      // Check if user needs to create a tenant
+      try {
+        // Use the tenant service to check requirement instead of direct API call
+        const { checkTenantRequirement } = await import("./tenant.actions");
+        const tenantCheck = await checkTenantRequirement(data.uid);
+        
+        if (tenantCheck.needsTenant) {
+          // User needs to create a tenant
+          return {
+            ...result,
+            needsTenant: true,
+            redirectUrl: `/tenants/create?uid=${data.uid}&email=${encodeURIComponent(data.email || "")}`
+          };
+        }
+      } catch (error) {
+        console.warn("Failed to check tenant requirement:", error);
+        // Continue with normal flow if tenant check fails
+      }
+    }
+
     return result;
   } catch (error) {
     console.error("❌ Set password error:", error);

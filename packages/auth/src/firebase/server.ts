@@ -444,6 +444,17 @@ export class FirebaseServerClient {
   }
 
   /**
+   * Delete tenant (GIP multi-tenancy)
+   */
+  async deleteTenant(tenantId: string): Promise<void> {
+    try {
+      await this.auth.tenantManager().deleteTenant(tenantId);
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
    * Handle Firebase authentication errors
    */
   private handleFirebaseError(error: unknown): FirebaseAuthError {

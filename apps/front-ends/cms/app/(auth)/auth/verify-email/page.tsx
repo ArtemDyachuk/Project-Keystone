@@ -94,12 +94,23 @@ export default function VerifyEmailPage() {
       const result = await setPasswordAction({
         uid: userId,
         password: password,
+        email: userEmail,
       });
 
       if (!result.success) {
         throw new Error(result.error);
       }
 
+      console.log("✅ Password set successfully");
+
+      // Check if user needs to create a tenant
+      if (result.needsTenant && result.redirectUrl) {
+        console.log("🔄 User needs to create tenant, redirecting...");
+        router.push(result.redirectUrl);
+        return;
+      }
+
+      // If no tenant needed, continue with normal flow
       console.log("✅ Password set successfully, moving to complete step");
       setStep("complete");
       

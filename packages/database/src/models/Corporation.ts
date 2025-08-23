@@ -1,32 +1,31 @@
 import { mongoose } from "../types";
 
-export interface ITenant {
+export interface ICorporation {
   _id?: string;
   name: string;
-  gipTenantId: string; // Google Identity Platform tenant ID
+  tenantId: string; // Reference to the tenant this corporation belongs to
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-const tenantSchema = new mongoose.Schema<ITenant>({
+const corporationSchema = new mongoose.Schema<ICorporation>({
   name: {
     type: String,
     required: true,
     trim: true,
     maxlength: 100
   },
-  gipTenantId: {
+  tenantId: {
     type: String,
     required: true,
-    unique: true,
     index: true
   }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt
 });
 
-// Create index for faster queries
-tenantSchema.index({ name: 1 });
+// Create indexes for faster queries
+corporationSchema.index({ tenantId: 1, name: 1 });
 
 // Handle Next.js development mode where models may be compiled multiple times
-export const Tenant = mongoose.models.Tenant || mongoose.model<ITenant>("Tenant", tenantSchema);
+export const Corporation = mongoose.models.Corporation || mongoose.model<ICorporation>("Corporation", corporationSchema);

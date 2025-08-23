@@ -8,9 +8,32 @@ export default async function DashboardPage() {
   // Fetch real session data via server-side cookie forwarding
   let userData = null as any;
   let error = null as any;
+  let userCorporations = [] as any[];
+  let selectedCorporation = null as any;
 
   try {
     userData = await getCurrentUserServer();
+
+    if (userData) {
+      // Fetch user's corporations
+      const { cookies } = await import("next/headers");
+      const cookieStore = await cookies();
+      const sessionId = cookieStore.get("session")?.value || '';
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/user/me`, {
+        method: "GET",
+        headers: {
+          Cookie: `session=${sessionId}`,
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        userCorporations = data.corporations || [];
+        selectedCorporation = userCorporations.find((c: any) => c._id === userData.selectedCorporationId) || null;
+      }
+    }
   } catch (err) {
     error = err instanceof Error ? err.message : "Unknown error";
   }
@@ -75,7 +98,13 @@ export default async function DashboardPage() {
                     displayName: userData.displayName,
                     emailVerified: userData.emailVerified,
                     tenantId: userData.tenantId,
+                    selectedCorporationId: userData.selectedCorporationId,
                     roles: userData.roles,
+                  },
+                  corporations: {
+                    total: userCorporations.length,
+                    selected: selectedCorporation ? selectedCorporation.name : null,
+                    selectedId: selectedCorporation ? selectedCorporation._id : null,
                   },
                   timestamp: new Date().toISOString(),
                 }, null, 2)}

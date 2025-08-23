@@ -22,7 +22,7 @@ export class SessionService {
 
     const session: UserSession = {
       ...user,
-      selectedTenantId: user.selectedTenantId || user.tenantId,
+      selectedCorporationId: user.selectedCorporationId || user.tenantId,
       createdAt: now,
       expiresAt,
     };
@@ -103,16 +103,16 @@ export class SessionService {
     return redisSuccess || memorySuccess;
   }
 
-  async switchTenant(sessionId: string, selectedTenantId: string): Promise<boolean> {
+  async switchCorporation(sessionId: string, selectedCorporationId: string): Promise<boolean> {
     const sessionData = await this.getSession(sessionId);
     if (!sessionData) return false;
 
-    // TODO: Add tenant access validation here
-    // Ensure user has access to the requested tenant
+    // TODO: Add corporation access validation here
+    // Ensure user has access to the requested corporation
 
     const updatedSession: UserSession = {
       ...sessionData.user,
-      selectedTenantId,
+      selectedCorporationId,
       expiresAt: new Date(Date.now() + this.sessionTTL * 1000), // Extend expiry
     };
 
@@ -128,7 +128,7 @@ export class SessionService {
       this.memoryFallback.set(sessionId, updatedSession);
     }
 
-    this.logger.log(`User ${sessionData.user.uid} switched to tenant ${selectedTenantId}`);
+    this.logger.log(`User ${sessionData.user.uid} switched to corporation ${selectedCorporationId}`);
     return true;
   }
 

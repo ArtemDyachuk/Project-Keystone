@@ -574,6 +574,26 @@ export class AuthController {
         );
       }
 
+      // Get user's first corporation to set as default
+      let selectedCorporationId: string | null = null;
+      try {
+        const { TenantMembership, Corporation } = await import('@keystone/database');
+        const memberships = await TenantMembership.find({
+          userId: user.uid,
+          isActive: true
+        });
+        
+        if (memberships.length > 0) {
+          const firstTenantId = memberships[0].tenantId.toString();
+          const firstCorporation = await Corporation.findOne({ tenantId: firstTenantId });
+          if (firstCorporation) {
+            selectedCorporationId = firstCorporation._id.toString();
+          }
+        }
+      } catch (error) {
+        console.log('Could not determine default corporation, will set to null:', error);
+      }
+
       // Create session
       const sessionId = await this.sessionService.createSession({
         uid: user.uid,
@@ -581,7 +601,7 @@ export class AuthController {
         displayName: user.displayName,
         emailVerified: user.emailVerified,
         tenantId: user.tenantId || null,
-        selectedTenantId: user.tenantId || null,
+        selectedCorporationId: selectedCorporationId,
         roles: [],
       });
 

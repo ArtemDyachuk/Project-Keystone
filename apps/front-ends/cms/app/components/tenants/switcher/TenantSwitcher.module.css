@@ -99,7 +99,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.selectedTenant {
+.selectedCorporation {
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -150,13 +150,13 @@
   color: var(--text-secondary);
 }
 
-.tenantList {
+.corporationList {
   max-height: 200px;
   overflow-y: auto;
-  overflow-x: hidden; /* Hide horizontal scrollbar */
+  overflow-x: hidden;
 }
 
-.tenantOption {
+.corporationOption {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -168,26 +168,38 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
   color: var(--text-primary);
+  border-bottom: 1px solid var(--glass-border);
 }
 
-.tenantOption:hover {
+.corporationOption:last-child {
+  border-bottom: none;
+}
+
+.corporationOption:hover {
   background: var(--glass-hover);
-  transform: translateX(4px);
 }
 
-.tenantOption.selected {
+.corporationOption.selected {
   background: var(--accent-bg);
   color: var(--accent-text);
-  transform: translateX(4px);
 }
 
-.tenantName {
+.corporationName {
   font-weight: 500;
 }
 
 .checkmark {
   color: currentColor;
   font-weight: bold;
+  font-size: 16px;
+}
+
+.noCorporations {
+  padding: 12px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-style: italic;
 }
 
 .dropdownFooter {

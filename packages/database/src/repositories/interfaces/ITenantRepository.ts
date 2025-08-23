@@ -22,6 +22,11 @@ export interface ITenantRepository {
   findByName(name: string): Promise<ITenant | null>;
 
   /**
+   * Find tenant by Google Identity Platform tenant ID
+   */
+  findByGipId(gipTenantId: string): Promise<ITenant | null>;
+
+  /**
    * Find tenants by IDs (for filtering user's tenants)
    */
   findByIds(tenantIds: string[]): Promise<ITenant[]>;
@@ -40,4 +45,9 @@ export interface ITenantRepository {
    * Check if tenant exists by name
    */
   existsByName(name: string): Promise<boolean>;
+
+  /**
+   * Check if tenant exists by Google Identity Platform tenant ID
+   */
+  existsByGipId(gipTenantId: string): Promise<boolean>;
 }

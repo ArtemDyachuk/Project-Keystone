@@ -32,6 +32,13 @@ export class TenantRepository implements ITenantRepository {
   }
 
   /**
+   * Find tenant by Google Identity Platform tenant ID
+   */
+  async findByGipId(gipTenantId: string): Promise<ITenant | null> {
+    return await Tenant.findOne({ gipTenantId });
+  }
+
+  /**
    * Find tenants by IDs (for filtering user's tenants)
    */
   async findByIds(tenantIds: string[]): Promise<ITenant[]> {
@@ -68,6 +75,14 @@ export class TenantRepository implements ITenantRepository {
    */
   async existsByName(name: string): Promise<boolean> {
     const tenant = await Tenant.findOne({ name });
+    return tenant !== null;
+  }
+
+  /**
+   * Check if tenant exists by Google Identity Platform tenant ID
+   */
+  async existsByGipId(gipTenantId: string): Promise<boolean> {
+    const tenant = await Tenant.findOne({ gipTenantId });
     return tenant !== null;
   }
 }

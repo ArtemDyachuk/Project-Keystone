@@ -11,22 +11,38 @@
 
 .header h1 {
   font-size: 2.5rem;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .header p {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .content {
-  background: white;
-  border: 1px solid #e1e5e9;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 2rem;
+}
+
+.error {
+  text-align: center;
+  padding: 3rem;
+}
+
+.error h1 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+}
+
+.error p {
+  color: var(--text-secondary);
+  margin: 0 0 2rem 0;
 }
 
 .backSection {
@@ -34,13 +50,19 @@
 }
 
 .backButton {
-  color: #007bff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--accent-bg);
+  color: var(--accent-text);
   text-decoration: none;
+  border-radius: 8px;
   font-weight: 500;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .backButton:hover {
-  color: #0056b3;
-  text-decoration: underline;
+  opacity: 0.9;
+  transform: translateY(-1px);
 }

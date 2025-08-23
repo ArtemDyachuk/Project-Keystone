@@ -1,16 +1,49 @@
-import { getUserDataFromJWT } from "@/lib/auth-utils";
-import { TenantServiceClient } from "@/app/services";
+import { getCurrentUserServer } from "@/lib/sessions/server";
+import { redirect } from "next/navigation";
 import styles from "./page.module.css";
+
+interface Tenant {
+  _id: string;
+  name: string;
+  gipTenantId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Force dynamic rendering since we use cookies
 export const dynamic = 'force-dynamic';
 
 export default async function TenantsPage() {
-  // Get user data from JWT
-  const userData = await getUserDataFromJWT();
-  
-  // Get user's tenants from database
-  const userTenants = await TenantServiceClient.getTenantsByIds(userData?.tenantIds || []);
+  // Get current user from server-side session
+  const currentUser = await getCurrentUserServer();
+
+  // If no user session, redirect to login
+  if (!currentUser) {
+    redirect("/login");
+  }
+
+  // Get user's tenants from backend API
+  let userTenants: Tenant[] = [];
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get("session")?.value || '';
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/management/list`, {
+      method: "GET",
+      headers: {
+        Cookie: `session=${sessionId}`,
+      },
+      cache: "no-store",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      userTenants = data.tenants || [];
+    }
+  } catch (error) {
+    console.error("Failed to fetch user tenants:", error);
+  }
 
   return (
     <div className={styles.container}>

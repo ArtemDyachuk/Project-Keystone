@@ -7,11 +7,11 @@ import styles from "./CMSNavigation.module.css";
 interface CMSNavigationProps {
   className?: string; // for dark mode
   userData: any;
-  selectedTenant: any;
-  userTenants: any[];
+  selectedCorporation: any;
+  userCorporations: any[];
 }
 
-export function CMSNavigation({ className, userData, selectedTenant, userTenants }: CMSNavigationProps) {
+export function CMSNavigation({ className, userData, selectedCorporation, userCorporations }: CMSNavigationProps) {
   // Client-safe display name extraction
   const getDisplayName = (user: any): string => {
     if (user?.displayName) {
@@ -37,8 +37,8 @@ export function CMSNavigation({ className, userData, selectedTenant, userTenants
         <h1 className={styles.logo}>Keystone CMS</h1>
         <div className={styles.headerActions}>
           <TenantSwitcher
-            selectedTenant={selectedTenant}
-            userTenants={userTenants}
+            selectedCorporation={selectedCorporation}
+            userCorporations={userCorporations}
           />
           <span className={styles.userInfo}>
             {displayName}

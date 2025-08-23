@@ -1,6 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { TenantService, ITenant } from '@keystone/database';
-import { TenantAccessGuard } from '../guards/tenant-access.guard';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards, Req } from '@nestjs/common';
+import { Request } from 'express';
+import { TenantService as DatabaseTenantService } from '@keystone/database';
+import { SessionGuard } from '../guards/session.guard';
+import { TenantService, CreateTenantRequest } from '../services/tenant.service';
+import { SessionService } from '../services/session.service';
 
 // DTOs for request validation
 export class CreateTenantDto {
@@ -13,14 +16,17 @@ export class UpdateTenantDto {
 
 @Controller('tenants')
 export class TenantController {
-  constructor() { }
+  constructor(
+    private readonly tenantService: TenantService,
+    private readonly sessionService: SessionService
+  ) { }
 
   /**
    * Get all tenants (filtered by user)
    * GET /tenants
    */
   @Get()
-  async getAllTenants(@Headers('authorization') authHeader: string): Promise<ITenant[]> {
+  async getAllTenants(@Headers('authorization') authHeader: string): Promise<any[]> {
     try {
       if (!authHeader) {
         throw new UnauthorizedException("Authorization header required");
@@ -42,10 +48,29 @@ export class TenantController {
    * GET /tenants/:id
    */
   @Get(':id')
-  @UseGuards(TenantAccessGuard)
-  async getTenantById(@Param('id') id: string): Promise<ITenant> {
+  @UseGuards(SessionGuard)
+  async getTenantById(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }): Promise<any> {
     try {
-      const tenant = await TenantService.getTenantById(id);
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      // Check if user has access to this tenant via TenantMembership
+      const { TenantMembership } = await import('@keystone/database');
+      const membership = await TenantMembership.findOne({
+        userId: request.user.uid,
+        tenantId: id,
+        isActive: true
+      });
+
+      if (!membership) {
+        throw new HttpException(
+          "Access denied to this tenant",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      const tenant = await DatabaseTenantService.getTenantById(id);
 
       if (!tenant) {
         throw new HttpException(
@@ -54,7 +79,10 @@ export class TenantController {
         );
       }
 
-      return tenant;
+      return {
+        success: true,
+        tenant: tenant
+      };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -71,18 +99,43 @@ export class TenantController {
    * POST /tenants
    */
   @Post()
-  async createTenant(@Body() createTenantDto: CreateTenantDto, @Headers('authorization') authHeader: string): Promise<any> {
+  @UseGuards(SessionGuard)
+  async createTenant(@Body() createTenantDto: CreateTenantDto, @Req() request: Request & { user?: any; sessionId?: string }): Promise<any> {
     try {
-      if (!authHeader) {
-        throw new UnauthorizedException("Authorization header required");
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
       }
 
-      // TODO: Implement Firebase session-based user association
-      const tenant = await TenantService.createTenant(createTenantDto.name);
+      if (!createTenantDto.name?.trim()) {
+        throw new HttpException("Tenant name is required", HttpStatus.BAD_REQUEST);
+      }
 
-      return { ...tenant, message: "Tenant created successfully" };
+      const createRequest: CreateTenantRequest = {
+        name: createTenantDto.name.trim(),
+        userId: request.user.uid,
+        userEmail: request.user.email
+      };
+
+      const result = await this.tenantService.createTenant(createRequest);
+
+      // Update user's session to select the newly created corporation
+      if (request.sessionId && result.corporationId) {
+        await this.sessionService.switchCorporation(request.sessionId, result.corporationId);
+      }
+
+      return {
+        success: true,
+        tenantId: result.tenantId,
+        corporationId: result.corporationId,
+        message: result.message
+      };
     } catch (error) {
       console.error('❌ Tenant creation failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       throw new HttpException(
         `Failed to create tenant: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.BAD_REQUEST
@@ -91,25 +144,175 @@ export class TenantController {
   }
 
   /**
-   * Get user's tenants
-   * GET /tenants/user/me
+   * Check if user needs to create a tenant
+   * GET /tenants/check-requirement
    */
-  @Get('user/me')
-  async getUserTenants(): Promise<{
-    tenants: ITenant[];
-    selectedTenantId: string | null;
-  }> {
+  @UseGuards(SessionGuard)
+  @Get('check-requirement')
+  async checkTenantRequirement(@Req() request: Request & { user?: any; sessionId?: string }) {
     try {
-      // TODO: Implement Firebase session-based tenant retrieval
-      // For now, return empty arrays as placeholder
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      const result = await this.tenantService.checkTenantRequirement(request.user.uid);
+
       return {
-        tenants: [],
-        selectedTenantId: null
+        success: true,
+        needsTenant: result.needsTenant,
+        existingTenantId: result.existingTenantId
       };
     } catch (error) {
+      console.error("❌ Check tenant requirement failed:", error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        "Failed to check tenant requirement",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get user's active tenant information
+   * GET /tenants/active
+   */
+  @UseGuards(SessionGuard)
+  @Get('active')
+  async getActiveTenant(@Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      const activeTenant = await this.tenantService.getUserActiveTenant(request.user.uid);
+
+      if (!activeTenant) {
+        return {
+          success: true,
+          hasActiveTenant: false,
+          message: "No active tenant found"
+        };
+      }
+
+      return {
+        success: true,
+        hasActiveTenant: true,
+        tenant: activeTenant
+      };
+    } catch (error) {
+      console.error("❌ Get active tenant failed:", error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        "Failed to get active tenant",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get user's corporations (for navigation)
+   * GET /tenants/user/me
+   */
+  @UseGuards(SessionGuard)
+  @Get('user/me')
+  async getUserCorporations(@Req() request: Request & { user?: any; sessionId?: string }): Promise<{
+    corporations: any[];
+    selectedCorporationId: string | null;
+  }> {
+    try {
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get user's tenant memberships
+      const { TenantMembership } = await import('@keystone/database');
+
+      const memberships = await TenantMembership.find({
+        userId: request.user.uid,
+        isActive: true
+      }).populate('tenantId');
+
+      if (!memberships || memberships.length === 0) {
+        return {
+          corporations: [],
+          selectedCorporationId: null
+        };
+      }
+
+      // Get corporations for each tenant
+      const { Corporation } = await import('@keystone/database');
+      const tenantIds = memberships.map(m => m.tenantId.toString());
+      const corporations = await Corporation.find({
+        tenantId: { $in: tenantIds }
+      }).sort({ createdAt: -1 });
+
+      // Get selected corporation from user's session or first corporation
+      const selectedCorporationId = request.user.selectedCorporationId || (corporations.length > 0 ? corporations[0]._id.toString() : null);
+
+      return {
+        corporations: corporations,
+        selectedCorporationId: selectedCorporationId
+      };
+    } catch (error) {
+      console.error('❌ Get user corporations failed:', error);
+      throw new HttpException(
+        `Failed to fetch user corporations: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get user's actual tenants (for tenant management page)
+   * GET /tenants/management/list
+   */
+  @UseGuards(SessionGuard)
+  @Get('management/list')
+  async getUserTenants(@Req() request: Request & { user?: any; sessionId?: string }): Promise<{
+    tenants: any[];
+  }> {
+    try {
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get user's tenant memberships
+      const { TenantMembership } = await import('@keystone/database');
+
+      const memberships = await TenantMembership.find({
+        userId: request.user.uid,
+        isActive: true
+      }).populate('tenantId');
+
+      if (!memberships || memberships.length === 0) {
+        return {
+          tenants: []
+        };
+      }
+
+      // Get full tenant details for each membership
+      const { Tenant } = await import('@keystone/database');
+      const tenantIds = memberships.map(m => m.tenantId.toString());
+      const tenants = await Tenant.find({
+        _id: { $in: tenantIds }
+      }).sort({ createdAt: -1 });
+
+      return {
+        tenants: tenants
+      };
+    } catch (error) {
+      console.error('❌ Get user tenants failed:', error);
       throw new HttpException(
         `Failed to fetch user tenants: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        HttpStatus.BAD_REQUEST
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }
@@ -119,13 +322,41 @@ export class TenantController {
    * PUT /tenants/:id
    */
   @Put(':id')
-  @UseGuards(TenantAccessGuard)
+  @UseGuards(SessionGuard)
   async updateTenant(
     @Param('id') id: string,
-    @Body() updateTenantDto: UpdateTenantDto
-  ): Promise<ITenant> {
+    @Body() updateTenantDto: UpdateTenantDto,
+    @Req() request: Request & { user?: any; sessionId?: string }
+  ): Promise<{ success: boolean; tenant: any }> {
     try {
-      const updatedTenant = await TenantService.updateTenant(id, updateTenantDto);
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
+
+      // Check if user has access to this tenant via TenantMembership
+      const { TenantMembership } = await import('@keystone/database');
+      const membership = await TenantMembership.findOne({
+        userId: request.user.uid,
+        tenantId: id,
+        isActive: true
+      });
+
+      if (!membership) {
+        throw new HttpException(
+          "Access denied to this tenant",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // Check if user is the tenant owner (has owner role)
+      if (!membership.roles.includes('owner')) {
+        throw new HttpException(
+          "Only tenant owners can update tenants",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      const updatedTenant = await DatabaseTenantService.updateTenant(id, updateTenantDto);
 
       if (!updatedTenant) {
         throw new HttpException(
@@ -134,7 +365,10 @@ export class TenantController {
         );
       }
 
-      return updatedTenant;
+      return {
+        success: true,
+        tenant: updatedTenant
+      };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -151,19 +385,52 @@ export class TenantController {
    * DELETE /tenants/:id
    */
   @Delete(':id')
-  @UseGuards(TenantAccessGuard)
-  async deleteTenant(@Param('id') id: string): Promise<{ message: string }> {
+  @UseGuards(SessionGuard)
+  async deleteTenant(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }): Promise<{ success: boolean; message: string }> {
     try {
-      const deleted = await TenantService.deleteTenant(id);
+      if (!request.user?.uid) {
+        throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
+      }
 
-      if (!deleted) {
+      // Check if user has access to this tenant via TenantMembership
+      const { TenantMembership } = await import('@keystone/database');
+      const membership = await TenantMembership.findOne({
+        userId: request.user.uid,
+        tenantId: id,
+        isActive: true
+      });
+
+      if (!membership) {
+        throw new HttpException(
+          "Access denied to this tenant",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // Check if user is the tenant owner (has owner role)
+      if (!membership.roles.includes('owner')) {
+        throw new HttpException(
+          "Only tenant owners can delete tenants",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // Get the tenant to find its GIP tenant ID
+      const tenant = await DatabaseTenantService.getTenantById(id);
+      if (!tenant) {
         throw new HttpException(
           `Tenant with ID "${id}" not found`,
           HttpStatus.NOT_FOUND
         );
       }
 
-      return { message: `Tenant with ID "${id}" deleted successfully` };
+      // Delete tenant from both GIP and local database using TenantService
+      const result = await this.tenantService.deleteTenant(id, tenant.gipTenantId);
+
+      return {
+        success: true,
+        message: result.message
+      };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -182,7 +449,7 @@ export class TenantController {
   @Get('check/:name')
   async checkTenantExists(@Param('name') name: string): Promise<{ exists: boolean; name: string }> {
     try {
-      const exists = await TenantService.tenantExists(name);
+      const exists = await DatabaseTenantService.tenantExists(name);
       return { exists, name };
     } catch (error) {
       throw new HttpException(

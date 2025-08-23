@@ -55,7 +55,7 @@ export interface UserSession {
   displayName: string | null;
   emailVerified: boolean;
   tenantId: string | null;
-  selectedTenantId: string | null; // Current active tenant for multi-tenant users
+  selectedCorporationId: string | null; // Current active corporation for multi-tenant users
   roles: string[];
   createdAt: Date;
   expiresAt: Date;
@@ -92,7 +92,7 @@ export interface RedisSessionData {
   email: string;
   displayName: string | null;
   tenantId: string | null;
-  selectedTenantId: string | null;
+  selectedCorporationId: string | null;
   roles: string[];
   createdAt: number; // Unix timestamp for Redis efficiency
   lastActivity: number; // Unix timestamp for activity tracking
