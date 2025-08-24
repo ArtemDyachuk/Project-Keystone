@@ -2,10 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@keystone/ui";
-import { FullPageLoader } from "@/components/loaders";
-import styles from "./page.module.css";
-
 interface FirebaseUser {
    uid: string;
    email: string | null;
@@ -14,22 +10,21 @@ interface FirebaseUser {
    photoURL: string | null;
    disabled: boolean;
    roles: string[];
+   inviteStatus: "invited" | "active";
    metadata: {
       creationTime: string;
       lastSignInTime: string;
    };
 }
 
-interface UserListResponse {
-   users: FirebaseUser[];
-   total: number;
-   nextPageToken?: string;
-}
+import styles from "./page.module.css";
 
 export default function UsersPage() {
    const [users, setUsers] = useState<FirebaseUser[]>([]);
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
+   const [showConfirmation, setShowConfirmation] = useState(false);
+   const [userToCancel, setUserToCancel] = useState<FirebaseUser | null>(null);
    const router = useRouter();
 
    useEffect(() => {
@@ -39,7 +34,8 @@ export default function UsersPage() {
    const fetchUsers = async () => {
       try {
          setLoading(true);
-         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/users`, {
+         const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+         const response = await fetch(`${backendUrl}/api/user/users`, {
             credentials: "include",
          });
 
@@ -47,109 +43,260 @@ export default function UsersPage() {
             throw new Error("Failed to fetch users");
          }
 
-         const data: UserListResponse = await response.json();
-         setUsers(data.users);
-      } catch (err) {
-         setError(err instanceof Error ? err.message : "An error occurred");
+         const data = await response.json();
+         setUsers(data.users || []);
+         setError(null);
+      } catch (error) {
+         console.error("Error fetching users:", error);
+         setError("Failed to load users");
       } finally {
          setLoading(false);
       }
    };
 
    const handleCreateUser = () => {
-      router.push("/users/create");
+      router.push("/users/invite");
    };
 
-   const handleEditUser = (userId: string) => {
-      router.push(`/users/${userId}`);
+   const handleEditUser = (user: FirebaseUser) => {
+      router.push(`/users/${user.uid}`);
+   };
+
+   const handleCancelInvite = (user: FirebaseUser) => {
+      setUserToCancel(user);
+      setShowConfirmation(true);
+   };
+
+   const confirmCancelInvite = async () => {
+      if (!userToCancel) return;
+
+      try {
+         const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+         const response = await fetch(`${backendUrl}/api/user/invite/${userToCancel.uid}`, {
+            method: "DELETE",
+            headers: {
+               "Content-Type": "application/json",
+            },
+            credentials: "include",
+         });
+
+         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to cancel invite: ${response.status}`);
+         }
+
+         // Refresh the users list
+         await fetchUsers();
+         setShowConfirmation(false);
+         setUserToCancel(null);
+      } catch (error) {
+         console.error("Error canceling invite:", error);
+         alert("Failed to cancel invite");
+      }
    };
 
    const formatDate = (dateString: string) => {
       if (!dateString) return "Never";
-      return new Date(dateString).toLocaleDateString();
+      try {
+         return new Date(dateString).toLocaleDateString();
+      } catch {
+         return "Invalid date";
+      }
+   };
+
+   const getStatusLabels = (user: FirebaseUser) => {
+      const labels = [];
+
+      if (user.disabled) {
+         labels.push(
+            <span key="disabled" className={styles.statusLabel + " " + styles.statusDisabled}>
+               Disabled
+            </span>
+         );
+      } else {
+         labels.push(
+            <span key="active" className={styles.statusLabel + " " + styles.statusActive}>
+               Active
+            </span>
+         );
+      }
+
+      if (!user.emailVerified) {
+         labels.push(
+            <span key="unverified" className={styles.statusLabel + " " + styles.statusUnverified}>
+               Unverified
+            </span>
+         );
+      } else {
+         labels.push(
+            <span key="verified" className={styles.statusLabel + " " + styles.statusActive}>
+               Verified
+            </span>
+         );
+      }
+
+      if (user.inviteStatus === "invited") {
+         labels.push(
+            <span key="invited" className={styles.statusLabel + " " + styles.statusInvited}>
+               Invited
+            </span>
+         );
+      }
+
+      return labels;
    };
 
    if (loading) {
-      return <FullPageLoader isVisible={true} />;
+      return (
+         <div className={styles.usersContainer}>
+            <div className={styles.usersCard}>
+               <div className={styles.emptyState}>
+                  <div className={styles.emptyStateTitle}>Loading users...</div>
+               </div>
+            </div>
+         </div>
+      );
    }
 
    if (error) {
       return (
-         <div className={styles.errorContainer}>
-            <h2>Error</h2>
-            <p>{error}</p>
-            <button onClick={fetchUsers} className={styles.retryButton}>
-               Retry
-            </button>
+         <div className={styles.usersContainer}>
+            <div className={styles.usersCard}>
+               <div className={styles.emptyState}>
+                  <div className={styles.emptyStateTitle}>Error</div>
+                  <div className={styles.emptyStateDescription}>{error}</div>
+                  <button onClick={fetchUsers} className={styles.sendInviteButton}>
+                     Retry
+                  </button>
+               </div>
+            </div>
          </div>
       );
    }
 
    return (
-      <div className={styles.container}>
+      <div className={styles.usersContainer}>
          <div className={styles.header}>
-            <h1>User Management</h1>
-            <button onClick={handleCreateUser} className={styles.createButton}>
-               Create User
+            <h1 className={styles.title}>User Management</h1>
+            <button onClick={handleCreateUser} className={styles.sendInviteButton}>
+               Send Invite
             </button>
          </div>
 
-         <Card className={styles.usersCard}>
-            <div className={styles.usersHeader}>
-               <h2>Users ({users.length})</h2>
-            </div>
+         <div className={styles.usersCard}>
+            <h2 className={styles.usersHeader}>Users ({users.length})</h2>
 
             {users.length === 0 ? (
                <div className={styles.emptyState}>
-                  <p>No users found in this tenant.</p>
-                  <button onClick={handleCreateUser} className={styles.createFirstButton}>
-                     Create Your First User
+                  <div className={styles.emptyStateTitle}>No users yet</div>
+                  <div className={styles.emptyStateDescription}>
+                     Get started by sending your first invite to a new user.
+                  </div>
+                  <button onClick={handleCreateUser} className={styles.sendInviteButton}>
+                     Send Your First Invite
                   </button>
                </div>
             ) : (
-               <div className={styles.usersList}>
-                  {users.map((user) => (
-                     <div key={user.uid} className={styles.userItem}>
-                        <div className={styles.userInfo}>
-                           <div className={styles.userMain}>
-                              <h3>{user.displayName || user.email || "Unnamed User"}</h3>
-                              <p className={styles.userEmail}>{user.email}</p>
-                              {user.roles && user.roles.length > 0 && (
-                                 <div className={styles.userRoles}>
-                                    {user.roles.map((role, index) => (
-                                       <span key={index} className={styles.roleBadge}>
-                                          {role}
-                                       </span>
-                                    ))}
+               <table className={styles.usersTable}>
+                  <thead>
+                     <tr>
+                        <th className={styles.nameColumn}>Name</th>
+                        <th className={styles.statusColumn}>Status</th>
+                        <th className={styles.roleColumn}>Role</th>
+                        <th className={styles.createdColumn}>Created</th>
+                        <th className={styles.lastSignInColumn}>Last Sign In</th>
+                        <th className={styles.actionsColumn}>Actions</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     {users.map((user) => (
+                        <tr key={user.uid}>
+                           <td className={styles.nameColumn}>
+                              <div className={styles.userInfo}>
+                                 <div className={styles.userName}>
+                                    {user.displayName || user.email}
                                  </div>
+                                 <div className={styles.userEmail}>{user.email}</div>
+                              </div>
+                           </td>
+                           <td className={styles.statusColumn}>
+                              <div className={styles.statusLabels}>
+                                 {getStatusLabels(user)}
+                              </div>
+                           </td>
+                           <td className={styles.roleColumn}>
+                              {user.roles && user.roles.length > 0 ? (
+                                 user.roles.map((role: string, index: number) => (
+                                    <span key={index} className={styles.roleLabel}>
+                                       {role}
+                                    </span>
+                                 ))
+                              ) : (
+                                 <span style={{ color: "var(--text-secondary)" }}>No role</span>
                               )}
-                           </div>
-                           <div className={styles.userMeta}>
-                              <span className={`${styles.status} ${user.disabled ? styles.disabled : styles.active}`}>
-                                 {user.disabled ? "Disabled" : "Active"}
-                              </span>
-                              <span className={`${styles.verified} ${user.emailVerified ? styles.verified : styles.unverified}`}>
-                                 {user.emailVerified ? "Verified" : "Unverified"}
-                              </span>
-                           </div>
-                        </div>
-                        <div className={styles.userDetails}>
-                           <p>Created: {formatDate(user.metadata.creationTime)}</p>
-                           <p>Last Sign In: {formatDate(user.metadata.lastSignInTime)}</p>
-                        </div>
-                        <div className={styles.userActions}>
-                           <button
-                              onClick={() => handleEditUser(user.uid)}
-                              className={styles.editButton}
-                           >
-                              Edit
-                           </button>
-                        </div>
-                     </div>
-                  ))}
-               </div>
+                           </td>
+                           <td className={styles.createdColumn}>
+                              <div className={styles.metadata}>
+                                 {formatDate(user.metadata?.creationTime)}
+                              </div>
+                           </td>
+                           <td className={styles.lastSignInColumn}>
+                              <div className={styles.metadata}>
+                                 {formatDate(user.metadata?.lastSignInTime)}
+                              </div>
+                           </td>
+                           <td className={styles.actionsColumn}>
+                              <div className={styles.actions}>
+                                 <button
+                                    onClick={() => handleEditUser(user)}
+                                    className={styles.editButton}
+                                 >
+                                    Edit
+                                 </button>
+                                 {user.inviteStatus === "invited" && (
+                                    <button
+                                       onClick={() => handleCancelInvite(user)}
+                                       className={styles.cancelInviteButton}
+                                    >
+                                       Cancel Invite
+                                    </button>
+                                 )}
+                              </div>
+                           </td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
             )}
-         </Card>
+         </div>
+
+         {/* Confirmation Modal */}
+         {showConfirmation && (
+            <div className={styles.confirmationModal}>
+               <div className={styles.confirmationContent}>
+                  <h3 className={styles.confirmationTitle}>Cancel Invite</h3>
+                  <p className={styles.confirmationMessage}>
+                     Are you sure you want to cancel the invite for{" "}
+                     <strong>{userToCancel?.email}</strong>? This will permanently delete the user
+                     and invalidate the invite link.
+                  </p>
+                  <div className={styles.confirmationActions}>
+                     <button
+                        onClick={() => {
+                           setShowConfirmation(false);
+                           setUserToCancel(null);
+                        }}
+                        className={styles.cancelButton}
+                     >
+                        Cancel
+                     </button>
+                     <button onClick={confirmCancelInvite} className={styles.confirmButton}>
+                        Yes, Cancel Invite
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 }

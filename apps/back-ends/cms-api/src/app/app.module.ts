@@ -14,8 +14,10 @@ import { RedisService } from '../services/redis.service';
 import { TenantService } from '../services/tenant.service';
 import { UserService } from '../services/user.service';
 import { CorporationService } from '../services/corporation.service';
+import { InviteService } from '../services/invite.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 import { SessionGuard } from '../guards/session.guard';
+import { SignupService } from "../services/signup.service";
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { SessionGuard } from '../guards/session.guard';
     TenantService,
     UserService,
     CorporationService,
+    InviteService,
+    SignupService,
   ],
 })
 export class AppModule { }

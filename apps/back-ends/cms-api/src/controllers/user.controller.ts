@@ -3,6 +3,10 @@ import { Request } from 'express';
 import { SessionService } from '../services/session.service';
 import { SessionGuard } from '../guards/session.guard';
 import { UserService } from '../services/user.service';
+import { InviteService } from '../services/invite.service';
+import type { CreateInviteDto } from '../services/invite.service';
+import { RbacGuard } from '../guards/rbac.guard';
+import { RequirePermission } from '../decorators/require-permission.decorator';
 import type { CreateUserRequest, UpdateUserRequest } from '../services/user.service';
 
 /**
@@ -12,7 +16,8 @@ import type { CreateUserRequest, UpdateUserRequest } from '../services/user.serv
 export class UserController {
   constructor(
     private readonly sessionService: SessionService,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly inviteService: InviteService
   ) {
     // Simple controller focused on session management
   }
@@ -406,6 +411,105 @@ export class UserController {
 
       throw new HttpException(
         'Failed to delete user',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Send user invite
+   * POST /user/invite
+   */
+  @UseGuards(SessionGuard, RbacGuard)
+  @RequirePermission('user:invite')
+  @Post('invite')
+  async sendInvite(@Body() inviteData: CreateInviteDto, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.BAD_REQUEST);
+      }
+
+      // Add the current user as the inviter
+      if (!sessionData.user.tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      // Create the invite using the new unified system
+      await this.inviteService.createInvite(
+        inviteData,
+        sessionData.user.uid,
+        sessionData.user.tenantId
+      );
+
+      return {
+        success: true,
+        message: 'Invite sent successfully',
+        data: {
+          email: inviteData.email,
+          expiresAt: new Date(Date.now() + (15 * 60 * 1000)).toISOString(), // 15 minutes from now
+        }
+      };
+    } catch (error) {
+      console.error('❌ Send invite failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to send invite',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Cancel user invite
+   * DELETE /user/invite/:id
+   */
+  @UseGuards(SessionGuard, RbacGuard)
+  @RequirePermission('user:invite')
+  @Delete('invite/:id')
+  async cancelInvite(@Param('id') uid: string, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      // Cancel the invite using the new unified system
+      await this.inviteService.cancelInviteByUid(uid, tenantId);
+
+      return {
+        success: true,
+        message: 'Invite cancelled successfully'
+      };
+    } catch (error) {
+      console.error('❌ Cancel invite failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to cancel invite',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

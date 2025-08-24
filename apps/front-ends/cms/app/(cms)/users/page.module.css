@@ -1,6 +1,6 @@
-.container {
+.usersContainer {
    padding: 2rem;
-   max-width: 1200px;
+   max-width: 1400px;
    margin: 0 auto;
 }
 
@@ -11,262 +11,286 @@
    margin-bottom: 2rem;
 }
 
-.header h1 {
+.title {
    font-size: 2rem;
    font-weight: 600;
    color: var(--text-primary);
-   margin: 0;
 }
 
-.createButton {
-   background: var(--accent-bg);
-   color: var(--accent-text);
+.sendInviteButton {
+   background: var(--primary-color);
+   color: white;
    border: none;
    padding: 0.75rem 1.5rem;
-   border-radius: 8px;
-   font-size: 0.875rem;
+   border-radius: 0.5rem;
    font-weight: 500;
    cursor: pointer;
-   transition: background-color 0.2s ease;
+   transition: background-color 0.2s;
 }
 
-.createButton:hover {
-   background: var(--accent-bg);
-   opacity: 0.9;
+.sendInviteButton:hover {
+   background: var(--primary-color-hover);
 }
 
 .usersCard {
-   background: var(--surface-primary);
-   border: 1px solid var(--border-primary);
-   border-radius: 12px;
-   overflow: hidden;
+   background: var(--card-bg);
+   border-radius: 1rem;
+   padding: 1.5rem;
+   box-shadow: var(--card-shadow);
 }
 
 .usersHeader {
-   padding: 1.5rem;
-   border-bottom: 1px solid var(--border-primary);
-   background: var(--surface-secondary);
-}
-
-.usersHeader h2 {
-   margin: 0;
    font-size: 1.25rem;
    font-weight: 600;
    color: var(--text-primary);
-}
-
-.emptyState {
-   padding: 3rem;
-   text-align: center;
-   color: var(--text-secondary);
-}
-
-.emptyState p {
    margin-bottom: 1.5rem;
-   font-size: 1.125rem;
 }
 
-.createFirstButton {
-   background: var(--accent-bg);
-   color: var(--accent-text);
-   border: none;
-   padding: 0.75rem 1.5rem;
-   border-radius: 8px;
-   font-size: 0.875rem;
+.usersTable {
+   width: 100%;
+   border-collapse: collapse;
+}
+
+.usersTable th {
+   text-align: left;
+   padding: 1rem;
+   border-bottom: 1px solid var(--border-color);
+   color: var(--text-secondary);
    font-weight: 500;
-   cursor: pointer;
-   transition: background-color 0.2s ease;
+   font-size: 0.875rem;
+   text-transform: uppercase;
+   letter-spacing: 0.05em;
 }
 
-.createFirstButton:hover {
-   background: var(--accent-bg);
-   opacity: 0.9;
+.usersTable td {
+   padding: 1rem;
+   border-bottom: 1px solid var(--border-color);
+   vertical-align: top;
 }
 
-.usersList {
-   padding: 0;
+/* Column widths */
+.nameColumn {
+   width: 25%;
 }
 
-.userItem {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   padding: 1.5rem;
-   border-bottom: 1px solid var(--border-primary);
-   transition: background-color 0.2s ease;
+.statusColumn {
+   width: 20%;
 }
 
-.userItem:last-child {
-   border-bottom: none;
+.roleColumn {
+   width: 15%;
 }
 
-.userItem:hover {
-   background: var(--surface-secondary);
+.createdColumn {
+   width: 15%;
+}
+
+.lastSignInColumn {
+   width: 15%;
+}
+
+.actionsColumn {
+   width: 10%;
+   text-align: right;
 }
 
 .userInfo {
-   flex: 1;
    display: flex;
-   justify-content: space-between;
-   align-items: center;
+   flex-direction: column;
+   gap: 0.25rem;
 }
 
-.userMain h3 {
-   margin: 0 0 0.25rem 0;
-   font-size: 1.125rem;
-   font-weight: 600;
+.userName {
+   font-weight: 500;
    color: var(--text-primary);
 }
 
 .userEmail {
-   margin: 0;
-   color: var(--text-secondary);
    font-size: 0.875rem;
+   color: var(--text-secondary);
 }
 
-.userRoles {
+.statusLabels {
+   display: flex;
+   flex-direction: column;
+   gap: 0.5rem;
+}
+
+.statusLabel {
+   display: inline-block;
+   padding: 0.25rem 0.5rem;
+   border-radius: 0.375rem;
+   font-size: 0.75rem;
+   font-weight: 500;
+   text-transform: uppercase;
+   letter-spacing: 0.05em;
+}
+
+.statusActive {
+   background: var(--success-bg);
+   color: var(--success-text);
+}
+
+.statusDisabled {
+   background: var(--error-bg);
+   color: var(--error-text);
+}
+
+.statusUnverified {
+   background: var(--warning-bg);
+   color: var(--warning-text);
+}
+
+.statusInvited {
+   background: var(--info-bg);
+   color: var(--info-text);
+}
+
+.roleLabel {
+   display: inline-block;
+   padding: 0.25rem 0.5rem;
+   border-radius: 0.375rem;
+   font-size: 0.75rem;
+   font-weight: 500;
+   background: var(--primary-bg);
+   color: var(--primary-text);
+   text-transform: uppercase;
+   letter-spacing: 0.05em;
+}
+
+.metadata {
+   display: flex;
+   flex-direction: column;
+   gap: 0.25rem;
+   font-size: 0.875rem;
+   color: var(--text-secondary);
+}
+
+.actions {
    display: flex;
    gap: 0.5rem;
-   margin-top: 0.5rem;
-   flex-wrap: wrap;
-}
-
-.roleBadge {
-   background: var(--accent-bg);
-   color: var(--accent-text);
-   padding: 0.25rem 0.5rem;
-   border-radius: 12px;
-   font-size: 0.75rem;
-   font-weight: 500;
-   text-transform: uppercase;
-   letter-spacing: 0.025em;
-}
-
-.userMeta {
-   display: flex;
-   gap: 0.75rem;
-   align-items: center;
-}
-
-.status,
-.verified {
-   padding: 0.25rem 0.75rem;
-   border-radius: 20px;
-   font-size: 0.75rem;
-   font-weight: 500;
-   text-transform: uppercase;
-   letter-spacing: 0.025em;
-}
-
-.status.active {
-   background: #10b981;
-   color: white;
-}
-
-.status.disabled {
-   background: #ef4444;
-   color: white;
-}
-
-.verified.verified {
-   background: #10b981;
-   color: white;
-}
-
-.verified.unverified {
-   background: #f59e0b;
-   color: white;
-}
-
-.userDetails {
-   flex: 1;
-   margin: 0 2rem;
-   color: var(--text-secondary);
-   font-size: 0.875rem;
-}
-
-.userDetails p {
-   margin: 0.25rem 0;
-}
-
-.userActions {
-   display: flex;
-   gap: 0.75rem;
+   justify-content: flex-end;
 }
 
 .editButton {
-   background: var(--surface-secondary);
+   background: var(--secondary-bg);
    color: var(--text-primary);
-   border: 1px solid var(--border-primary);
+   border: 1px solid var(--border-color);
    padding: 0.5rem 1rem;
-   border-radius: 6px;
+   border-radius: 0.375rem;
    font-size: 0.875rem;
-   font-weight: 500;
    cursor: pointer;
-   transition: background-color 0.2s ease;
+   transition: all 0.2s;
 }
 
 .editButton:hover {
-   background: var(--surface-tertiary);
+   background: var(--secondary-bg-hover);
+   border-color: var(--border-color-hover);
 }
 
-.errorContainer {
-   padding: 2rem;
+.cancelInviteButton {
+   background: var(--error-bg);
+   color: var(--error-text);
+   border: 1px solid var(--error-border);
+   padding: 0.5rem 1rem;
+   border-radius: 0.375rem;
+   font-size: 0.875rem;
+   cursor: pointer;
+   transition: all 0.2s;
+}
+
+.cancelInviteButton:hover {
+   background: var(--error-bg-hover);
+   border-color: var(--error-border-hover);
+}
+
+.emptyState {
    text-align: center;
-   color: #ef4444;
+   padding: 3rem 1rem;
+   color: var(--text-secondary);
 }
 
-.errorContainer h2 {
+.emptyStateTitle {
+   font-size: 1.5rem;
+   font-weight: 600;
    margin-bottom: 1rem;
-   color: #ef4444;
+   color: var(--text-primary);
 }
 
-.retryButton {
-   background: var(--accent-bg);
-   color: var(--accent-text);
+.emptyStateDescription {
+   margin-bottom: 2rem;
+   line-height: 1.6;
+}
+
+/* Confirmation Modal */
+.confirmationModal {
+   position: fixed;
+   top: 0;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   background: rgba(0, 0, 0, 0.5);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   z-index: 1000;
+}
+
+.confirmationContent {
+   background: var(--card-bg);
+   border-radius: 1rem;
+   padding: 2rem;
+   max-width: 500px;
+   width: 90%;
+   box-shadow: var(--card-shadow);
+}
+
+.confirmationTitle {
+   font-size: 1.25rem;
+   font-weight: 600;
+   color: var(--text-primary);
+   margin-bottom: 1rem;
+}
+
+.confirmationMessage {
+   color: var(--text-secondary);
+   margin-bottom: 2rem;
+   line-height: 1.6;
+}
+
+.confirmationActions {
+   display: flex;
+   gap: 1rem;
+   justify-content: flex-end;
+}
+
+.confirmButton {
+   background: var(--error-bg);
+   color: var(--error-text);
    border: none;
    padding: 0.75rem 1.5rem;
-   border-radius: 8px;
-   font-size: 0.875rem;
+   border-radius: 0.5rem;
    font-weight: 500;
    cursor: pointer;
-   margin-top: 1rem;
-   transition: background-color 0.2s ease;
+   transition: background-color 0.2s;
 }
 
-.retryButton:hover {
-   background: var(--accent-bg);
-   opacity: 0.9;
+.confirmButton:hover {
+   background: var(--error-bg-hover);
 }
 
-@media (max-width: 768px) {
-   .container {
-      padding: 1rem;
-   }
+.cancelButton {
+   background: var(--secondary-bg);
+   color: var(--text-primary);
+   border: 1px solid var(--border-color);
+   padding: 0.75rem 1.5rem;
+   border-radius: 0.5rem;
+   font-weight: 500;
+   cursor: pointer;
+   transition: all 0.2s;
+}
 
-   .header {
-      flex-direction: column;
-      gap: 1rem;
-      align-items: stretch;
-   }
-
-   .userItem {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 1rem;
-   }
-
-   .userInfo {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 1rem;
-   }
-
-   .userDetails {
-      margin: 0;
-   }
-
-   .userActions {
-      justify-content: center;
-   }
+.cancelButton:hover {
+   background: var(--secondary-bg-hover);
+   border-color: var(--border-color-hover);
 }

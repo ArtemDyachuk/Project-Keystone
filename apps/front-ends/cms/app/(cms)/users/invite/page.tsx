@@ -6,16 +6,18 @@ import { Card } from "@keystone/ui";
 import styles from "./page.module.css";
 import { getRolesByCategory } from "@keystone/rbac";
 
-interface CreateUserForm {
+interface SendInviteForm {
    email: string;
-   displayName: string;
+   firstName: string;
+   lastName: string;
    roles: string[];
 }
 
-export default function CreateUserPage() {
-   const [form, setForm] = useState<CreateUserForm>({
+export default function SendInvitePage() {
+   const [form, setForm] = useState<SendInviteForm>({
       email: "",
-      displayName: "",
+      firstName: "",
+      lastName: "",
       roles: [],
    });
    const [loading, setLoading] = useState(false);
@@ -87,18 +89,24 @@ export default function CreateUserPage() {
       setError(null);
 
       try {
-         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/users`, {
+         // Use the invite endpoint instead of create user
+         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/invite`, {
             method: "POST",
             headers: {
                "Content-Type": "application/json",
             },
             credentials: "include",
-            body: JSON.stringify(form),
+            body: JSON.stringify({
+               email: form.email,
+               firstName: form.firstName,
+               lastName: form.lastName,
+               roles: form.roles,
+            }),
          });
 
          if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to create user");
+            throw new Error(errorData.message || "Failed to send invite");
          }
 
          // Redirect to users list on success
@@ -117,8 +125,8 @@ export default function CreateUserPage() {
    return (
       <div className={styles.container}>
          <div className={styles.header}>
-            <h1>Create New User</h1>
-            <p>Add a new user to your tenant</p>
+            <h1>Send User Invite</h1>
+            <p>Invite a new user to join your tenant</p>
          </div>
 
          <Card className={styles.formCard}>
@@ -141,22 +149,37 @@ export default function CreateUserPage() {
                </div>
 
                <div className={styles.formGroup}>
-                  <label htmlFor="displayName" className={styles.label}>
-                     Display Name
+                  <label htmlFor="firstName" className={styles.label}>
+                     First Name *
                   </label>
                   <input
                      type="text"
-                     id="displayName"
-                     name="displayName"
-                     value={form.displayName}
+                     id="firstName"
+                     name="firstName"
+                     value={form.firstName}
                      onChange={handleInputChange}
+                     required
                      className={styles.input}
-                     placeholder="John Doe"
+                     placeholder="John"
                      disabled={loading}
                   />
-                  <p className={styles.helpText}>
-                     Optional. If not provided, the email will be used as the display name.
-                  </p>
+               </div>
+
+               <div className={styles.formGroup}>
+                  <label htmlFor="lastName" className={styles.label}>
+                     Last Name *
+                  </label>
+                  <input
+                     type="text"
+                     id="lastName"
+                     name="lastName"
+                     value={form.lastName}
+                     onChange={handleInputChange}
+                     required
+                     className={styles.input}
+                     placeholder="Doe"
+                     disabled={loading}
+                  />
                </div>
 
                <div className={styles.formGroup}>
@@ -222,9 +245,9 @@ export default function CreateUserPage() {
                   <button
                      type="submit"
                      className={styles.submitButton}
-                     disabled={loading || !form.email.trim()}
+                     disabled={loading || !form.email.trim() || !form.firstName.trim() || !form.lastName.trim()}
                   >
-                     {loading ? "Creating..." : "Create User"}
+                     {loading ? "Sending Invite..." : "Send Invite"}
                   </button>
                </div>
             </form>

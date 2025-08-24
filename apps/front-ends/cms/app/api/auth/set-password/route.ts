@@ -1,38 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // Since auth is temporarily disabled, return an error
-    throw new Error("Cognito not configured - auth temporarily disabled");
+    const { uid, password, tenantId } = await request.json();
 
-    // Original code commented out:
-    // const { username, password } = await request.json();
-    // const config = await getCognitoConfig();
-    // const { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } = await import("@aws-sdk/client-cognito-identity-provider");
-    // const clientConfig: any = { region: config.region };
-    // if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-    //   clientConfig.credentials = {
-    //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    //   };
-    // }
-    // const cognitoClient = new CognitoIdentityProviderClient(clientConfig);
-    // const command = new AdminSetUserPasswordCommand({
-    //   UserPoolId: config.userPoolId,
-    //   Username: username,
-    //   Password: password,
-    //   Permanent: true,
-    // });
-    // await cognitoClient.send(command);
-    // return NextResponse.json({
-    //   success: true,
-    //   message: "Password set successfully"
-    // });
+    if (!uid || !password) {
+      return NextResponse.json(
+        { success: false, error: "UID and password are required" },
+        { status: 400 }
+      );
+    }
+
+    // Call our backend set-password endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/set-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uid, password, tenantId }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, error: result.message || "Failed to set password" },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Set password error:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Failed to set password" },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }

@@ -8,6 +8,7 @@ export interface SignupWithEmailLinkData {
   firstName: string;
   lastName: string;
   email: string;
+  companyName: string;
 }
 
 export interface SetPasswordData {
@@ -16,6 +17,11 @@ export interface SetPasswordData {
   tenantId?: string;
   email?: string;
   sessionId?: string;
+}
+
+export interface AutoLoginRequest {
+  email: string;
+  password: string;
 }
 
 /**
@@ -46,6 +52,13 @@ export async function signupWithEmailLink(data: SignupWithEmailLinkData) {
       };
     }
 
+    if (!data.companyName?.trim()) {
+      return {
+        success: false,
+        error: "Company name is required"
+      };
+    }
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
@@ -60,6 +73,7 @@ export async function signupWithEmailLink(data: SignupWithEmailLinkData) {
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
       email: data.email.trim().toLowerCase(),
+      companyName: data.companyName.trim(),
     });
 
     return result;
@@ -414,5 +428,46 @@ export async function logoutAction() {
     await deleteSessionCookie();
     await deleteCSRFCookie();
     redirect("/");
+  }
+}
+
+/**
+ * Auto-login function for the verify-signup flow
+ * This uses server-side session management to properly set cookies
+ */
+export async function autoLogin(request: AutoLoginRequest) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Auto-login failed");
+    }
+
+    const loginData = await response.json();
+
+    // Set the session cookie from the backend response
+    if (loginData.sessionId) {
+      await setSessionCookie(loginData.sessionId);
+    }
+
+    // Set CSRF token if provided
+    if (loginData.csrfToken) {
+      await setCSRFCookie(loginData.csrfToken);
+    }
+
+    return { success: true, data: loginData };
+  } catch (error) {
+    console.error("Auto-login failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Auto-login failed"
+    };
   }
 }

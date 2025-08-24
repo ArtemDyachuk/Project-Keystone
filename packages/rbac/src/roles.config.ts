@@ -1,52 +1,42 @@
 import { ResourceRoles } from "./types";
 
-// Define all available permissions
+// Define only essential permissions - no granular overcomplication
 export const PERMISSIONS = {
    // Tenant permissions
    TENANT_CREATE: "tenant:create",
    TENANT_READ: "tenant:read",
    TENANT_UPDATE: "tenant:update",
    TENANT_DELETE: "tenant:delete",
-   TENANT_MANAGE_USERS: "tenant:manage_users",
-   TENANT_MANAGE_SETTINGS: "tenant:manage_settings",
 
    // Corporation permissions
    CORPORATION_CREATE: "corporation:create",
    CORPORATION_READ: "corporation:read",
    CORPORATION_UPDATE: "corporation:update",
    CORPORATION_DELETE: "corporation:delete",
-   CORPORATION_MANAGE_USERS: "corporation:manage_users",
-   CORPORATION_MANAGE_SETTINGS: "corporation:manage_settings",
 
    // User permissions
    USER_CREATE: "user:create",
    USER_READ: "user:read",
    USER_UPDATE: "user:update",
    USER_DELETE: "user:delete",
-   USER_MANAGE_ROLES: "user:manage_roles",
-
-   // System permissions
-   SYSTEM_READ: "system:read",
-   SYSTEM_MANAGE: "system:manage",
+   USER_INVITE: "user:invite",
 
    // Global permissions (override all resource-specific permissions)
    GLOBAL_READ: "global:read",
    GLOBAL_ADMIN: "global:admin",
 } as const;
 
-// Define the role configuration
+// Define the role configuration with simplified permissions
 export const ROLES_CONFIG: ResourceRoles = {
    Tenant: {
       Owner: {
          name: "Tenant:Owner",
          displayName: "Tenant Owner",
-         description: "Full control over tenant, including deletion and user management",
+         description: "Full control over tenant, including deletion",
          permissions: [
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.TENANT_UPDATE,
             PERMISSIONS.TENANT_DELETE,
-            PERMISSIONS.TENANT_MANAGE_USERS,
-            PERMISSIONS.TENANT_MANAGE_SETTINGS,
             PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
          ],
@@ -58,12 +48,9 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.TENANT_UPDATE,
-            PERMISSIONS.TENANT_MANAGE_USERS,
-            PERMISSIONS.TENANT_MANAGE_SETTINGS,
             PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
          ],
-         inheritsFrom: ["Tenant:Reader"],
       },
       Reader: {
          name: "Tenant:Reader",
@@ -86,8 +73,6 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.CORPORATION_UPDATE,
             PERMISSIONS.CORPORATION_DELETE,
-            PERMISSIONS.CORPORATION_MANAGE_USERS,
-            PERMISSIONS.CORPORATION_MANAGE_SETTINGS,
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.USER_READ,
          ],
@@ -99,12 +84,9 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.CORPORATION_UPDATE,
-            PERMISSIONS.CORPORATION_MANAGE_USERS,
-            PERMISSIONS.CORPORATION_MANAGE_SETTINGS,
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.USER_READ,
          ],
-         inheritsFrom: ["Corporation:Reader"],
       },
       Reader: {
          name: "Corporation:Reader",
@@ -122,16 +104,15 @@ export const ROLES_CONFIG: ResourceRoles = {
       Admin: {
          name: "User:Admin",
          displayName: "User Administrator",
-         description: "System-wide user management capabilities",
+         description: "Can create/invite users and manage user roles",
          permissions: [
             PERMISSIONS.USER_CREATE,
+            PERMISSIONS.USER_INVITE,
             PERMISSIONS.USER_READ,
             PERMISSIONS.USER_UPDATE,
             PERMISSIONS.USER_DELETE,
-            PERMISSIONS.USER_MANAGE_ROLES,
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.CORPORATION_READ,
-            PERMISSIONS.SYSTEM_READ,
          ],
       },
       Reader: {
@@ -155,25 +136,9 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.GLOBAL_ADMIN,
             PERMISSIONS.GLOBAL_READ,
             // Include all specific permissions for clarity
-            PERMISSIONS.TENANT_CREATE,
-            PERMISSIONS.TENANT_READ,
-            PERMISSIONS.TENANT_UPDATE,
-            PERMISSIONS.TENANT_DELETE,
-            PERMISSIONS.TENANT_MANAGE_USERS,
-            PERMISSIONS.TENANT_MANAGE_SETTINGS,
-            PERMISSIONS.CORPORATION_CREATE,
-            PERMISSIONS.CORPORATION_READ,
-            PERMISSIONS.CORPORATION_UPDATE,
-            PERMISSIONS.CORPORATION_DELETE,
-            PERMISSIONS.CORPORATION_MANAGE_USERS,
-            PERMISSIONS.CORPORATION_MANAGE_SETTINGS,
-            PERMISSIONS.USER_CREATE,
-            PERMISSIONS.USER_READ,
-            PERMISSIONS.USER_UPDATE,
-            PERMISSIONS.USER_DELETE,
-            PERMISSIONS.USER_MANAGE_ROLES,
-            PERMISSIONS.SYSTEM_READ,
-            PERMISSIONS.SYSTEM_MANAGE,
+            PERMISSIONS.TENANT_CREATE, PERMISSIONS.TENANT_READ, PERMISSIONS.TENANT_UPDATE, PERMISSIONS.TENANT_DELETE,
+            PERMISSIONS.CORPORATION_CREATE, PERMISSIONS.CORPORATION_READ, PERMISSIONS.CORPORATION_UPDATE, PERMISSIONS.CORPORATION_DELETE,
+            PERMISSIONS.USER_CREATE, PERMISSIONS.USER_INVITE, PERMISSIONS.USER_READ, PERMISSIONS.USER_UPDATE, PERMISSIONS.USER_DELETE,
          ],
       },
       Reader: {
@@ -185,7 +150,6 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
-            PERMISSIONS.SYSTEM_READ,
          ],
       },
    },

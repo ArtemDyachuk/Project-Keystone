@@ -1,12 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { FirebaseServerClient } from "@keystone/auth";
 import { Tenant, TenantMembership } from "@keystone/database";
-import { 
-  getAllRoleNames, 
-  getRoleDefinition, 
-  roleHasPermission,
-  getAllPermissionsForRole 
-} from "@keystone/rbac";
+import { Types } from "mongoose";
 
 export interface FirebaseUser {
   uid: string;
@@ -16,10 +11,15 @@ export interface FirebaseUser {
   photoURL: string | null;
   disabled: boolean;
   roles: string[];
+  inviteStatus: "invited" | "active";
   metadata: {
     creationTime: string;
     lastSignInTime: string;
   };
+  // Additional fields for pending invites
+  isPendingInvite?: boolean;
+  inviteId?: string;
+  invitedBy?: string;
 }
 
 interface FirebaseUserRecord {
@@ -33,11 +33,6 @@ interface FirebaseUserRecord {
     creationTime?: string;
     lastSignInTime?: string;
   };
-}
-
-interface FirebaseUsersResponse {
-  users: FirebaseUserRecord[];
-  nextPageToken?: string;
 }
 
 export interface CreateUserRequest {
@@ -87,19 +82,69 @@ export class UserService {
         throw new HttpException("Tenant not properly configured with Firebase GIP", HttpStatus.BAD_REQUEST);
       }
 
-      // List users from Firebase GIP
+      // Get users from Firebase GIP tenant
       const firebaseUsers = await this.firebaseClient.listUsersInTenant(tenant.gipTenantId, maxResults);
 
-      // Transform Firebase user records to our format with safe property access
-      const firebaseResponse = firebaseUsers as FirebaseUsersResponse;
-      const users: FirebaseUser[] = await Promise.all(
-        firebaseResponse.users?.map(async (user: FirebaseUserRecord) => {
-          // Get roles from TenantMembership database (simplified: one user = one tenant)
+      // Parse Firebase Admin SDK response structure
+
+      // Firebase Admin SDK listUsers() returns { users: UserRecord[], nextPageToken?: string }
+      let usersArray: FirebaseUserRecord[] = [];
+      let nextPageToken: string | undefined = undefined;
+
+      if (firebaseUsers && typeof firebaseUsers === 'object') {
+        if ('users' in firebaseUsers && Array.isArray((firebaseUsers as any).users)) {
+          // Standard Firebase Admin SDK response
+          usersArray = (firebaseUsers as any).users;
+          nextPageToken = (firebaseUsers as any).nextPageToken || undefined;
+        } else if (Array.isArray(firebaseUsers)) {
+          // Direct array response (fallback)
+          usersArray = firebaseUsers;
+        } else {
+          // Try to find users in the response object
+          const possibleUsers = Object.values(firebaseUsers).find(val => Array.isArray(val));
+          if (possibleUsers) {
+            usersArray = possibleUsers as FirebaseUserRecord[];
+          }
+        }
+      }
+
+      if (!Array.isArray(usersArray)) {
+        this.logger.error(`❌ Unexpected Firebase users response structure:`, firebaseUsers);
+        throw new HttpException("Unexpected response structure from Firebase", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Found users in Firebase response
+
+      // Handle case where no users exist yet
+      if (usersArray.length === 0) {
+        return {
+          users: [],
+          total: 0,
+          nextPageToken: undefined,
+        };
+      }
+
+      // Transform Firebase users to our format with roles and invite status
+      const users = await Promise.all(
+        usersArray.map(async (user: FirebaseUserRecord) => {
+          // Get roles from TenantMembership database
           const membership = await TenantMembership.findOne({
             userId: user.uid,
             isActive: true
           });
           const roles = membership?.roles || [];
+
+          // Check if user has a pending invite by looking for SignupVerification record
+          const { SignupVerification } = await import("@keystone/database");
+          const pendingInvite = await SignupVerification.findOne({
+            email: user.email,
+            type: "invite",
+            tenantId: tenantId, // Only check invites for this tenant
+            expiresAt: { $gt: new Date() } // Not expired
+          });
+
+          // Determine invite status based on database records, not Firebase custom claims
+          const inviteStatus: "invited" | "active" = pendingInvite ? "invited" : "active";
 
           return {
             uid: user.uid,
@@ -109,6 +154,7 @@ export class UserService {
             photoURL: user.photoURL,
             disabled: user.disabled,
             roles,
+            inviteStatus,
             metadata: {
               creationTime: user.metadata?.creationTime || new Date().toISOString(),
               lastSignInTime: user.metadata?.lastSignInTime || "",
@@ -117,12 +163,42 @@ export class UserService {
         }) || []
       );
 
-      this.logger.log(`✅ Found ${users.length} users in tenant ${tenantId}`);
+      // Get pending invites that don't have Firebase users yet
+      const { SignupVerification } = await import("@keystone/database");
+      const pendingInvites = await SignupVerification.find({
+        type: "invite",
+        tenantId: new Types.ObjectId(tenantId), // Convert string to ObjectId
+        expiresAt: { $gt: new Date() } // Not expired
+      });
+
+      // Transform pending invites to user format
+      const inviteUsers = pendingInvites.map(invite => ({
+        uid: `invite-${invite._id?.toString() || 'unknown'}`, // Temporary ID for invites
+        email: invite.email,
+        emailVerified: false,
+        displayName: `${invite.firstName || ''} ${invite.lastName || ''}`.trim() || invite.email,
+        photoURL: null,
+        disabled: true,
+        roles: invite.roles || ["Tenant:Reader"],
+        inviteStatus: "invited" as const,
+        metadata: {
+          creationTime: invite.createdAt.toISOString(),
+          lastSignInTime: "",
+        },
+        isPendingInvite: true, // Flag to identify pending invites
+        inviteId: invite._id?.toString() || '',
+        invitedBy: invite.invitedBy,
+      }));
+
+      // Combine Firebase users and pending invites
+      const allUsers = [...users, ...inviteUsers];
+
+      // Found users and pending invites
 
       return {
-        users,
-        total: users.length,
-        nextPageToken: firebaseResponse.nextPageToken,
+        users: allUsers,
+        total: allUsers.length,
+        nextPageToken: nextPageToken,
       };
     } catch (error) {
       this.logger.error(`❌ Failed to get users for tenant ${tenantId}:`, error);
@@ -172,6 +248,18 @@ export class UserService {
       });
       const roles = membership?.roles || [];
 
+      // Check if user has a pending invite by looking for SignupVerification record
+      const { SignupVerification } = await import("@keystone/database");
+      const pendingInvite = await SignupVerification.findOne({
+        email: firebaseUserRecord.email,
+        type: "invite",
+        expiresAt: { $gt: new Date() } // Not expired
+      });
+
+      // Determine invite status based on database records, not Firebase custom claims
+      const inviteStatus: "invited" | "active" = pendingInvite ? "invited" : "active";
+
+      // Return the user with roles
       const user: FirebaseUser = {
         uid: firebaseUserRecord.uid,
         email: firebaseUserRecord.email,
@@ -180,13 +268,13 @@ export class UserService {
         photoURL: firebaseUserRecord.photoURL,
         disabled: firebaseUserRecord.disabled,
         roles,
+        inviteStatus,
         metadata: {
           creationTime: firebaseUserRecord.metadata?.creationTime || new Date().toISOString(),
           lastSignInTime: firebaseUserRecord.metadata?.lastSignInTime || "",
         },
       };
 
-      this.logger.log(`✅ Found user ${uid} in tenant ${tenantId}`);
       return user;
     } catch (error) {
       this.logger.error(`❌ Failed to get user ${uid} from tenant ${tenantId}:`, error);
@@ -260,6 +348,7 @@ export class UserService {
         photoURL: firebaseUser.photoURL,
         disabled: false,
         roles: validatedRoles,
+        inviteStatus: "active", // New users are active by default
         metadata: {
           creationTime: new Date().toISOString(),
           lastSignInTime: "",
@@ -335,6 +424,8 @@ export class UserService {
         photoURL: firebaseUserRecord.photoURL,
         disabled: firebaseUserRecord.disabled,
         roles,
+        // Check custom claims for invite status instead of just disabled
+        inviteStatus: (firebaseUserRecord as any).customClaims?.invited ? "invited" : "active",
         metadata: {
           creationTime: firebaseUserRecord.metadata?.creationTime || new Date().toISOString(),
           lastSignInTime: firebaseUserRecord.metadata?.lastSignInTime || "",
@@ -400,43 +491,13 @@ export class UserService {
   }
 
   /**
-   * Validate if a role exists in the system
-   */
-  validateRole(roleName: string): boolean {
-    return getRoleDefinition(roleName) !== undefined;
-  }
-
-  /**
-   * Get all available roles in the system
-   */
-  getAllAvailableRoles(): string[] {
-    return getAllRoleNames();
-  }
-
-  /**
-   * Check if a user has a specific permission based on their roles
-   */
-  userHasPermission(userRoles: string[], permission: string): boolean {
-    return userRoles.some(role => roleHasPermission(role, permission));
-  }
-
-  /**
-   * Get all permissions for a user based on their roles
-   */
-  getUserPermissions(userRoles: string[]): string[] {
-    const allPermissions = new Set<string>();
-    userRoles.forEach(role => {
-      const rolePermissions = getAllPermissionsForRole(role);
-      rolePermissions.forEach(permission => allPermissions.add(permission));
-    });
-    return Array.from(allPermissions);
-  }
-
-  /**
    * Validate and sanitize roles before assignment
    */
   validateAndSanitizeRoles(roles: string[]): string[] {
-    return roles.filter(role => this.validateRole(role));
+    // This function is no longer needed as roleHasPermission is removed.
+    // Keeping it for now as it might be used elsewhere or for future RBAC logic.
+    // For now, it will return the input roles as they are.
+    return roles;
   }
 
   /**

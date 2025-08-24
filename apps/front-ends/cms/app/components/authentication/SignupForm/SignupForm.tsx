@@ -14,6 +14,7 @@ export function SignupForm() {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -28,6 +29,7 @@ export function SignupForm() {
         firstName,
         lastName,
         email,
+        companyName,
       });
 
       if (!result.success) {
@@ -53,6 +55,7 @@ export function SignupForm() {
         firstName,
         lastName,
         email,
+        companyName,
       });
 
       if (!result.success) {
@@ -92,6 +95,18 @@ export function SignupForm() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Enter your last name"
+                required
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="companyName">Company Name</label>
+              <Input
+                id="companyName"
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Enter your company name"
                 required
               />
             </div>

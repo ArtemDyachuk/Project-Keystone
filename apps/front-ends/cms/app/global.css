@@ -4,28 +4,64 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
-  
+
   --surface-primary: #ffffff;
   --surface-secondary: #f8fafc;
   --surface-tertiary: #f1f5f9;
-  
+
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
-  
+
   --border-primary: #e5e7eb;
   --border-secondary: #d1d5db;
-  
+
   /* Glass Effect */
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
   --glass-hover: rgba(255, 255, 255, 0.15);
-  
+
   /* Accent Colors */
   --accent-bg: #3b82f6;
   --accent-text: #ffffff;
   --accent-shadow: rgba(59, 130, 246, 0.25);
-  
+
+  /* Primary Colors */
+  --primary-color: #3b82f6;
+  --primary-color-hover: #2563eb;
+  --primary-bg: #dbeafe;
+  --primary-text: #1e40af;
+
+  /* Secondary Colors */
+  --secondary-bg: #f3f4f6;
+  --secondary-bg-hover: #e5e7eb;
+
+  /* Success Colors */
+  --success-bg: #d1fae5;
+  --success-text: #065f46;
+
+  /* Error Colors */
+  --error-bg: #fee2e2;
+  --error-text: #991b1b;
+  --error-border: #fca5a5;
+  --error-bg-hover: #fecaca;
+
+  /* Warning Colors */
+  --warning-bg: #fef3c7;
+  --warning-text: #92400e;
+
+  /* Info Colors */
+  --info-bg: #dbeafe;
+  --info-text: #1e40af;
+
+  /* Card Colors */
+  --card-bg: var(--surface-primary);
+  --card-shadow: var(--shadow-md);
+
+  /* Border Colors */
+  --border-color: var(--border-primary);
+  --border-color-hover: var(--border-secondary);
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -37,28 +73,64 @@
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
-  
+
   --surface-primary: #1e293b;
   --surface-secondary: #334155;
   --surface-tertiary: #475569;
-  
+
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
   --text-tertiary: #94a3b8;
-  
+
   --border-primary: #334155;
   --border-secondary: #475569;
-  
+
   /* Glass Effect */
   --glass-bg: rgba(30, 41, 59, 0.8);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-hover: rgba(255, 255, 255, 0.05);
-  
+
   /* Accent Colors */
   --accent-bg: #3b82f6;
   --accent-text: #ffffff;
   --accent-shadow: rgba(59, 130, 246, 0.3);
-  
+
+  /* Primary Colors */
+  --primary-color: #60a5fa;
+  --primary-color-hover: #3b82f6;
+  --primary-bg: #1e3a8a;
+  --primary-text: #dbeafe;
+
+  /* Secondary Colors */
+  --secondary-bg: #334155;
+  --secondary-bg-hover: #475569;
+
+  /* Success Colors */
+  --success-bg: #065f46;
+  --success-text: #d1fae5;
+
+  /* Error Colors */
+  --error-bg: #991b1b;
+  --error-text: #fecaca;
+  --error-border: #dc2626;
+  --error-bg-hover: #b91c1c;
+
+  /* Warning Colors */
+  --warning-bg: #92400e;
+  --warning-text: #fef3c7;
+
+  /* Info Colors */
+  --info-bg: #1e40af;
+  --info-text: #dbeafe;
+
+  /* Card Colors */
+  --card-bg: var(--surface-primary);
+  --card-shadow: var(--shadow-md);
+
+  /* Border Colors */
+  --border-color: var(--border-primary);
+  --border-color-hover: var(--border-secondary);
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
@@ -88,31 +160,38 @@ html {
 
 /* Liquid Glass Animation */
 @keyframes float {
-  0%, 100% { 
-    transform: translateY(0px) rotate(0deg); 
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
   }
-  33% { 
-    transform: translateY(-20px) rotate(1deg); 
+
+  33% {
+    transform: translateY(-20px) rotate(1deg);
   }
-  66% { 
-    transform: translateY(10px) rotate(-1deg); 
+
+  66% {
+    transform: translateY(10px) rotate(-1deg);
   }
 }
 
 .liquid-glass-bg {
   animation: float 20s ease-in-out infinite;
 }
+
 body {
   font-family: inherit;
   line-height: inherit;
   margin: 0;
 }
+
 h1,
 h2,
 p,
 pre {
   margin: 0;
 }
+
 *,
 ::before,
 ::after {
@@ -121,25 +200,30 @@ pre {
   border-style: solid;
   border-color: currentColor;
 }
+
 h1,
 h2 {
   font-size: inherit;
   font-weight: inherit;
 }
+
 a {
   color: inherit;
   text-decoration: inherit;
 }
+
 pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     Liberation Mono, Courier New, monospace;
 }
+
 svg {
   display: block;
   vertical-align: middle;
   shape-rendering: auto;
   text-rendering: optimizeLegibility;
 }
+
 pre {
   background-color: rgba(55, 65, 81, 1);
   border-radius: 0.25rem;
@@ -154,12 +238,15 @@ pre {
   box-shadow: 0 0 #0000, 0 0 #0000, 0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
+
 .rounded {
   border-radius: 1.5rem;
 }
+
 .wrapper {
   width: 100%;
 }
+
 .container {
   margin-left: auto;
   margin-right: auto;
@@ -170,15 +257,18 @@ pre {
   color: rgba(55, 65, 81, 1);
   width: 100%;
 }
+
 #welcome {
   margin-top: 2.5rem;
 }
+
 #welcome h1 {
   font-size: 3rem;
   font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 1;
 }
+
 #welcome span {
   display: block;
   font-size: 1.875rem;
@@ -186,6 +276,7 @@ pre {
   line-height: 2.25rem;
   margin-bottom: 0.5rem;
 }
+
 #hero {
   align-items: center;
   background-color: hsla(214, 62%, 21%, 1);
@@ -196,15 +287,18 @@ pre {
   grid-template-columns: 1fr;
   margin-top: 3.5rem;
 }
+
 #hero .text-container {
   color: rgba(255, 255, 255, 1);
   padding: 3rem 2rem;
 }
+
 #hero .text-container h2 {
   font-size: 1.5rem;
   line-height: 2rem;
   position: relative;
 }
+
 #hero .text-container h2 svg {
   color: hsla(162, 47%, 50%, 1);
   height: 2rem;
@@ -213,9 +307,11 @@ pre {
   top: 0;
   width: 2rem;
 }
+
 #hero .text-container h2 span {
   margin-left: 2.5rem;
 }
+
 #hero .text-container a {
   background-color: rgba(255, 255, 255, 1);
   border-radius: 0.75rem;
@@ -225,16 +321,19 @@ pre {
   padding: 1rem 2rem;
   text-decoration: inherit;
 }
+
 #hero .logo-container {
   display: none;
   justify-content: center;
   padding-left: 2rem;
   padding-right: 2rem;
 }
+
 #hero .logo-container svg {
   color: rgba(255, 255, 255, 1);
   width: 66.666667%;
 }
+
 #middle-content {
   align-items: flex-start;
   display: grid;
@@ -242,9 +341,11 @@ pre {
   grid-template-columns: 1fr;
   margin-top: 3.5rem;
 }
+
 #learning-materials {
   padding: 2.5rem 2rem;
 }
+
 #learning-materials h2 {
   font-weight: 500;
   font-size: 1.25rem;
@@ -253,6 +354,7 @@ pre {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
 .list-item-link {
   align-items: center;
   border-radius: 0.75rem;
@@ -266,6 +368,7 @@ pre {
   transition-duration: 150ms;
   width: 100%;
 }
+
 .list-item-link svg:first-child {
   margin-right: 1rem;
   height: 1.5rem;
@@ -276,7 +379,8 @@ pre {
   transition-duration: 150ms;
   width: 1.5rem;
 }
-.list-item-link > span {
+
+.list-item-link>span {
   flex-grow: 1;
   font-weight: 400;
   transition-property: background-color, border-color, color, fill, stroke,
@@ -285,7 +389,8 @@ pre {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
-.list-item-link > span > span {
+
+.list-item-link>span>span {
   color: rgba(107, 114, 128, 1);
   display: block;
   flex-grow: 1;
@@ -298,6 +403,7 @@ pre {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+
 .list-item-link svg:last-child {
   height: 1rem;
   transition-property: all;
@@ -305,20 +411,24 @@ pre {
   transition-duration: 150ms;
   width: 1rem;
 }
+
 .list-item-link:hover {
   color: rgba(255, 255, 255, 1);
   background-color: hsla(162, 47%, 50%, 1);
 }
-.list-item-link:hover > span {
-}
-.list-item-link:hover > span > span {
+
+.list-item-link:hover>span {}
+
+.list-item-link:hover>span>span {
   color: rgba(243, 244, 246, 1);
 }
+
 .list-item-link:hover svg:last-child {
   transform: translateX(0.25rem);
 }
-#other-links {
-}
+
+#other-links {}
+
 .button-pill {
   padding: 1.5rem 2rem;
   transition-duration: 300ms;
@@ -329,6 +439,7 @@ pre {
   align-items: center;
   display: flex;
 }
+
 .button-pill svg {
   transition-property: background-color, border-color, color, fill, stroke,
     opacity, box-shadow, transform, filter, backdrop-filter,
@@ -338,7 +449,8 @@ pre {
   flex-shrink: 0;
   width: 3rem;
 }
-.button-pill > span {
+
+.button-pill>span {
   letter-spacing: -0.025em;
   font-weight: 400;
   font-size: 1.125rem;
@@ -346,52 +458,65 @@ pre {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
 .button-pill span span {
   display: block;
   font-size: 0.875rem;
   font-weight: 300;
   line-height: 1.25rem;
 }
+
 .button-pill:hover svg,
 .button-pill:hover {
   color: rgba(255, 255, 255, 1) !important;
 }
+
 #nx-console:hover {
   background-color: rgba(0, 122, 204, 1);
 }
+
 #nx-console svg {
   color: rgba(0, 122, 204, 1);
 }
+
 #nx-console-jetbrains {
   margin-top: 2rem;
 }
+
 #nx-console-jetbrains:hover {
   background-color: rgba(255, 49, 140, 1);
 }
+
 #nx-console-jetbrains svg {
   color: rgba(255, 49, 140, 1);
 }
+
 #nx-repo:hover {
   background-color: rgba(24, 23, 23, 1);
 }
+
 #nx-repo svg {
   color: rgba(24, 23, 23, 1);
 }
+
 #nx-cloud {
   margin-bottom: 2rem;
   margin-top: 2rem;
   padding: 2.5rem 2rem;
 }
-#nx-cloud > div {
+
+#nx-cloud>div {
   align-items: center;
   display: flex;
 }
-#nx-cloud > div svg {
+
+#nx-cloud>div svg {
   border-radius: 0.375rem;
   flex-shrink: 0;
   width: 3rem;
 }
-#nx-cloud > div h2 {
+
+#nx-cloud>div h2 {
   font-size: 1.125rem;
   font-weight: 400;
   letter-spacing: -0.025em;
@@ -399,20 +524,24 @@ pre {
   padding-left: 1rem;
   padding-right: 1rem;
 }
-#nx-cloud > div h2 span {
+
+#nx-cloud>div h2 span {
   display: block;
   font-size: 0.875rem;
   font-weight: 300;
   line-height: 1.25rem;
 }
+
 #nx-cloud p {
   font-size: 1rem;
   line-height: 1.5rem;
   margin-top: 1rem;
 }
+
 #nx-cloud pre {
   margin-top: 1rem;
 }
+
 #nx-cloud a {
   color: rgba(107, 114, 128, 1);
   display: block;
@@ -421,13 +550,16 @@ pre {
   margin-top: 1.5rem;
   text-align: right;
 }
+
 #nx-cloud a:hover {
   text-decoration: underline;
 }
+
 #commands {
   padding: 2.5rem 2rem;
   margin-top: 3.5rem;
 }
+
 #commands h2 {
   font-size: 1.25rem;
   font-weight: 400;
@@ -436,6 +568,7 @@ pre {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
 #commands p {
   font-size: 1rem;
   font-weight: 300;
@@ -444,6 +577,7 @@ pre {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
 details {
   align-items: center;
   display: flex;
@@ -452,10 +586,12 @@ details {
   padding-right: 1rem;
   width: 100%;
 }
-details pre > span {
+
+details pre>span {
   color: rgba(181, 181, 181, 1);
   display: block;
 }
+
 summary {
   border-radius: 0.5rem;
   display: flex;
@@ -468,14 +604,17 @@ summary {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+
 summary:hover {
   background-color: rgba(243, 244, 246, 1);
 }
+
 summary svg {
   height: 1.5rem;
   margin-right: 1rem;
   width: 1.5rem;
 }
+
 #love {
   color: rgba(107, 114, 128, 1);
   font-size: 0.875rem;
@@ -484,6 +623,7 @@ summary svg {
   opacity: 0.6;
   text-align: center;
 }
+
 #love svg {
   color: rgba(252, 165, 165, 1);
   width: 1.25rem;
@@ -491,13 +631,16 @@ summary svg {
   display: inline;
   margin-top: -0.25rem;
 }
+
 @media screen and (min-width: 768px) {
   #hero {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   #hero .logo-container {
     display: flex;
   }
+
   #middle-content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

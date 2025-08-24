@@ -19,6 +19,7 @@ export default function VerifyEmailPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
+  const [tenantId, setTenantId] = useState("");
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
@@ -29,8 +30,9 @@ export default function VerifyEmailPage() {
         const mode = searchParams.get("mode");
         const email = searchParams.get("email");
         const uid = searchParams.get("uid");
+        const tenantId = searchParams.get("tenantId");
 
-        if (!oobCode || mode !== "verifyEmail" || !email || !uid) {
+        if (!oobCode || mode !== "verifyEmail" || !email || !uid || !tenantId) {
           setError("Invalid or expired verification link");
           setStep("error");
           return;
@@ -39,9 +41,10 @@ export default function VerifyEmailPage() {
         // Set user info from URL parameters
         setUserEmail(decodeURIComponent(email));
         setUserId(uid);
+        setTenantId(tenantId);
 
         // Verify the email with our backend
-        const result = await verifyEmailAction(uid);
+        const result = await verifyEmailAction(uid, tenantId);
 
         if (!result.success) {
           throw new Error(result.error || "Failed to verify email");
@@ -95,6 +98,7 @@ export default function VerifyEmailPage() {
         uid: userId,
         password: password,
         email: userEmail,
+        tenantId: tenantId,
       });
 
       if (!result.success) {

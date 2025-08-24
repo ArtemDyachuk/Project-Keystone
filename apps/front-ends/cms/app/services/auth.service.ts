@@ -4,6 +4,7 @@ export interface SignupWithEmailLinkRequest {
   firstName: string;
   lastName: string;
   email: string;
+  companyName: string;
 }
 
 export interface VerifyEmailRequest {
@@ -20,7 +21,6 @@ export interface SetPasswordRequest {
 export interface LoginRequest {
   email: string;
   password: string;
-  tenantId?: string;
 }
 
 export interface AuthResponse {
@@ -432,7 +432,6 @@ export class AuthServiceClient {
         body: JSON.stringify({
           email: data.email.trim().toLowerCase(),
           password: data.password.trim(),
-          tenantId: data.tenantId
         }),
       });
 

@@ -5,6 +5,7 @@ export { connectToDatabase, disconnectFromDatabase, isConnectedToDatabase } from
 export { Tenant, ITenant } from "./models/Tenant";
 export { Corporation, ICorporation } from "./models/Corporation";
 export { TenantMembership, ITenantMembership } from "./models/TenantMembership";
+export { SignupVerification, ISignupVerification } from "./models/SignupVerification";
 
 // Repositories
 export { TenantRepository } from "./repositories/TenantRepository";

@@ -37,6 +37,10 @@
    margin-bottom: 1.5rem;
 }
 
+.formGroup:last-of-type {
+   margin-bottom: 2rem;
+}
+
 .label {
    display: block;
    margin-bottom: 0.5rem;
