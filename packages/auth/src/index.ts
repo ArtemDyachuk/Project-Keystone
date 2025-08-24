@@ -16,5 +16,6 @@ export type {
   SignInParams,
   FirebaseConfig,
   FirebaseAuthError,
-  TenantConfig
+  TenantConfig,
+  CreateTenantConfig
 } from "./types";

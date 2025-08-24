@@ -109,6 +109,12 @@ export interface UpdateProfileParams {
   photoURL?: string;
 }
 
+// For creating new tenants (Firebase generates tenantId)
+export interface CreateTenantConfig {
+  displayName: string;
+}
+
+// For existing tenant operations (tenantId is required)
 export interface TenantConfig {
   tenantId: string;
   displayName: string;

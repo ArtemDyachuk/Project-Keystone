@@ -3,7 +3,7 @@ import { mongoose } from "../types";
 export interface ICorporation {
   _id?: string;
   name: string;
-  tenantId: string; // Reference to the tenant this corporation belongs to
+  tenantId: mongoose.Types.ObjectId; // Reference to the tenant this corporation belongs to
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -16,7 +16,8 @@ const corporationSchema = new mongoose.Schema<ICorporation>({
     maxlength: 100
   },
   tenantId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Tenant",
     required: true,
     index: true
   }

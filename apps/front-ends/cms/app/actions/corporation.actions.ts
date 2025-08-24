@@ -164,14 +164,9 @@ export async function updateSelectedCorporationAndRedirect(corporationId: string
 export async function createCorporation(formData: FormData) {
    try {
       const name = formData.get("name") as string;
-      const tenantId = formData.get("tenantId") as string;
 
       if (!name?.trim()) {
          throw new Error("Corporation name is required");
-      }
-
-      if (!tenantId) {
-         throw new Error("Tenant ID is required");
       }
 
       // Get session cookie from server-side cookies
@@ -191,7 +186,6 @@ export async function createCorporation(formData: FormData) {
          },
          body: JSON.stringify({
             name: name.trim(),
-            tenantId: tenantId,
          }),
       });
 

@@ -7,7 +7,7 @@ import {
   EmailLinkSignUpParams,
   ActionCodeSettings,
   FirebaseAuthError,
-  TenantConfig,
+  CreateTenantConfig,
 } from "../types";
 
 /**
@@ -409,7 +409,7 @@ export class FirebaseServerClient {
   /**
    * Create tenant (GIP multi-tenancy)
    */
-  async createTenant(config: TenantConfig): Promise<unknown> {
+  async createTenant(config: CreateTenantConfig): Promise<unknown> {
     try {
       const tenant = await this.auth.tenantManager().createTenant({
         displayName: config.displayName,

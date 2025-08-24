@@ -3,7 +3,7 @@ import { mongoose } from "../types";
 export interface ITenantMembership {
   _id?: string;
   userId: string; // Firebase UID
-  tenantId: string; // Reference to the tenant
+  tenantId: mongoose.Types.ObjectId; // Reference to the tenant
   roles: string[]; // Array of roles e.g., ["owner", "admin"]
   isActive: boolean;
   joinedAt?: Date;
@@ -18,7 +18,8 @@ const tenantMembershipSchema = new mongoose.Schema<ITenantMembership>({
     index: true
   },
   tenantId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Tenant",
     required: true,
     index: true
   },

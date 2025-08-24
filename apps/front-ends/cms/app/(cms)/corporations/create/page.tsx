@@ -2,6 +2,7 @@ import { getCurrentUserServer } from "@/lib/sessions/server";
 import { redirect } from "next/navigation";
 import { CreateCorporationForm } from "@/app/components/corporations/CreateCorporationForm";
 import styles from "./page.module.css";
+import Link from "next/link";
 
 // Force dynamic rendering since we use cookies
 export const dynamic = 'force-dynamic';
@@ -15,8 +16,8 @@ export default async function CreateCorporationPage() {
       redirect("/login");
    }
 
-   // Get user's tenants to choose from
-   let userTenants: Array<{ _id: string; name: string; gipTenantId: string }> = [];
+   // Check if user has a tenant (required for corporation creation)
+   let hasTenant = false;
    try {
       const { cookies } = await import("next/headers");
       const cookieStore = await cookies();
@@ -32,21 +33,21 @@ export default async function CreateCorporationPage() {
 
       if (response.ok) {
          const data = await response.json();
-         userTenants = data.tenants || [];
+         hasTenant = (data.tenants || []).length > 0;
       }
    } catch (error) {
-      console.error("Failed to fetch user tenants:", error);
+      console.error("Failed to check user tenants:", error);
    }
 
-   if (userTenants.length === 0) {
+   if (!hasTenant) {
       return (
          <div className={styles.container}>
             <div className={styles.error}>
                <h1>No Tenants Available</h1>
                <p>You need to create a tenant first before you can create corporations.</p>
-               <a href="/tenants/create" className={styles.createTenantButton}>
+               <Link href="/tenants/create" className={styles.createTenantButton}>
                   ➕ Create Tenant
-               </a>
+               </Link>
             </div>
          </div>
       );
@@ -61,11 +62,11 @@ export default async function CreateCorporationPage() {
                </a>
             </div>
             <h1>🏢 Create Corporation</h1>
-            <p>Create a new corporation and assign it to a tenant.</p>
+            <p>Create a new corporation in your organization.</p>
          </div>
 
          <div className={styles.content}>
-            <CreateCorporationForm userTenants={userTenants} />
+            <CreateCorporationForm />
          </div>
       </div>
    );

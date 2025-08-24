@@ -1,6 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { FirebaseServerClient } from "@keystone/auth";
 import { Tenant, Corporation, TenantMembership } from "@keystone/database";
+import mongoose from "mongoose";
 
 export interface CreateTenantRequest {
   name: string;
@@ -74,7 +75,16 @@ export class TenantService {
 
         this.logger.log(`📝 Full tenant config:`, JSON.stringify(tenantConfig, null, 2));
 
-        const gipTenant = await this.firebaseClient.createTenant(tenantConfig);
+        this.logger.log(`🔍 Firebase client type: ${typeof this.firebaseClient}`);
+        this.logger.log(`🔍 Firebase client methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(this.firebaseClient))}`);
+
+        // Only pass displayName to Firebase (other options are not supported by Firebase Admin SDK)
+        const gipTenant = await this.firebaseClient.createTenant({
+          displayName: firebaseDisplayName
+        });
+
+        this.logger.log(`🔍 Firebase response type: ${typeof gipTenant}`);
+        this.logger.log(`🔍 Firebase response:`, JSON.stringify(gipTenant, null, 2));
 
         if (!gipTenant || !(gipTenant as any).tenantId) {
           throw new Error("No tenantId returned from Firebase");
@@ -85,12 +95,10 @@ export class TenantService {
 
       } catch (firebaseError) {
         this.logger.error(`❌ Firebase tenant creation failed:`, firebaseError);
-        this.logger.warn(`⚠️ Proceeding without Firebase tenant - using temporary ID`);
-
-        // Temporary workaround: use a placeholder tenant ID
-        // TODO: Fix Firebase configuration and remove this workaround
-        gipTenantId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        this.logger.log(`📝 Using temporary tenant ID: ${gipTenantId}`);
+        throw new HttpException(
+          `Failed to create tenant in Google Identity Platform: ${firebaseError instanceof Error ? firebaseError.message : 'Unknown error'}`,
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
       }
 
       // Step 2: Create local tenant record in MongoDB
@@ -249,7 +257,7 @@ export class TenantService {
       this.logger.log(`🔄 Starting tenant deletion for tenant ${tenantId} (GIP: ${gipTenantId})`);
 
       // Step 1: Delete tenant from Google Identity Platform (Firebase)
-      if (gipTenantId && !gipTenantId.startsWith('temp_')) {
+      if (gipTenantId) {
         this.logger.log("🔄 Deleting tenant from Google Identity Platform...");
 
         try {
@@ -260,19 +268,17 @@ export class TenantService {
           // Continue with local deletion even if GIP deletion fails
           this.logger.warn(`⚠️ Proceeding with local deletion despite GIP failure`);
         }
-      } else {
-        this.logger.log(`ℹ️ Skipping GIP deletion for temporary tenant ID: ${gipTenantId}`);
       }
 
       // Step 2: Delete local tenant record and related data
       this.logger.log("🔄 Deleting local tenant data...");
 
       // Delete tenant memberships first (foreign key constraint)
-      const deletedMemberships = await TenantMembership.deleteMany({ tenantId });
+      const deletedMemberships = await TenantMembership.deleteMany({ tenantId: new mongoose.Types.ObjectId(tenantId) });
       this.logger.log(`✅ Deleted ${deletedMemberships.deletedCount} tenant memberships`);
 
       // Delete corporations associated with this tenant
-      const deletedCorporations = await Corporation.deleteMany({ tenantId });
+      const deletedCorporations = await Corporation.deleteMany({ tenantId: new mongoose.Types.ObjectId(tenantId) });
       this.logger.log(`✅ Deleted ${deletedCorporations.deletedCount} corporations`);
 
       // Delete the tenant itself

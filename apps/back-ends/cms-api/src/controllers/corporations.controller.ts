@@ -7,7 +7,6 @@ import { SessionGuard } from '../guards/session.guard';
 // DTOs for request validation
 export class CreateCorporationDto {
    name!: string;
-   tenantId!: string;
 }
 
 export class UpdateCorporationDto {
@@ -38,7 +37,7 @@ export class CorporationsController {
          const memberships = await TenantMembership.find({
             userId: request.user.uid,
             isActive: true
-         }).populate('tenantId');
+         });
 
          if (!memberships || memberships.length === 0) {
             return {
@@ -48,7 +47,7 @@ export class CorporationsController {
          }
 
          // Get corporations for all user's tenants
-         const tenantIds = memberships.map(m => m.tenantId.toString());
+         const tenantIds = memberships.map(m => m.tenantId);
          const corporations = await Corporation.find({
             tenantId: { $in: tenantIds }
          }).sort({ createdAt: -1 });
@@ -133,21 +132,16 @@ export class CorporationsController {
             throw new HttpException("Corporation name is required", HttpStatus.BAD_REQUEST);
          }
 
-         if (!createCorporationDto.tenantId) {
-            throw new HttpException("Tenant ID is required", HttpStatus.BAD_REQUEST);
-         }
-
-         // Check if user has access to the specified tenant
+         // Get user's tenant automatically
          const { TenantMembership } = await import('@keystone/database');
          const membership = await TenantMembership.findOne({
             userId: request.user.uid,
-            tenantId: createCorporationDto.tenantId,
             isActive: true
          });
 
          if (!membership) {
             throw new HttpException(
-               "Access denied to the specified tenant",
+               "You must belong to a tenant to create corporations",
                HttpStatus.FORBIDDEN
             );
          }
@@ -155,7 +149,7 @@ export class CorporationsController {
          // Create corporation
          const corporation = new Corporation({
             name: createCorporationDto.name.trim(),
-            tenantId: createCorporationDto.tenantId
+            tenantId: membership.tenantId
          });
 
          await corporation.save();
@@ -334,8 +328,27 @@ export class CorporationsController {
             );
          }
 
+         // Check if this was the selected corporation
+         const wasSelected = request.user.selectedCorporationId === id;
+
          // Delete corporation
          await Corporation.findByIdAndDelete(id);
+
+         // If this was the selected corporation, update the session
+         if (wasSelected && request.sessionId) {
+            // Find next available corporation or clear selection
+            const remainingCorporations = await Corporation.find({
+               tenantId: corporation.tenantId
+            }).sort({ createdAt: -1 });
+
+            if (remainingCorporations.length > 0) {
+               // Select the first remaining corporation
+               await this.sessionService.switchCorporation(request.sessionId, remainingCorporations[0]._id.toString());
+            } else {
+               // No corporations left, clear selection
+               await this.sessionService.clearSelectedCorporation(request.sessionId);
+            }
+         }
 
          return {
             success: true,

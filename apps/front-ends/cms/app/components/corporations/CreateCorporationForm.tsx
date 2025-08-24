@@ -5,22 +5,11 @@ import { useRouter } from "next/navigation";
 import { createCorporation } from "@/app/actions/corporation.actions";
 import styles from "./CreateCorporationForm.module.css";
 
-interface Tenant {
-   _id: string;
-   name: string;
-   gipTenantId: string;
-}
-
-interface CreateCorporationFormProps {
-   userTenants: Tenant[];
-}
-
-export function CreateCorporationForm({ userTenants }: CreateCorporationFormProps) {
+export function CreateCorporationForm() {
    const [isCreating, setIsCreating] = useState(false);
    const router = useRouter();
    const [formData, setFormData] = useState({
-      name: "",
-      tenantId: userTenants.length > 0 ? userTenants[0]._id : ""
+      name: ""
    });
 
    const handleSubmit = async (e: React.FormEvent) => {
@@ -31,18 +20,12 @@ export function CreateCorporationForm({ userTenants }: CreateCorporationFormProp
          return;
       }
 
-      if (!formData.tenantId) {
-         alert("Please select a tenant");
-         return;
-      }
-
       try {
          setIsCreating(true);
 
          // Create FormData for the server action
          const formDataObj = new FormData();
          formDataObj.append("name", formData.name.trim());
-         formDataObj.append("tenantId", formData.tenantId);
 
          const result = await createCorporation(formDataObj);
 
@@ -101,30 +84,7 @@ export function CreateCorporationForm({ userTenants }: CreateCorporationFormProp
                </p>
             </div>
 
-            <div className={styles.formGroup}>
-               <label htmlFor="tenantId" className={styles.label}>
-                  Assign to Tenant *
-               </label>
-               <select
-                  id="tenantId"
-                  name="tenantId"
-                  value={formData.tenantId}
-                  onChange={handleInputChange}
-                  className={styles.select}
-                  required
-                  disabled={isCreating}
-               >
-                  <option value="">Select a tenant</option>
-                  {userTenants.map((tenant) => (
-                     <option key={tenant._id} value={tenant._id}>
-                        {tenant.name} (ID: {tenant._id})
-                     </option>
-                  ))}
-               </select>
-               <p className={styles.helpText}>
-                  Select which tenant this corporation will belong to.
-               </p>
-            </div>
+
          </div>
 
          <div className={styles.actions}>

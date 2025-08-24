@@ -74,7 +74,8 @@ async function bootstrap() {
   app.use('/api/auth/signup-email-link', rateLimit({
     ...rateLimitOptions,
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // 3 signups per hour per IP
+    max: 10, // Temporarily increased to 100 for testing
+    // max: 100, // Temporarily increased to 100 for testing
     message: { error: 'Too many signup attempts. Please try again in 1 hour.' },
   }));
 
@@ -88,7 +89,8 @@ async function bootstrap() {
   // Moderate rate limiting for other auth endpoints
   app.use('/api/auth', rateLimit({
     ...rateLimitOptions,
-    max: 20, // 20 requests per 15 minutes
+    max: 25, // Temporarily increased to 100 for testing
+    // max: 100, // Temporarily increased to 100 for testing
     message: { error: 'Too many authentication requests. Please try again later.' },
   }));
 

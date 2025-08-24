@@ -576,22 +576,31 @@ export class AuthController {
 
       // Get user's first corporation to set as default
       let selectedCorporationId: string | null = null;
+      let userRoles: string[] = [];
+      let userTenantId: string | null = null;
+      
       try {
         const { TenantMembership, Corporation } = await import('@keystone/database');
         const memberships = await TenantMembership.find({
           userId: user.uid,
           isActive: true
         });
-        
+
         if (memberships.length > 0) {
-          const firstTenantId = memberships[0].tenantId.toString();
+          const firstTenantId = memberships[0].tenantId;
+          userTenantId = firstTenantId.toString();
+          
           const firstCorporation = await Corporation.findOne({ tenantId: firstTenantId });
           if (firstCorporation) {
             selectedCorporationId = firstCorporation._id.toString();
           }
+
+          // Get all unique roles from all tenant memberships
+          const allRoles = memberships.flatMap((m: any) => m.roles || []);
+          userRoles = [...new Set(allRoles)]; // Remove duplicates
         }
       } catch (error) {
-        console.log('Could not determine default corporation, will set to null:', error);
+        console.log('Could not determine default corporation or roles, will set to null/empty:', error);
       }
 
       // Create session
@@ -600,9 +609,9 @@ export class AuthController {
         email: user.email || email,
         displayName: user.displayName,
         emailVerified: user.emailVerified,
-        tenantId: user.tenantId || null,
+        tenantId: userTenantId,
         selectedCorporationId: selectedCorporationId,
-        roles: [],
+        roles: userRoles,
       });
 
       // Generate CSRF token for this session

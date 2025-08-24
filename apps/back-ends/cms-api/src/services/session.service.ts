@@ -132,6 +132,84 @@ export class SessionService {
     return true;
   }
 
+  async clearSelectedCorporation(sessionId: string): Promise<boolean> {
+    const sessionData = await this.getSession(sessionId);
+    if (!sessionData) return false;
+
+    const updatedSession: UserSession = {
+      ...sessionData.user,
+      selectedCorporationId: null,
+      expiresAt: new Date(Date.now() + this.sessionTTL * 1000), // Extend expiry
+    };
+
+    // Update in Redis
+    const success = await this.redisService.set(
+      `session:${sessionId}`,
+      JSON.stringify(updatedSession),
+      this.sessionTTL
+    );
+
+    if (!success) {
+      // Update in memory fallback
+      this.memoryFallback.set(sessionId, updatedSession);
+    }
+
+    this.logger.log(`User ${sessionData.user.uid} cleared selected corporation`);
+    return true;
+  }
+
+  async updateTenantId(sessionId: string, tenantId: string): Promise<boolean> {
+    const sessionData = await this.getSession(sessionId);
+    if (!sessionData) return false;
+
+    const updatedSession: UserSession = {
+      ...sessionData.user,
+      tenantId,
+      expiresAt: new Date(Date.now() + this.sessionTTL * 1000), // Extend expiry
+    };
+
+    // Update in Redis
+    const success = await this.redisService.set(
+      `session:${sessionId}`,
+      JSON.stringify(updatedSession),
+      this.sessionTTL
+    );
+
+    if (!success) {
+      // Update in memory fallback
+      this.memoryFallback.set(sessionId, updatedSession);
+    }
+
+    this.logger.log(`User ${sessionData.user.uid} updated tenant ID to ${tenantId}`);
+    return true;
+  }
+
+  async updateRoles(sessionId: string, roles: string[]): Promise<boolean> {
+    const sessionData = await this.getSession(sessionId);
+    if (!sessionData) return false;
+
+    const updatedSession: UserSession = {
+      ...sessionData.user,
+      roles,
+      expiresAt: new Date(Date.now() + this.sessionTTL * 1000), // Extend expiry
+    };
+
+    // Update in Redis
+    const success = await this.redisService.set(
+      `session:${sessionId}`,
+      JSON.stringify(updatedSession),
+      this.sessionTTL
+    );
+
+    if (!success) {
+      // Update in memory fallback
+      this.memoryFallback.set(sessionId, updatedSession);
+    }
+
+    this.logger.log(`User ${sessionData.user.uid} updated roles to [${roles.join(', ')}]`);
+    return true;
+  }
+
   async deleteAllUserSessions(userUid: string): Promise<number> {
     let deletedCount = 0;
 

@@ -48,17 +48,14 @@ export default async function TenantsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1>🏢 Organizations</h1>
-        <p>Manage your organizations and their settings.</p>
+        <h1>🏢 Tenants</h1>
+        <p>Manage your tenants and their settings.</p>
       </div>
 
       <div className={styles.tenantsList}>
         {userTenants.length === 0 ? (
           <div className={styles.emptyState}>
-            <p>No organizations found. Create your first organization to get started.</p>
-            <a href="/tenants/create" className={styles.createButton}>
-              ➕ Create Organization
-            </a>
+            <p>No tenants found. Create your first tenant to get started.</p>
           </div>
         ) : (
           <div className={styles.tenantsGrid}>

@@ -151,9 +151,18 @@ export class TenantController {
 
       const result = await this.tenantService.createTenant(createRequest);
 
-      // Update user's session to select the newly created corporation
-      if (request.sessionId && result.corporationId) {
-        await this.sessionService.switchCorporation(request.sessionId, result.corporationId);
+      // Update user's session with tenant ID, roles, and select the newly created corporation
+      if (request.sessionId) {
+        // Set the tenant ID in the session
+        await this.sessionService.updateTenantId(request.sessionId, result.tenantId);
+        
+        // Update roles (user becomes owner of new tenant)
+        await this.sessionService.updateRoles(request.sessionId, ["owner"]);
+        
+        // Select the newly created corporation
+        if (result.corporationId) {
+          await this.sessionService.switchCorporation(request.sessionId, result.corporationId);
+        }
       }
 
       return {
@@ -238,7 +247,7 @@ export class TenantController {
       const memberships = await TenantMembership.find({
         userId: request.user.uid,
         isActive: true
-      }).populate('tenantId');
+      });
 
       if (!memberships || memberships.length === 0) {
         return {
@@ -249,7 +258,7 @@ export class TenantController {
 
       // Get corporations for each tenant
       const { Corporation } = await import('@keystone/database');
-      const tenantIds = memberships.map(m => m.tenantId.toString());
+      const tenantIds = memberships.map(m => m.tenantId);
       const corporations = await Corporation.find({
         tenantId: { $in: tenantIds }
       }).sort({ createdAt: -1 });
@@ -290,7 +299,7 @@ export class TenantController {
       const memberships = await TenantMembership.find({
         userId: request.user.uid,
         isActive: true
-      }).populate('tenantId');
+      });
 
       if (!memberships || memberships.length === 0) {
         return {
@@ -300,7 +309,8 @@ export class TenantController {
 
       // Get full tenant details for each membership
       const { Tenant } = await import('@keystone/database');
-      const tenantIds = memberships.map(m => m.tenantId.toString());
+      const tenantIds = memberships.map(m => m.tenantId);
+      
       const tenants = await Tenant.find({
         _id: { $in: tenantIds }
       }).sort({ createdAt: -1 });
