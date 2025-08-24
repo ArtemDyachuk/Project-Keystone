@@ -140,6 +140,97 @@
    cursor: not-allowed;
 }
 
+/* Role Selection Styles */
+.rolesContainer {
+   border: 1px solid var(--border-primary);
+   border-radius: 8px;
+   padding: 1rem;
+   background: var(--surface-secondary);
+}
+
+.roleCategory {
+   margin-bottom: 1.5rem;
+}
+
+.roleCategory:last-child {
+   margin-bottom: 0;
+}
+
+.categoryTitle {
+   font-size: 0.875rem;
+   font-weight: 600;
+   color: var(--text-primary);
+   margin: 0 0 0.75rem 0;
+   text-transform: uppercase;
+   letter-spacing: 0.05em;
+}
+
+.roleOptions {
+   display: flex;
+   flex-direction: column;
+   gap: 0.5rem;
+}
+
+.roleOption {
+   display: flex;
+   align-items: flex-start;
+   gap: 0.75rem;
+   padding: 0.75rem;
+   border: 1px solid var(--border-primary);
+   border-radius: 6px;
+   cursor: pointer;
+   transition: all 0.2s ease;
+   background: var(--surface-primary);
+}
+
+.roleOption:hover:not(.disabled) {
+   border-color: var(--accent-bg);
+   background: var(--surface-secondary);
+}
+
+.roleOption.selected {
+   border-color: var(--accent-bg);
+   background: var(--accent-bg);
+   color: var(--accent-text);
+}
+
+.roleOption.disabled {
+   opacity: 0.5;
+   cursor: not-allowed;
+   background: var(--surface-tertiary);
+}
+
+.roleCheckbox {
+   margin: 0;
+   margin-top: 0.125rem;
+}
+
+.roleInfo {
+   display: flex;
+   flex-direction: column;
+   gap: 0.25rem;
+   flex: 1;
+}
+
+.roleLabel {
+   font-weight: 500;
+   font-size: 0.875rem;
+}
+
+.roleDescription {
+   font-size: 0.75rem;
+   opacity: 0.8;
+}
+
+.selectedRoles {
+   margin-top: 1rem;
+   padding: 0.75rem;
+   background: var(--surface-secondary);
+   border: 1px solid var(--border-primary);
+   border-radius: 6px;
+   font-size: 0.875rem;
+}
+
 @media (max-width: 768px) {
    .container {
       padding: 1rem;

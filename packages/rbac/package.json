@@ -1,0 +1,20 @@
+{
+  "name": "@keystone/rbac",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Role-based access control (RBAC) system for Keystone",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.2"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}

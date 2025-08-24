@@ -15,6 +15,7 @@
   "dependencies": {
     "@keystone/auth": "file:../../../packages/auth",
     "@keystone/database": "file:../../../packages/database",
+    "@keystone/rbac": "file:../../../packages/rbac",
     "@keystone/ui": "file:../../../packages/ui",
     "next": "^15.0.0",
     "react": "^19.0.0",

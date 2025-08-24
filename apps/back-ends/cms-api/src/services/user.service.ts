@@ -1,6 +1,12 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { FirebaseServerClient } from "@keystone/auth";
 import { Tenant, TenantMembership } from "@keystone/database";
+import { 
+  getAllRoleNames, 
+  getRoleDefinition, 
+  roleHasPermission,
+  getAllPermissionsForRole 
+} from "@keystone/rbac";
 
 export interface FirebaseUser {
   uid: string;
@@ -221,8 +227,14 @@ export class UserService {
         tenantId: tenant.gipTenantId,
       });
 
-      // Set up initial roles (default to "member" if none specified)
-      const initialRoles = request.roles && request.roles.length > 0 ? request.roles : ["member"];
+      // Set up initial roles (default to "Tenant:Reader" if none specified)
+      const initialRoles = request.roles && request.roles.length > 0 ? request.roles : ["Tenant:Reader"];
+
+      // Validate and sanitize the roles
+      const validatedRoles = this.validateAndSanitizeRoles(initialRoles);
+      if (validatedRoles.length === 0) {
+        throw new HttpException("No valid roles provided", HttpStatus.BAD_REQUEST);
+      }
 
       // Create TenantMembership record with roles (simplified: one user = one tenant)
       await TenantMembership.findOneAndUpdate(
@@ -247,7 +259,7 @@ export class UserService {
         displayName: firebaseUser.displayName,
         photoURL: firebaseUser.photoURL,
         disabled: false,
-        roles: initialRoles,
+        roles: validatedRoles,
         metadata: {
           creationTime: new Date().toISOString(),
           lastSignInTime: "",
@@ -290,9 +302,15 @@ export class UserService {
 
       // Update roles in TenantMembership if provided (simplified: one user = one tenant)
       if (newRoles !== undefined) {
+        // Validate and sanitize the roles
+        const validatedRoles = this.validateAndSanitizeRoles(newRoles);
+        if (validatedRoles.length === 0) {
+          throw new HttpException("No valid roles provided", HttpStatus.BAD_REQUEST);
+        }
+
         await TenantMembership.findOneAndUpdate(
           { userId: uid, isActive: true },
-          { roles: newRoles },
+          { roles: validatedRoles },
           { new: true }
         );
       }
@@ -343,6 +361,12 @@ export class UserService {
     try {
       this.logger.log(`🔄 Setting roles for user ${uid} in tenant: ${tenantId}`);
 
+      // Validate and sanitize the roles
+      const validatedRoles = this.validateAndSanitizeRoles(roles);
+      if (validatedRoles.length === 0) {
+        throw new HttpException("No valid roles provided", HttpStatus.BAD_REQUEST);
+      }
+
       // Get the Firebase GIP tenant ID from the database tenant
       const tenant = await Tenant.findById(tenantId);
       if (!tenant) {
@@ -356,11 +380,11 @@ export class UserService {
       // Update roles in TenantMembership database (simplified: one user = one tenant)
       await TenantMembership.findOneAndUpdate(
         { userId: uid, isActive: true },
-        { roles },
+        { roles: validatedRoles },
         { new: true }
       );
 
-      this.logger.log(`✅ Set roles for user ${uid} in tenant ${tenantId}: ${roles.join(", ")}`);
+      this.logger.log(`✅ Set roles for user ${uid} in tenant ${tenantId}: ${validatedRoles.join(", ")}`);
     } catch (error) {
       this.logger.error(`❌ Failed to set roles for user ${uid} in tenant ${tenantId}:`, error);
 
@@ -373,6 +397,46 @@ export class UserService {
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
+  }
+
+  /**
+   * Validate if a role exists in the system
+   */
+  validateRole(roleName: string): boolean {
+    return getRoleDefinition(roleName) !== undefined;
+  }
+
+  /**
+   * Get all available roles in the system
+   */
+  getAllAvailableRoles(): string[] {
+    return getAllRoleNames();
+  }
+
+  /**
+   * Check if a user has a specific permission based on their roles
+   */
+  userHasPermission(userRoles: string[], permission: string): boolean {
+    return userRoles.some(role => roleHasPermission(role, permission));
+  }
+
+  /**
+   * Get all permissions for a user based on their roles
+   */
+  getUserPermissions(userRoles: string[]): string[] {
+    const allPermissions = new Set<string>();
+    userRoles.forEach(role => {
+      const rolePermissions = getAllPermissionsForRole(role);
+      rolePermissions.forEach(permission => allPermissions.add(permission));
+    });
+    return Array.from(allPermissions);
+  }
+
+  /**
+   * Validate and sanitize roles before assignment
+   */
+  validateAndSanitizeRoles(roles: string[]): string[] {
+    return roles.filter(role => this.validateRole(role));
   }
 
   /**

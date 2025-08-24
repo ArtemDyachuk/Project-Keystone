@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@keystone/ui";
 import styles from "./page.module.css";
+import { getRolesByCategory } from "@keystone/rbac";
 
 interface CreateUserForm {
    email: string;
@@ -20,6 +21,57 @@ export default function CreateUserPage() {
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
    const router = useRouter();
+
+   // Load roles on component mount
+   const [rolesByCategory, setRolesByCategory] = useState<Record<string, Array<{ value: string; label: string; description: string }>>>({});
+
+   useEffect(() => {
+      const loadRoles = () => {
+         try {
+            const rolesData = getRolesByCategory();
+            setRolesByCategory(rolesData);
+         } catch (error) {
+            console.error("Failed to load roles:", error);
+            setRolesByCategory({});
+         }
+      };
+
+      loadRoles();
+   }, []);
+
+   // Check if a role can be added (no conflicts with existing roles)
+   const canAddRole = (roleToAdd: string): boolean => {
+      const roleToAddCategory = Object.entries(rolesByCategory).find(([_category, roles]) =>
+         roles.some(role => role.value === roleToAdd)
+      )?.[0];
+
+      if (!roleToAddCategory) return false;
+
+      // Check if we already have a role from the same category
+      return !form.roles.some(existingRole => {
+         const existingCategory = Object.entries(rolesByCategory).find(([_category, roles]) =>
+            roles.some(role => role.value === existingRole)
+         )?.[0];
+         return existingCategory === roleToAddCategory;
+      });
+   };
+
+   // Handle role selection
+   const handleRoleToggle = (roleValue: string) => {
+      if (form.roles.includes(roleValue)) {
+         // Remove role
+         setForm(prev => ({
+            ...prev,
+            roles: prev.roles.filter(role => role !== roleValue)
+         }));
+      } else if (canAddRole(roleValue)) {
+         // Add role if no conflicts
+         setForm(prev => ({
+            ...prev,
+            roles: [...prev.roles, roleValue]
+         }));
+      }
+   };
 
    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
@@ -108,25 +160,48 @@ export default function CreateUserPage() {
                </div>
 
                <div className={styles.formGroup}>
-                  <label htmlFor="roles" className={styles.label}>
+                  <label className={styles.label}>
                      User Roles
                   </label>
-                  <input
-                     type="text"
-                     id="roles"
-                     name="roles"
-                     placeholder="Enter roles separated by commas (e.g., admin, user, moderator)"
-                     value={form.roles.join(", ")}
-                     onChange={(e) => {
-                        const roles = e.target.value.split(",").map(role => role.trim()).filter(role => role.length > 0);
-                        setForm(prev => ({ ...prev, roles }));
-                     }}
-                     className={styles.input}
-                     disabled={loading}
-                  />
+                  <div className={styles.rolesContainer}>
+                     {Object.entries(rolesByCategory).map(([category, roles]) => (
+                        <div key={category} className={styles.roleCategory}>
+                           <h4 className={styles.categoryTitle}>{category} Roles</h4>
+                           <div className={styles.roleOptions}>
+                              {roles.map((role) => {
+                                 const isSelected = form.roles.includes(role.value);
+                                 const isDisabled = !isSelected && !canAddRole(role.value);
+                                 return (
+                                    <label
+                                       key={role.value}
+                                       className={`${styles.roleOption} ${isSelected ? styles.selected : ""} ${isDisabled ? styles.disabled : ""}`}
+                                    >
+                                       <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => handleRoleToggle(role.value)}
+                                          disabled={loading || isDisabled}
+                                          className={styles.roleCheckbox}
+                                       />
+                                       <div className={styles.roleInfo}>
+                                          <span className={styles.roleLabel}>{role.label}</span>
+                                          <span className={styles.roleDescription}>{role.description}</span>
+                                       </div>
+                                    </label>
+                                 );
+                              })}
+                           </div>
+                        </div>
+                     ))}
+                  </div>
                   <p className={styles.helpText}>
-                     Optional. Enter roles separated by commas. These will be stored in the database.
+                     Select one role per category. Users can have multiple roles from different categories.
                   </p>
+                  {form.roles.length > 0 && (
+                     <div className={styles.selectedRoles}>
+                        <strong>Selected Roles:</strong> {form.roles.join(", ")}
+                     </div>
+                  )}
                </div>
 
                {error && (
