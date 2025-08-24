@@ -121,7 +121,24 @@ export class TenantService {
       await corporation.save();
       this.logger.log(`✅ Corporation created with ID: ${corporation._id}`);
 
-      // Step 4: Create tenant membership for user (as owner)
+      // Step 4: Add user to the Firebase GIP tenant
+      this.logger.log("🔄 Adding user to Firebase GIP tenant...");
+      try {
+        // First, get the user from Firebase (they should exist in the default tenant)
+        const userRecord = await this.firebaseClient.getUserByUid(request.userId);
+        if (!userRecord) {
+          throw new Error("User not found in Firebase");
+        }
+
+        // Add user to the new GIP tenant
+        await this.firebaseClient.addUserToTenant(request.userId, gipTenantId);
+        this.logger.log(`✅ User added to Firebase GIP tenant`);
+      } catch (firebaseError) {
+        this.logger.error(`❌ Failed to add user to Firebase GIP tenant:`, firebaseError);
+        // Don't fail the entire operation, but log the error
+      }
+
+      // Step 5: Create tenant membership for user (as owner)
       this.logger.log("🔄 Creating tenant membership for user...");
       const membership = new TenantMembership({
         userId: request.userId,

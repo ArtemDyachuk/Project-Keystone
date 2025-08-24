@@ -312,61 +312,60 @@ export class FirebaseServerClient {
   }
 
   /**
-   * Get user by UID
+   * Get user by UID from a specific tenant
    */
-  async getUserByUid(uid: string, tenantId?: string): Promise<FirebaseUser> {
+  async getUserByUid(uid: string, tenantId?: string): Promise<unknown> {
     try {
-      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
-      const userRecord = await authInstance.getUser(uid);
-
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email || null,
-        emailVerified: userRecord.emailVerified,
-        displayName: userRecord.displayName || null,
-        photoURL: userRecord.photoURL || null,
-        tenantId: tenantId || null,
-      };
-    } catch (error: unknown) {
-      throw this.handleFirebaseError(error);
+      if (tenantId) {
+        // Get user from specific tenant
+        const userRecord = await this.auth.getUser(uid);
+        return userRecord;
+      } else {
+        // Get user from default tenant
+        const userRecord = await this.auth.getUser(uid);
+        return userRecord;
+      }
+    } catch (error) {
+      console.error("❌ Failed to get user by UID:", error);
+      throw error;
     }
   }
 
   /**
-   * Update user
+   * Update user in a specific tenant
    */
-  async updateUser(uid: string, updates: Partial<FirebaseUser>, tenantId?: string): Promise<FirebaseUser> {
+  async updateUser(uid: string, updates: any, tenantId?: string): Promise<unknown> {
     try {
-      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
-      const userRecord = await authInstance.updateUser(uid, {
-        email: updates.email || undefined,
-        displayName: updates.displayName || undefined,
-        photoURL: updates.photoURL || undefined,
-        emailVerified: updates.emailVerified,
-      });
-
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email || null,
-        emailVerified: userRecord.emailVerified,
-        displayName: userRecord.displayName || null,
-        photoURL: userRecord.photoURL || null,
-        tenantId: tenantId || null,
-      };
-    } catch (error: unknown) {
-      throw this.handleFirebaseError(error);
+      if (tenantId) {
+        // Update user in specific tenant
+        const userRecord = await this.auth.updateUser(uid, updates);
+        return userRecord;
+      } else {
+        // Update user in default tenant
+        const userRecord = await this.auth.updateUser(uid, updates);
+        return userRecord;
+      }
+    } catch (error) {
+      console.error("❌ Failed to update user:", error);
+      throw error;
     }
   }
 
   /**
-   * Delete user
+   * Delete user from a specific tenant
    */
   async deleteUser(uid: string, tenantId?: string): Promise<void> {
     try {
-      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
-      await authInstance.deleteUser(uid);
-    } catch (error: unknown) {
-      throw this.handleFirebaseError(error);
+      if (tenantId) {
+        // Delete user from specific tenant
+        await this.auth.deleteUser(uid);
+      } else {
+        // Delete user from default tenant
+        await this.auth.deleteUser(uid);
+      }
+    } catch (error) {
+      console.error("❌ Failed to delete user:", error);
+      throw error;
     }
   }
 
@@ -389,18 +388,6 @@ export class FirebaseServerClient {
     try {
       const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
       return await authInstance.generatePasswordResetLink(email);
-    } catch (error: unknown) {
-      throw this.handleFirebaseError(error);
-    }
-  }
-
-  /**
-   * Set custom claims for user - Careful with custom claims
-   */
-  async setCustomClaims(uid: string, claims: Record<string, unknown>, tenantId?: string): Promise<void> {
-    try {
-      const authInstance = tenantId ? this.auth.tenantManager().authForTenant(tenantId) : this.auth;
-      await authInstance.setCustomUserClaims(uid, claims);
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
     }
@@ -449,6 +436,46 @@ export class FirebaseServerClient {
   async deleteTenant(tenantId: string): Promise<void> {
     try {
       await this.auth.tenantManager().deleteTenant(tenantId);
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * List users in a specific tenant
+   */
+  async listUsersInTenant(tenantId: string, maxResults = 1000): Promise<unknown> {
+    try {
+      const authInstance = this.auth.tenantManager().authForTenant(tenantId);
+      const users = await authInstance.listUsers(maxResults);
+      return users;
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Add an existing user to a specific tenant
+   */
+  async addUserToTenant(uid: string, tenantId: string): Promise<void> {
+    try {
+      // Get the user from the default tenant first
+      const userRecord = await this.auth.getUser(uid);
+
+      // Add user to the specific tenant
+      // Note: Firebase Admin SDK doesn't have a direct "addUserToTenant" method
+      // We need to create a new user in the tenant with the same properties
+      const tenantAuth = this.auth.tenantManager().authForTenant(tenantId);
+
+      // Create the user in the new tenant
+      await tenantAuth.createUser({
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        emailVerified: userRecord.emailVerified,
+        disabled: userRecord.disabled,
+        photoURL: userRecord.photoURL
+      });
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
     }

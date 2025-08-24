@@ -15,6 +15,7 @@ const navigationItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/tenants", label: "Tenants", icon: "🏢" },
   { href: "/corporations", label: "Corporations", icon: "🏢" },
+  { href: "/users", label: "Users", icon: "👥" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
@@ -23,7 +24,7 @@ export async function Sidebar({ className }: SidebarProps) {
   const isCollapsed = await getSidebarState();
 
   return (
-    <SidebarClient 
+    <SidebarClient
       initialCollapsed={isCollapsed}
       navigationItems={navigationItems}
       className={className}

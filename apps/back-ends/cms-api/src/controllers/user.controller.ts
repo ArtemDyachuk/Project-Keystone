@@ -1,7 +1,9 @@
-import { Controller, Get, Req, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Req, Body, Param, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { SessionService } from '../services/session.service';
 import { SessionGuard } from '../guards/session.guard';
+import { UserService } from '../services/user.service';
+import type { CreateUserRequest, UpdateUserRequest } from '../services/user.service';
 
 /**
  * User Controller - handles user data and session recovery
@@ -9,7 +11,8 @@ import { SessionGuard } from '../guards/session.guard';
 @Controller('user')
 export class UserController {
   constructor(
-    private readonly sessionService: SessionService
+    private readonly sessionService: SessionService,
+    private readonly userService: UserService
   ) {
     // Simple controller focused on session management
   }
@@ -130,6 +133,279 @@ export class UserController {
 
       throw new HttpException(
         'Failed to get user profile',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get all users in the current tenant
+   * GET /user/users
+   */
+  @UseGuards(SessionGuard)
+  @Get('users')
+  async getUsers(@Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      const users = await this.userService.getUsersInTenant(tenantId);
+      return {
+        success: true,
+        ...users
+      };
+    } catch (error) {
+      console.error('❌ Get users failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to get users',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get a specific user by ID
+   * GET /user/users/:id
+   */
+  @UseGuards(SessionGuard)
+  @Get('users/:id')
+  async getUserById(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      const user = await this.userService.getUserById(id, tenantId);
+      return {
+        success: true,
+        user
+      };
+    } catch (error) {
+      console.error('❌ Get user by ID failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to get user',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Create a new user
+   * POST /user/users
+   */
+  @UseGuards(SessionGuard)
+  @Post('users')
+  async createUser(@Body() createUserRequest: CreateUserRequest, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      // Override tenantId from request with current user's tenant
+      createUserRequest.tenantId = tenantId;
+
+      const user = await this.userService.createUser(createUserRequest);
+      return {
+        success: true,
+        user
+      };
+    } catch (error) {
+      console.error('❌ Create user failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to create user',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Update a user
+   * PUT /user/users/:id
+   */
+  @UseGuards(SessionGuard)
+  @Put('users/:id')
+  async updateUser(@Param('id') id: string, @Body() updateUserRequest: UpdateUserRequest, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.UNAUTHORIZED);
+      }
+
+      const user = await this.userService.updateUser(id, updateUserRequest, tenantId);
+      
+      // If the user being updated is the current user and roles were changed, update their session
+      if (id === sessionData.user.uid && updateUserRequest.roles !== undefined) {
+        await this.sessionService.updateRoles(sessionId, updateUserRequest.roles);
+      }
+      
+      return {
+        success: true,
+        user
+      };
+    } catch (error) {
+      console.error('❌ Update user failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to update user',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Set user roles
+   * POST /user/users/:id/roles
+   */
+  @UseGuards(SessionGuard)
+  @Post('users/:id/roles')
+  async setUserRoles(@Param('id') id: string, @Body() body: { roles: string[] }, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      await this.userService.setUserRoles(id, body.roles, tenantId);
+      
+      // If the user being updated is the current user, update their session
+      if (id === sessionData.user.uid) {
+        await this.sessionService.updateRoles(sessionId, body.roles);
+      }
+      
+      return {
+        success: true,
+        message: 'User roles updated successfully'
+      };
+    } catch (error) {
+      console.error('❌ Set user roles failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to set user roles',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Delete a user
+   * DELETE /user/users/:id
+   */
+  @UseGuards(SessionGuard)
+  @Delete('users/:id')
+  async deleteUser(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }) {
+    try {
+      const sessionId = request.cookies?.session;
+      if (!sessionId) {
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sessionData = await this.sessionService.getSession(sessionId);
+      if (!sessionData) {
+        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
+      }
+
+      // Get tenant ID directly from user's session
+      const tenantId = sessionData.user.tenantId;
+      if (!tenantId) {
+        throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
+      }
+
+      await this.userService.deleteUser(id, tenantId);
+      return {
+        success: true,
+        message: 'User deleted successfully'
+      };
+    } catch (error) {
+      console.error('❌ Delete user failed:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to delete user',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

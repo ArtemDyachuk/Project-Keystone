@@ -41,7 +41,8 @@ const tenantMembershipSchema = new mongoose.Schema<ITenantMembership>({
 });
 
 // Create indexes for faster queries
-tenantMembershipSchema.index({ userId: 1, tenantId: 1 }, { unique: true });
+// Unique constraint: One user can only be in one tenant (simplified for single-tenant users)
+tenantMembershipSchema.index({ userId: 1 }, { unique: true });
 tenantMembershipSchema.index({ tenantId: 1, roles: 1 });
 tenantMembershipSchema.index({ userId: 1, isActive: 1 });
 
