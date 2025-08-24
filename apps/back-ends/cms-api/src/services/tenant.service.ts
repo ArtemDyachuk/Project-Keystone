@@ -1,6 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { FirebaseServerClient } from "@keystone/auth";
 import { Tenant, Corporation, TenantMembership } from "@keystone/database";
+import { getRoleDefinition, getAllRoleNames } from "@keystone/rbac";
 import mongoose from "mongoose";
 
 export interface CreateTenantRequest {
@@ -143,7 +144,7 @@ export class TenantService {
       const membership = new TenantMembership({
         userId: request.userId,
         tenantId: tenant._id.toString(),
-        roles: ["owner"],
+        roles: ["Tenant:Owner"],
         isActive: true
       });
 
@@ -234,6 +235,90 @@ export class TenantService {
     // Allow letters, numbers, spaces, and common punctuation
     const validNameRegex = /^[a-zA-Z0-9\s\-_&.()]+$/;
     return validNameRegex.test(name) && name.trim().length >= 2 && name.trim().length <= 100;
+  }
+
+  /**
+   * Validate if a role exists in the system
+   */
+  private validateRole(roleName: string): boolean {
+    return getRoleDefinition(roleName) !== undefined;
+  }
+
+  /**
+   * Get all available roles for validation
+   */
+  private getAllAvailableRoles(): string[] {
+    return getAllRoleNames();
+  }
+
+  /**
+   * Get all available roles in the system
+   */
+  async getAvailableRoles(): Promise<string[]> {
+    try {
+      const roles = this.getAllAvailableRoles();
+      this.logger.log(`✅ Retrieved ${roles.length} available roles`);
+      return roles;
+    } catch (error) {
+      this.logger.error(`❌ Failed to get available roles:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Validate and sanitize roles, filtering out invalid ones
+   */
+  private validateAndSanitizeRoles(roles: string[]): string[] {
+    if (!Array.isArray(roles)) {
+      return [];
+    }
+    
+    return roles.filter(role => this.validateRole(role));
+  }
+
+  /**
+   * Update user roles in a tenant
+   */
+  async updateUserRoles(userId: string, tenantId: string, newRoles: string[]): Promise<{ success: boolean; message: string }> {
+    try {
+      this.logger.log(`🔄 Updating roles for user ${userId} in tenant ${tenantId}`);
+
+      // Validate the roles
+      const validatedRoles = this.validateAndSanitizeRoles(newRoles);
+      if (validatedRoles.length === 0) {
+        throw new HttpException("No valid roles provided", HttpStatus.BAD_REQUEST);
+      }
+
+      // Check if user has membership in this tenant
+      const membership = await TenantMembership.findOne({
+        userId: userId,
+        tenantId: tenantId,
+        isActive: true
+      });
+
+      if (!membership) {
+        throw new HttpException("User not found in this tenant", HttpStatus.NOT_FOUND);
+      }
+
+      // Update the roles
+      membership.roles = validatedRoles;
+      await membership.save();
+
+      this.logger.log(`✅ User roles updated successfully`);
+      return {
+        success: true,
+        message: `User roles updated successfully`
+      };
+    } catch (error) {
+      this.logger.error(`❌ Failed to update user roles:`, error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to update user roles: ${error instanceof Error ? error.message : "Unknown error"}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   /**

@@ -13,6 +13,7 @@ import { CSRFService } from '../services/csrf.service';
 import { RedisService } from '../services/redis.service';
 import { TenantService } from '../services/tenant.service';
 import { UserService } from '../services/user.service';
+import { CorporationService } from '../services/corporation.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 import { SessionGuard } from '../guards/session.guard';
 
@@ -34,6 +35,7 @@ import { SessionGuard } from '../guards/session.guard';
     CSRFService,
     TenantService,
     UserService,
+    CorporationService,
   ],
 })
 export class AppModule { }

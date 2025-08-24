@@ -28,6 +28,10 @@ export const PERMISSIONS = {
    // System permissions
    SYSTEM_READ: "system:read",
    SYSTEM_MANAGE: "system:manage",
+
+   // Global permissions (override all resource-specific permissions)
+   GLOBAL_READ: "global:read",
+   GLOBAL_ADMIN: "global:admin",
 } as const;
 
 // Define the role configuration
@@ -138,6 +142,50 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.USER_READ,
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.CORPORATION_READ,
+         ],
+      },
+   },
+
+   Global: {
+      Admin: {
+         name: "Global:Admin",
+         displayName: "Global Administrator",
+         description: "Full system access - can perform any action on any resource",
+         permissions: [
+            PERMISSIONS.GLOBAL_ADMIN,
+            PERMISSIONS.GLOBAL_READ,
+            // Include all specific permissions for clarity
+            PERMISSIONS.TENANT_CREATE,
+            PERMISSIONS.TENANT_READ,
+            PERMISSIONS.TENANT_UPDATE,
+            PERMISSIONS.TENANT_DELETE,
+            PERMISSIONS.TENANT_MANAGE_USERS,
+            PERMISSIONS.TENANT_MANAGE_SETTINGS,
+            PERMISSIONS.CORPORATION_CREATE,
+            PERMISSIONS.CORPORATION_READ,
+            PERMISSIONS.CORPORATION_UPDATE,
+            PERMISSIONS.CORPORATION_DELETE,
+            PERMISSIONS.CORPORATION_MANAGE_USERS,
+            PERMISSIONS.CORPORATION_MANAGE_SETTINGS,
+            PERMISSIONS.USER_CREATE,
+            PERMISSIONS.USER_READ,
+            PERMISSIONS.USER_UPDATE,
+            PERMISSIONS.USER_DELETE,
+            PERMISSIONS.USER_MANAGE_ROLES,
+            PERMISSIONS.SYSTEM_READ,
+            PERMISSIONS.SYSTEM_MANAGE,
+         ],
+      },
+      Reader: {
+         name: "Global:Reader",
+         displayName: "Global Reader",
+         description: "Read access to all system resources across all tenants",
+         permissions: [
+            PERMISSIONS.GLOBAL_READ,
+            PERMISSIONS.TENANT_READ,
+            PERMISSIONS.CORPORATION_READ,
+            PERMISSIONS.USER_READ,
+            PERMISSIONS.SYSTEM_READ,
          ],
       },
    },
