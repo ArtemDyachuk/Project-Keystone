@@ -514,4 +514,50 @@ export class UserController {
       );
     }
   }
+
+  /**
+   * Admin: Invalidate all sessions for a specific user
+   * POST /user/:uid/invalidate-sessions
+   */
+  @UseGuards(SessionGuard, RbacGuard)
+  @RequirePermission('user:manage')
+  @Post(':uid/invalidate-sessions')
+  async invalidateUserSessions(
+    @Param('uid') targetUid: string,
+    @Req() request: Request & { user?: any; sessionId?: string },
+    @Body() body: { reason?: string }
+  ) {
+    try {
+      const adminUser = request.user;
+      
+      // Prevent admin from invalidating their own sessions
+      if (adminUser.uid === targetUid) {
+        return {
+          success: false,
+          message: 'Cannot invalidate your own sessions'
+        };
+      }
+
+      // Invalidate all sessions for the target user
+      const deletedCount = await this.sessionService.invalidateUserSessions(
+        targetUid, 
+        body.reason || `Admin ${adminUser.email} invalidated sessions`,
+        adminUser.tenantId
+      );
+
+      return {
+        success: true,
+        message: `Successfully invalidated ${deletedCount} sessions for user ${targetUid}`,
+        deletedCount,
+        targetUser: targetUid
+      };
+    } catch (error) {
+      console.error('❌ Failed to invalidate user sessions:', error);
+      return {
+        success: false,
+        message: 'Failed to invalidate user sessions',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
 }

@@ -48,6 +48,7 @@ export class FirebaseServerClient {
         emailVerified: userRecord.emailVerified,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
+        disabled: userRecord.disabled,
         tenantId: tenantId,
         customClaims: userRecord.customClaims,
       };
@@ -66,7 +67,7 @@ export class FirebaseServerClient {
       }
 
       const authInstance = this.auth.tenantManager().authForTenant(params.tenantId);
-      
+
       const userRecord = await authInstance.createUser({
         email: params.email,
         displayName: `${params.firstName} ${params.lastName}`,
@@ -80,6 +81,7 @@ export class FirebaseServerClient {
         emailVerified: userRecord.emailVerified,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
+        disabled: userRecord.disabled,
         tenantId: params.tenantId,
       };
     } catch (error: unknown) {
@@ -114,20 +116,21 @@ export class FirebaseServerClient {
       // For GIP multi-tenancy, we need to use the Admin SDK with the specific tenant
       // The Firebase REST API doesn't support multi-tenancy
       const authInstance = this.auth.tenantManager().authForTenant(tenantId);
-      
+
       // Get user by email from the specific tenant
       const user = await authInstance.getUserByEmail(email);
-      
+
       // For now, we'll assume the password is correct since we're in a trusted server context
       // In a production environment, you might want to implement additional verification
       // or use Firebase Auth REST API with tenant-specific endpoints if available
-      
+
       return {
         uid: user.uid,
         email: user.email || null,
         emailVerified: user.emailVerified,
         displayName: user.displayName || null,
         photoURL: user.photoURL || null,
+        disabled: user.disabled,
         tenantId: tenantId,
         customClaims: user.customClaims,
       };
@@ -148,6 +151,7 @@ export class FirebaseServerClient {
         uid: decodedToken.uid,
         email: decodedToken.email || null,
         emailVerified: decodedToken.email_verified || false,
+        disabled: decodedToken.disabled || false,
         displayName: decodedToken.name || null,
         photoURL: decodedToken.picture || null,
         tenantId: decodedToken.firebase?.tenant || null,
@@ -180,6 +184,7 @@ export class FirebaseServerClient {
         emailVerified: userRecord.emailVerified,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
+        disabled: userRecord.disabled,
         tenantId: params.tenantId || null,
       };
     } catch (error: unknown) {
@@ -224,6 +229,7 @@ export class FirebaseServerClient {
         emailVerified: userRecord.emailVerified,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
+        disabled: userRecord.disabled,
         tenantId: tenantId || null,
       };
     } catch (error: unknown) {
@@ -248,6 +254,7 @@ export class FirebaseServerClient {
         emailVerified: userRecord.emailVerified,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
+        disabled: userRecord.disabled,
         tenantId: tenantId,
         customClaims: userRecord.customClaims,
       };
@@ -268,6 +275,7 @@ export class FirebaseServerClient {
         uid: userRecord.uid,
         email: userRecord.email || null,
         emailVerified: userRecord.emailVerified,
+        disabled: userRecord.disabled,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
         tenantId: tenantId || null,
@@ -295,6 +303,7 @@ export class FirebaseServerClient {
         emailVerified: userRecord.emailVerified,
         displayName: userRecord.displayName || null,
         photoURL: userRecord.photoURL || null,
+        disabled: userRecord.disabled,
         tenantId: tenantId,
         customClaims: userRecord.customClaims,
       };

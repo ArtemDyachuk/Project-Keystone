@@ -56,14 +56,14 @@ export class SessionService {
     if (redisData) {
       try {
         const session = JSON.parse(redisData) as UserSession;
-        
+
         // Extend TTL on each access (activity-based session renewal)
         await this.redisService.set(
           `session:${sessionId}`,
           redisData,
           this.sessionTTL
         );
-        
+
         return {
           sessionId,
           user: {
@@ -245,6 +245,86 @@ export class SessionService {
     }
 
     return deletedCount;
+  }
+
+  /**
+   * Invalidate all sessions for a specific user (admin function)
+   * This allows admins to force logout users
+   */
+  async invalidateUserSessions(userUid: string, reason: string = "Admin action", adminTenantId?: string): Promise<number> {
+    // If adminTenantId is provided, validate that the target user belongs to the same tenant
+    if (adminTenantId) {
+      const targetUserSessions = await this.getUserSessions(userUid);
+      if (targetUserSessions.length > 0) {
+        const firstSession = targetUserSessions[0];
+        if (firstSession.tenantId !== adminTenantId) {
+          throw new Error(`Cannot invalidate sessions for user from different tenant. Admin tenant: ${adminTenantId}, User tenant: ${firstSession.tenantId}`);
+        }
+      }
+    }
+
+    const deletedCount = await this.deleteAllUserSessions(userUid);
+    this.logger.log(`Admin invalidated ${deletedCount} sessions for user ${userUid}. Reason: ${reason}`);
+    return deletedCount;
+  }
+
+  /**
+   * Get all sessions for a specific user (for tenant validation)
+   */
+  async getUserSessions(userUid: string): Promise<UserSession[]> {
+    const sessions: UserSession[] = [];
+
+    try {
+      // Get session IDs from Redis
+      if (this.redisService.isConnected()) {
+        const client = this.redisService.getClient();
+        if (client) {
+          const sessionIds = await client.smembers(`user:${userUid}:sessions`);
+
+          // Get session data for each session ID
+          for (const sessionId of sessionIds) {
+            const sessionData = await this.getSession(sessionId);
+            if (sessionData && sessionData.user.uid === userUid) {
+              sessions.push(sessionData.user);
+            }
+          }
+        }
+      }
+
+      // Also check memory fallback
+      for (const [, session] of this.memoryFallback.entries()) {
+        if (session.uid === userUid) {
+          sessions.push(session);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get sessions for user ${userUid}:`, error);
+    }
+
+    return sessions;
+  }
+
+  /**
+   * Check if a user's sessions should be invalidated
+   * This can be called during session validation to check user status
+   */
+    async shouldInvalidateUserSessions(userUid: string, userService: any, tenantId: string): Promise<boolean> {
+    try {
+      // Get user from database to check status
+      const user = await userService.getUserById(userUid, tenantId);
+      
+      // Invalidate sessions if user is deleted, disabled, or has other issues
+      if (!user || user.deleted || user.disabled || user.status === "suspended") {
+        await this.invalidateUserSessions(userUid, `User status: ${user?.status || "deleted"}`);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      this.logger.error(`Failed to check user status for ${userUid}:`, error);
+      // If we can't verify user status, err on the side of caution
+      return true;
+    }
   }
 
   async rotateSession(oldSessionId: string, newRoles: string[]): Promise<string | null> {

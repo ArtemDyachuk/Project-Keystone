@@ -1,7 +1,8 @@
-import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
-import { FirebaseServerClient } from "@keystone/auth";
-import { Tenant, TenantMembership } from "@keystone/database";
-import { Types } from "mongoose";
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { FirebaseServerClient } from '@keystone/auth';
+import { Tenant, TenantMembership, SignupVerification } from '@keystone/database';
+import { Types } from 'mongoose';
+import { SessionService } from './session.service';
 
 export interface FirebaseUser {
   uid: string;
@@ -58,10 +59,12 @@ export interface UserListResponse {
 
 @Injectable()
 export class UserService {
-  private readonly logger = new Logger(UserService.name);
   private readonly firebaseClient: FirebaseServerClient;
+  private readonly logger = new Logger(UserService.name);
 
-  constructor() {
+  constructor(
+    private readonly sessionService: SessionService
+  ) {
     this.firebaseClient = new FirebaseServerClient();
   }
 
@@ -135,7 +138,6 @@ export class UserService {
           const roles = membership?.roles || [];
 
           // Check if user has a pending invite by looking for SignupVerification record
-          const { SignupVerification } = await import("@keystone/database");
           const pendingInvite = await SignupVerification.findOne({
             email: user.email,
             type: "invite",
@@ -164,7 +166,6 @@ export class UserService {
       );
 
       // Get pending invites that don't have Firebase users yet
-      const { SignupVerification } = await import("@keystone/database");
       const pendingInvites = await SignupVerification.find({
         type: "invite",
         tenantId: new Types.ObjectId(tenantId), // Convert string to ObjectId
@@ -249,7 +250,6 @@ export class UserService {
       const roles = membership?.roles || [];
 
       // Check if user has a pending invite by looking for SignupVerification record
-      const { SignupVerification } = await import("@keystone/database");
       const pendingInvite = await SignupVerification.findOne({
         email: firebaseUserRecord.email,
         type: "invite",
@@ -389,6 +389,20 @@ export class UserService {
       const { roles: newRoles, ...firebaseUpdates } = updates;
       const firebaseUser = await this.firebaseClient.updateUser(uid, firebaseUpdates, tenant.gipTenantId);
 
+      // If user is being disabled, invalidate all their sessions
+      if (firebaseUpdates.disabled === true) {
+        this.logger.log(`🚫 User ${uid} is being disabled, invalidating sessions...`);
+        
+        // Invalidate sessions and mark user as invalidated
+        const deletedSessions = await this.sessionService.invalidateUserSessions(
+          uid, 
+          `User disabled in tenant ${tenantId}`,
+          tenantId
+        );
+        
+        this.logger.log(`🚫 Invalidated ${deletedSessions} sessions for disabled user ${uid}`);
+      }
+
       // Update roles in TenantMembership if provided (simplified: one user = one tenant)
       if (newRoles !== undefined) {
         // Validate and sanitize the roles
@@ -519,6 +533,15 @@ export class UserService {
 
       // Delete user from Firebase GIP
       await this.firebaseClient.deleteUser(uid, tenant.gipTenantId);
+
+      // Automatically invalidate all sessions for this user
+      const deletedSessions = await this.sessionService.invalidateUserSessions(
+        uid, 
+        `User deleted from tenant ${tenantId}`,
+        tenantId
+      );
+      
+      this.logger.log(`🗑️ Invalidated ${deletedSessions} sessions for deleted user ${uid}`);
 
       this.logger.log(`✅ Deleted user ${uid} from tenant ${tenantId}`);
     } catch (error) {

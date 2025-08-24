@@ -8,11 +8,7 @@ export const PERMISSIONS = {
    TENANT_UPDATE: "tenant:update",
    TENANT_DELETE: "tenant:delete",
 
-   // Corporation permissions
-   CORPORATION_CREATE: "corporation:create",
-   CORPORATION_READ: "corporation:read",
-   CORPORATION_UPDATE: "corporation:update",
-   CORPORATION_DELETE: "corporation:delete",
+
 
    // User permissions
    USER_CREATE: "user:create",
@@ -20,6 +16,7 @@ export const PERMISSIONS = {
    USER_UPDATE: "user:update",
    USER_DELETE: "user:delete",
    USER_INVITE: "user:invite",
+   USER_MANAGE: "user:manage",
 
    // Global permissions (override all resource-specific permissions)
    GLOBAL_READ: "global:read",
@@ -37,8 +34,8 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.TENANT_UPDATE,
             PERMISSIONS.TENANT_DELETE,
-            PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
+            PERMISSIONS.USER_MANAGE,
          ],
       },
       Admin: {
@@ -48,8 +45,8 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.TENANT_UPDATE,
-            PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
+            PERMISSIONS.USER_MANAGE,
          ],
       },
       Reader: {
@@ -58,47 +55,12 @@ export const ROLES_CONFIG: ResourceRoles = {
          description: "View-only access to tenant resources",
          permissions: [
             PERMISSIONS.TENANT_READ,
-            PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
          ],
       },
    },
 
-   Corporation: {
-      Owner: {
-         name: "Corporation:Owner",
-         displayName: "Corporation Owner",
-         description: "Full control over corporation, including deletion",
-         permissions: [
-            PERMISSIONS.CORPORATION_READ,
-            PERMISSIONS.CORPORATION_UPDATE,
-            PERMISSIONS.CORPORATION_DELETE,
-            PERMISSIONS.TENANT_READ,
-            PERMISSIONS.USER_READ,
-         ],
-      },
-      Admin: {
-         name: "Corporation:Admin",
-         displayName: "Corporation Administrator",
-         description: "Manage corporation settings and users, but cannot delete",
-         permissions: [
-            PERMISSIONS.CORPORATION_READ,
-            PERMISSIONS.CORPORATION_UPDATE,
-            PERMISSIONS.TENANT_READ,
-            PERMISSIONS.USER_READ,
-         ],
-      },
-      Reader: {
-         name: "Corporation:Reader",
-         displayName: "Corporation Reader",
-         description: "View-only access to corporation resources",
-         permissions: [
-            PERMISSIONS.CORPORATION_READ,
-            PERMISSIONS.TENANT_READ,
-            PERMISSIONS.USER_READ,
-         ],
-      },
-   },
+
 
    User: {
       Admin: {
@@ -111,8 +73,8 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.USER_READ,
             PERMISSIONS.USER_UPDATE,
             PERMISSIONS.USER_DELETE,
+            PERMISSIONS.USER_MANAGE,
             PERMISSIONS.TENANT_READ,
-            PERMISSIONS.CORPORATION_READ,
          ],
       },
       Reader: {
@@ -122,7 +84,6 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.USER_READ,
             PERMISSIONS.TENANT_READ,
-            PERMISSIONS.CORPORATION_READ,
          ],
       },
    },
@@ -137,8 +98,7 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.GLOBAL_READ,
             // Include all specific permissions for clarity
             PERMISSIONS.TENANT_CREATE, PERMISSIONS.TENANT_READ, PERMISSIONS.TENANT_UPDATE, PERMISSIONS.TENANT_DELETE,
-            PERMISSIONS.CORPORATION_CREATE, PERMISSIONS.CORPORATION_READ, PERMISSIONS.CORPORATION_UPDATE, PERMISSIONS.CORPORATION_DELETE,
-            PERMISSIONS.USER_CREATE, PERMISSIONS.USER_INVITE, PERMISSIONS.USER_READ, PERMISSIONS.USER_UPDATE, PERMISSIONS.USER_DELETE,
+            PERMISSIONS.USER_CREATE, PERMISSIONS.USER_INVITE, PERMISSIONS.USER_READ, PERMISSIONS.USER_UPDATE, PERMISSIONS.USER_DELETE, PERMISSIONS.USER_MANAGE,
          ],
       },
       Reader: {
@@ -148,7 +108,6 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.GLOBAL_READ,
             PERMISSIONS.TENANT_READ,
-            PERMISSIONS.CORPORATION_READ,
             PERMISSIONS.USER_READ,
          ],
       },

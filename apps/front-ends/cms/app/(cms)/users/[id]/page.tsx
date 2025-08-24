@@ -114,11 +114,16 @@ export default function EditUserPage() {
 
          const data = await response.json();
          setUser(data.user);
+         
+
+         
          setForm({
             displayName: data.user.displayName || "",
             disabled: data.user.disabled,
             roles: data.user.roles || [],
          });
+         
+
       } catch (err) {
          setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -128,10 +133,19 @@ export default function EditUserPage() {
 
    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value, type, checked } = e.target;
-      setForm(prev => ({
-         ...prev,
-         [name]: type === "checkbox" ? checked : value
-      }));
+      
+
+      
+      setForm(prev => {
+         const newForm = {
+            ...prev,
+            [name]: type === "checkbox" ? checked : value
+         };
+         
+
+         
+         return newForm;
+      });
    };
 
    const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +153,8 @@ export default function EditUserPage() {
       setSaving(true);
       setError(null);
       setSuccess(null);
+
+
 
       try {
          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/users/${userId}`, {
@@ -316,6 +332,7 @@ export default function EditUserPage() {
                      <p className={styles.helpText}>
                         Disabled users cannot sign in to the system.
                      </p>
+
                   </div>
 
                   <div className={styles.formGroup}>
@@ -390,13 +407,20 @@ export default function EditUserPage() {
             <Card className={styles.dangerCard}>
                <h2>Danger Zone</h2>
                <p>These actions are irreversible. Please proceed with caution.</p>
-               <button
-                  onClick={handleDelete}
-                  className={styles.deleteButton}
-                  disabled={deleting}
-               >
-                  {deleting ? "Deleting..." : "Delete User"}
-               </button>
+               
+               <div className={styles.dangerActions}>
+                  <div className={styles.dangerAction}>
+                     <h3>Delete User</h3>
+                     <p>Permanently remove this user from the system. This will also immediately log them out from all active sessions.</p>
+                     <button
+                        onClick={handleDelete}
+                        className={styles.deleteButton}
+                        disabled={deleting}
+                     >
+                        {deleting ? "Deleting..." : "Delete User"}
+                     </button>
+                  </div>
+               </div>
             </Card>
          </div>
       </div>

@@ -10,6 +10,7 @@ export interface FirebaseUser {
   emailVerified: boolean;
   displayName: string | null;
   photoURL: string | null;
+  disabled: boolean;
   tenantId?: string | null;
   customClaims?: Record<string, unknown>;
 }
