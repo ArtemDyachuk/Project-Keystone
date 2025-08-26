@@ -9,6 +9,7 @@ export interface CurrentUser {
   tenantId: string | null;
   selectedCorporationId: string | null;
   roles: string[];
+  disabled?: boolean; // Optional flag to indicate if user account is disabled
 }
 
 /**

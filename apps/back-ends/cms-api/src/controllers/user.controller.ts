@@ -30,8 +30,6 @@ export class UserController {
   @Get('me')
   async getCurrentUser(@Req() request: Request & { user?: any; sessionId?: string }) {
     try {
-      // Debug: Log all cookies received
-      console.log('🍪 All cookies received:', request.cookies);
 
       // Get sessionId from HttpOnly cookie
       const sessionId = request.cookies?.session;
@@ -50,6 +48,8 @@ export class UserController {
 
       // Try to get existing session first
       const sessionData = await this.sessionService.getSession(sessionId);
+
+      // console.log('🍪 Session data:', sessionData);
 
       if (sessionData) {
         // Session exists and is valid
@@ -300,18 +300,24 @@ export class UserController {
       }
 
       const user = await this.userService.updateUser(id, updateUserRequest, tenantId);
-      
+
       // If roles were changed, update all sessions for this user
       if (updateUserRequest.roles !== undefined) {
         // Update the current user's session if they're updating themselves
         if (id === sessionData.user.uid) {
           await this.sessionService.updateRoles(sessionId, updateUserRequest.roles);
         }
-        
+
         // Update all other sessions for this user so they get new permissions immediately
         await this.sessionService.updateUserRoles(id, updateUserRequest.roles);
       }
-      
+
+      // If disabled status was changed, update all sessions for this user
+      if (updateUserRequest.disabled !== undefined) {
+        // Update all sessions for this user with the new disabled status
+        await this.sessionService.updateUserDisabledStatus(id, updateUserRequest.disabled);
+      }
+
       return {
         success: true,
         user
@@ -355,10 +361,10 @@ export class UserController {
       }
 
       await this.userService.setUserRoles(id, body.roles, tenantId);
-      
+
       // Update all sessions for this user so they get new permissions immediately
       await this.sessionService.updateUserRoles(id, body.roles);
-      
+
       return {
         success: true,
         message: 'User roles updated successfully'
@@ -533,7 +539,7 @@ export class UserController {
   ) {
     try {
       const adminUser = request.user;
-      
+
       // Prevent admin from invalidating their own sessions
       if (adminUser.uid === targetUid) {
         return {
@@ -544,7 +550,7 @@ export class UserController {
 
       // Invalidate all sessions for the target user
       const deletedCount = await this.sessionService.invalidateUserSessions(
-        targetUid, 
+        targetUid,
         body.reason || `Admin ${adminUser.email} invalidated sessions`,
         adminUser.tenantId
       );

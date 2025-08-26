@@ -6,12 +6,12 @@ function decodeJwtToken(token: string): any {
     // Simple JWT decode without verification (for development only)
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
       return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.warn('Failed to decode JWT token:', error);
+  } catch {
+    // Silent fail for production - don't expose internal errors
     return null;
   }
 }
@@ -67,8 +67,8 @@ export async function getUserDataFromJWT(): Promise<UserData | null> {
       tenantIds: tenantIds,
       selectedTenantId: customSelectedTenantId,
     };
-  } catch (error) {
-    console.error("Failed to extract user data from JWT:", error);
+  } catch {
+    // Silent fail for production - don't expose internal errors
     return null;
   }
 }

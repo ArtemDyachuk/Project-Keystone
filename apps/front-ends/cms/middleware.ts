@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "./lib/sessions/cookies";
-// import { getCurrentUser } from "./lib/sessions/utils";
+import { getCurrentUserServer } from "./lib/sessions/server";
 
 // Routes that don't require authentication
 // Route groups (auth) and (public) are organizational only - they don't appear in URLs
@@ -19,6 +19,12 @@ const PUBLIC_ROUTES = [
   "/ui-test" // From (public) folder
 ];
 
+// Routes that are accessible to disabled users
+const DISABLED_USER_ROUTES = [
+  "/disabled", // Disabled user page
+  "/api/auth/signout" // Allow signout
+];
+
 // Helper function to check if path is a public route
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some(route => {
@@ -29,18 +35,28 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
+// Helper function to check if path is accessible to disabled users
+function isDisabledUserRoute(pathname: string): boolean {
+  return DISABLED_USER_ROUTES.some(route => pathname.startsWith(route));
+}
+
 // Helper function to check if path is an auth page
 function isAuthPage(pathname: string): boolean {
   return ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
 }
 
-// Helper function to validate tenant access
-// async function validateTenantAccess(pathname: string, userData: any, request: NextRequest): Promise<NextResponse | null> {
-//   // For now, skip tenant validation since we're focusing on basic auth
-//   // This will be implemented later with proper tenant management
-//   console.log('🔄 Tenant validation skipped for now:', { pathname, userId: userData?.uid });
-//   return null;
-// }
+// Helper function to check if user is disabled
+async function isUserDisabled(): Promise<boolean> {
+  try {
+    const user = await getCurrentUserServer();
+    // Check if user has a disabled flag in their session data
+    // This assumes the session includes user status information
+    return user?.disabled === true;
+  } catch {
+    // Silent fail for production - don't expose internal errors
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -70,31 +86,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // USER DATA VALIDATION: Temporarily disabled to fix redirect loop
-  // TODO: Re-enable after fixing session validation
-  /*
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/tenants")) {
-    let userData;
+  // Check if user is disabled
+  const userDisabled = await isUserDisabled();
 
-    try {
-      userData = await getCurrentUser();
-
-      if (!userData) {
-        console.error("Authenticated user but no session data available");
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-    } catch (error) {
-      console.error("Failed to get user data:", error);
-      return NextResponse.redirect(new URL("/login", request.url));
+  if (userDisabled) {
+    // If user is disabled and not on disabled user routes, redirect to disabled page
+    if (!isDisabledUserRoute(pathname)) {
+      return NextResponse.redirect(new URL("/disabled", request.url));
     }
-
-    const tenantValidationResult = await validateTenantAccess(pathname, userData, request);
-
-    if (tenantValidationResult) {
-      return tenantValidationResult;
+    // Allow disabled users to access disabled user routes
+    return NextResponse.next();
+  } else {
+    // If enabled user is on disabled page, redirect to dashboard
+    if (pathname === "/disabled") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
-  */
 
   return NextResponse.next();
 }

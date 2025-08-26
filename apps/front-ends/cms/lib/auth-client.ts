@@ -127,15 +127,14 @@ export async function getAccessToken(): Promise<string | null> {
 
   const accessToken = accessTokenCookie.split("=")[1];
   
-  // Check if token is expired
+  // Check if token is expired or about to expire (within 5 minutes)
   if (isTokenExpired(accessToken)) {
-    console.log("🔄 Access token expired, attempting refresh...");
-    const newAccessToken = await refreshAccessToken();
-    if (newAccessToken) {
-      console.log("✅ Access token refreshed successfully");
-      return newAccessToken;
+    // Silent token refresh for production
+    const refreshedToken = await refreshAccessToken();
+    
+    if (refreshedToken) {
+      return refreshedToken;
     } else {
-      console.log("❌ Failed to refresh access token, redirecting to login");
       // Redirect to login if refresh fails
       window.location.href = "/login";
       return null;

@@ -389,19 +389,8 @@ export class UserService {
       const { roles: newRoles, ...firebaseUpdates } = updates;
       const firebaseUser = await this.firebaseClient.updateUser(uid, firebaseUpdates, tenant.gipTenantId);
 
-      // If user is being disabled, invalidate all their sessions
-      if (firebaseUpdates.disabled === true) {
-        this.logger.log(`🚫 User ${uid} is being disabled, invalidating sessions...`);
-        
-        // Invalidate sessions and mark user as invalidated
-        const deletedSessions = await this.sessionService.invalidateUserSessions(
-          uid, 
-          `User disabled in tenant ${tenantId}`,
-          tenantId
-        );
-        
-        this.logger.log(`🚫 Invalidated ${deletedSessions} sessions for disabled user ${uid}`);
-      }
+      // Note: Session updates for disabled users are now handled in the controller
+      // to allow disabled users to access the disabled page
 
       // Update roles in TenantMembership if provided (simplified: one user = one tenant)
       if (newRoles !== undefined) {

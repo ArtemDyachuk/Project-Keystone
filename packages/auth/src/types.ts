@@ -58,6 +58,7 @@ export interface UserSession {
   tenantId: string | null;
   selectedCorporationId: string | null; // Current active corporation for multi-tenant users
   roles: string[];
+  disabled?: boolean; // Optional flag to indicate if user account is disabled
   createdAt: Date;
   expiresAt: Date;
 }

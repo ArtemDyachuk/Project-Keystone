@@ -343,20 +343,70 @@ export class SessionService {
   }
 
   /**
+   * Update user disabled status in all active sessions
+   * This allows disabled users to still access the disabled page
+   */
+  async updateUserDisabledStatus(userUid: string, disabled: boolean): Promise<number> {
+    let updatedCount = 0;
+
+    try {
+      // Update Redis sessions
+      if (this.redisService.isConnected()) {
+        const client = this.redisService.getClient();
+        if (client) {
+          const keys = await client.keys("session:*");
+          
+          for (const key of keys) {
+            try {
+              const sessionData = await client.get(key);
+              if (sessionData) {
+                const session = JSON.parse(sessionData) as UserSession;
+                if (session.uid === userUid) {
+                  // Update the disabled status in the session
+                  session.disabled = disabled;
+                  await client.set(key, JSON.stringify(session), 'EX', 86400); // 24 hours
+                  updatedCount++;
+                }
+              }
+            } catch (error) {
+              this.logger.error(`Failed to update Redis session ${key}:`, error);
+            }
+          }
+        }
+      }
+
+      // Update memory fallback sessions
+      for (const [, session] of this.memoryFallback.entries()) {
+        if (session.uid === userUid) {
+          session.disabled = disabled;
+          updatedCount++;
+        }
+      }
+
+      this.logger.log(`Updated disabled status for ${updatedCount} sessions of user ${userUid} to ${disabled}`);
+      return updatedCount;
+    } catch (error) {
+      this.logger.error(`Failed to update disabled status for user ${userUid}:`, error);
+      return updatedCount;
+    }
+  }
+
+  /**
    * Check if a user's sessions should be invalidated
    * This can be called during session validation to check user status
    */
-    async shouldInvalidateUserSessions(userUid: string, userService: any, tenantId: string): Promise<boolean> {
+  async shouldInvalidateUserSessions(userUid: string, userService: any, tenantId: string): Promise<boolean> {
     try {
       // Get user from database to check status
       const user = await userService.getUserById(userUid, tenantId);
-      
-      // Invalidate sessions if user is deleted, disabled, or has other issues
-      if (!user || user.deleted || user.disabled || user.status === "suspended") {
+
+      // Invalidate sessions if user is deleted or has other critical issues
+      // Note: We don't invalidate sessions for disabled users - they need to access the disabled page
+      if (!user || user.deleted || user.status === "suspended") {
         await this.invalidateUserSessions(userUid, `User status: ${user?.status || "deleted"}`);
         return true;
       }
-      
+
       return false;
     } catch (error) {
       this.logger.error(`Failed to check user status for ${userUid}:`, error);
