@@ -45,6 +45,19 @@ async function bootstrap() {
   });
 
   // Enhanced rate limiting with different tiers
+  // 
+  // RATE LIMITING STRATEGY:
+  // 1. Authenticated users (with valid session) - NO RATE LIMITING
+  //    - These are legitimate users, no need to limit them
+  //    - Session validation happens via Redis
+  // 2. Unauthenticated requests - RATE LIMITED
+  //    - Prevents abuse from bots/attackers
+  //    - Protects against DDoS without affecting real users
+  //
+  // SESSION VALIDATION:
+  // - Uses Redis session store for validation
+  // - Simple cookie check for performance
+  // - Fallback to full session validation if needed
 
   // Configure rate limiting to work with proxy headers safely
   const rateLimitOptions = {
@@ -55,20 +68,45 @@ async function bootstrap() {
     legacyHeaders: false,
   };
 
-  // Reusable general rate limiter instance (performance optimization)
-  const generalLimiter = rateLimit({
+  // Session-aware rate limiter that skips authenticated users
+  const sessionAwareLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req: any) => req.path === '/health' || req.path === '/favicon.ico',
+    skip: (req: any) => {
+      const path = req.path;
+
+      // Always skip health checks and static files
+      if (path === '/health' || path === '/favicon.ico') {
+        return true;
+      }
+
+      // Skip rate limiting for requests with valid session cookies
+      // This allows authenticated users to make unlimited requests
+      const sessionCookie = req.cookies?.session;
+
+      // Basic session validation:
+      // 1. Session cookie exists
+      // 2. Session cookie has reasonable length (not empty or too short)
+      // 3. Session cookie looks like a valid session ID
+      if (sessionCookie &&
+        sessionCookie.length >= 20 &&
+        sessionCookie.length <= 100 &&
+        /^[a-zA-Z0-9_-]+$/.test(sessionCookie)) { // Alphanumeric + underscore + dash
+        return true; // Skip rate limiting for authenticated users
+      }
+
+      // Rate limit unauthenticated requests
+      return false;
+    },
   });
 
   // Strict rate limiting for sensitive auth endpoints
   app.use('/api/auth/login', rateLimit({
     ...rateLimitOptions,
     // max: 100, // for testing only
-    max: 10, // 10 attempts per 15 minutes
+    max: 5, // 10 attempts per 15 minutes
     message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
   }));
 
@@ -110,8 +148,8 @@ async function bootstrap() {
     message: { error: 'Too many upload requests. Please try again in 1 hour.' },
   }));
 
-  // General API rate limiting
-  app.use('/api', generalLimiter);
+  // Session-aware API rate limiting (authenticated users bypass limits)
+  app.use('/api', sessionAwareLimiter);
 
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);

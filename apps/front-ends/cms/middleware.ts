@@ -86,71 +86,83 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // CRITICAL: Validate session validity for authenticated users
-  // This prevents "zombie" sessions where cookie exists but session is invalid
-  try {
-    const user = await getCurrentUserServer();
-    if (!user) {
-      // Session ID exists but no valid data = invalid session
-      // Clear cookie and redirect to login
+  // OPTIMIZATION: Only validate session for protected routes that need user data
+  // Skip validation for static assets, public pages, etc.
+  const needsUserValidation = !pathname.startsWith("/_next") &&
+    !pathname.startsWith("/api") &&
+    !pathname.includes(".") && // Skip files with extensions
+    pathname !== "/favicon.ico";
+
+  if (needsUserValidation) {
+    // CRITICAL: Validate session validity for authenticated users
+    // This prevents "zombie" sessions where cookie exists but session is invalid
+    try {
+      const user = await getCurrentUserServer();
+      if (!user) {
+        // Session ID exists but no valid data = invalid session
+        // Clear cookie and redirect to login
+        const response = NextResponse.redirect(new URL("/login", request.url));
+
+        // Clear the session cookie by setting it to expire immediately
+        // Must match exact settings from your current cookie configuration
+        response.cookies.set("session", "", {
+          expires: new Date(0), // Expire immediately
+          path: "/",
+          domain: "localhost", // Match your current domain
+          httpOnly: true,
+          secure: false, // Match your current setting (not secure in dev)
+          sameSite: "lax" // Match your current setting
+        });
+
+        // Also clear the CSRF token cookie
+        response.cookies.set("csrfToken", "", {
+          expires: new Date(0), // Expire immediately
+          path: "/",
+          domain: "localhost", // Match your current domain
+          httpOnly: false, // CSRF token is not HttpOnly
+          secure: false, // Match your current setting
+          sameSite: "lax" // Match your current setting
+        });
+
+        return response;
+      }
+
+      // Check if user is disabled
+      const userDisabled = user.disabled === true;
+
+      if (userDisabled) {
+        // If user is disabled and not on disabled user routes, redirect to disabled page
+        if (!isDisabledUserRoute(pathname)) {
+          return NextResponse.redirect(new URL("/disabled", request.url));
+        }
+        // Allow disabled users to access disabled user routes
+        return NextResponse.next();
+      } else {
+        // If enabled user is on disabled page, redirect to dashboard
+        if (pathname === "/disabled") {
+          return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
+      }
+
+      // Session is valid and user is enabled - allow access
+      return NextResponse.next();
+    } catch {
+      // If session validation fails, clear the cookie and redirect to login
       const response = NextResponse.redirect(new URL("/login", request.url));
-
-      // Clear the session cookie by setting it to expire immediately
-      // Must match exact settings from your current cookie configuration
       response.cookies.set("session", "", {
-        expires: new Date(0), // Expire immediately
+        expires: new Date(0),
         path: "/",
-        domain: "localhost", // Match your current domain
+        domain: "localhost",
         httpOnly: true,
-        secure: false, // Match your current setting (not secure in dev)
-        sameSite: "lax" // Match your current setting
+        secure: false,
+        sameSite: "lax"
       });
-
-      // Also clear the CSRF token cookie
-      response.cookies.set("csrfToken", "", {
-        expires: new Date(0), // Expire immediately
-        path: "/",
-        domain: "localhost", // Match your current domain
-        httpOnly: false, // CSRF token is not HttpOnly
-        secure: false, // Match your current setting
-        sameSite: "lax" // Match your current setting
-      });
-
       return response;
     }
-
-    // Check if user is disabled
-    const userDisabled = user.disabled === true;
-
-    if (userDisabled) {
-      // If user is disabled and not on disabled user routes, redirect to disabled page
-      if (!isDisabledUserRoute(pathname)) {
-        return NextResponse.redirect(new URL("/disabled", request.url));
-      }
-      // Allow disabled users to access disabled user routes
-      return NextResponse.next();
-    } else {
-      // If enabled user is on disabled page, redirect to dashboard
-      if (pathname === "/disabled") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-
-    // Session is valid and user is enabled - allow access
-    return NextResponse.next();
-  } catch {
-    // If session validation fails, clear the cookie and redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.set("session", "", {
-      expires: new Date(0),
-      path: "/",
-      domain: "localhost",
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax"
-    });
-    return response;
   }
+
+  // For routes that don't need user validation, just allow access
+  return NextResponse.next();
 }
 
 export const config = {
