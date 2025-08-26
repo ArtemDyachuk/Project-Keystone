@@ -7,6 +7,7 @@ import { CSRFService } from '../services/csrf.service';
 import { InviteService } from '../services/invite.service';
 import { TenantService } from '../services/tenant.service';
 import { SignupService } from '../services/signup.service';
+import { Logger } from '@nestjs/common';
 
 // DTOs for request validation
 export class SignupWithEmailLinkDto {
@@ -67,6 +68,7 @@ export class LoginDto {
 @Controller('auth')
 export class AuthController {
   private readonly firebaseClient: FirebaseServerClient;
+  private readonly logger = new Logger(AuthController.name);
 
   constructor(
     private readonly emailService: EmailService,
@@ -290,11 +292,11 @@ export class AuthController {
       // Find the user's tenant automatically (similar to login method)
       let user: any = null;
       let gipTenantId: string | null = null;
-      
+
       // Get all tenants from the database to search for the user
       const { Tenant } = await import('@keystone/database');
       const tenants = await Tenant.find({});
-      
+
       // Search for the user in each GIP tenant
       for (const tenant of tenants) {
         if (tenant.gipTenantId) {
@@ -448,11 +450,11 @@ export class AuthController {
       // Find the user's tenant automatically (similar to login method)
       let user: any = null;
       let gipTenantId: string | null = null;
-      
+
       // Get all tenants from the database to search for the user
       const { Tenant } = await import('@keystone/database');
       const tenants = await Tenant.find({});
-      
+
       // Search for the user in each GIP tenant
       for (const tenant of tenants) {
         if (tenant.gipTenantId) {
@@ -580,11 +582,11 @@ export class AuthController {
       // We need to search across all GIP tenants since we don't know which one they belong to
       let user: any = null;
       let gipTenantId: string | null = null;
-      
+
       // Get all tenants from the database to search for the user
       const { Tenant } = await import('@keystone/database');
       const tenants = await Tenant.find({});
-      
+
       // Search for the user in each GIP tenant
       for (const tenant of tenants) {
         if (tenant.gipTenantId) {
@@ -631,7 +633,7 @@ export class AuthController {
 
       try {
         const { TenantMembership, Corporation } = await import('@keystone/database');
-        
+
         // Find the tenant record that matches the GIP tenant ID
         const tenantRecord = await Tenant.findOne({ gipTenantId: gipTenantId });
         if (!tenantRecord) {
@@ -685,11 +687,18 @@ export class AuthController {
         }
       };
     } catch (error) {
-      console.error('❌ Login failed:', error);
-
+      // Clean logging using NestJS logger
       if (error instanceof HttpException) {
+        // For known HTTP exceptions, just log the message
+        this.logger.error(`Login failed: ${error.message} (${error.getStatus()})`);
         throw error;
       }
+
+      // For unexpected errors, log minimal info
+      this.logger.error('Login failed - unexpected error', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        type: error?.constructor?.name || 'Unknown'
+      });
 
       // Handle Firebase-specific errors
       if (error instanceof Error) {
@@ -768,7 +777,8 @@ export class AuthController {
         sessionId: sessionData.sessionId
       };
     } catch (error) {
-      console.error('❌ Get session failed:', error);
+      // Clean logging using NestJS logger
+      this.logger.warn(`Get session failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       return {
         success: false,
@@ -864,7 +874,7 @@ export class AuthController {
         csrfToken
       };
     } catch (error) {
-      console.error('❌ Get CSRF token failed:', error);
+      this.logger.error(`Get CSRF token failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (error instanceof HttpException) {
         throw error;
@@ -904,7 +914,7 @@ export class AuthController {
         // Search all tenants for existing user
         const { Tenant } = await import('@keystone/database');
         const tenants = await Tenant.find({ gipTenantId: { $exists: true } });
-        
+
         for (const tenant of tenants) {
           if (tenant.gipTenantId) {
             try {
@@ -943,7 +953,7 @@ export class AuthController {
         emailSent: true
       };
     } catch (error) {
-      console.error('❌ Initiate signup failed:', error);
+      this.logger.error(`Initiate signup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (error instanceof HttpException) {
         throw error;
@@ -987,7 +997,7 @@ export class AuthController {
       }
 
       const tenantId = tenantResult.tenantId;
-      
+
       // Get the GIP tenant ID
       const { Tenant } = await import('@keystone/database');
       const tenantRecord = await Tenant.findById(tenantId);
@@ -1030,7 +1040,7 @@ export class AuthController {
         readyForPassword: true
       };
     } catch (error) {
-      console.error('❌ Verify signup token failed:', error);
+      this.logger.error(`Verify signup token failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (error instanceof HttpException) {
         throw error;
@@ -1073,7 +1083,7 @@ export class AuthController {
         token: verifyDto.token,
       };
     } catch (error) {
-      console.error('❌ Verify invite token failed:', error);
+      this.logger.error(`Verify invite token failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (error instanceof HttpException) {
         throw error;
@@ -1127,7 +1137,7 @@ export class AuthController {
         inviteCompleted: true
       };
     } catch (error) {
-      console.error('❌ Complete invite failed:', error);
+      this.logger.error(`Complete invite failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       if (error instanceof HttpException) {
         throw error;

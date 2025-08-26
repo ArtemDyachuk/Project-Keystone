@@ -46,17 +46,17 @@ function isAuthPage(pathname: string): boolean {
 }
 
 // Helper function to check if user is disabled
-async function isUserDisabled(): Promise<boolean> {
-  try {
-    const user = await getCurrentUserServer();
-    // Check if user has a disabled flag in their session data
-    // This assumes the session includes user status information
-    return user?.disabled === true;
-  } catch {
-    // Silent fail for production - don't expose internal errors
-    return false;
-  }
-}
+// async function isUserDisabled(): Promise<boolean> {
+//   try {
+//     const user = await getCurrentUserServer();
+//     // Check if user has a disabled flag in their session data
+//     // This assumes the session includes user status information
+//     return user?.disabled === true;
+//   } catch {
+//     // Silent fail for production - don't expose internal errors
+//     return false;
+//   }
+// }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -86,24 +86,71 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Check if user is disabled
-  const userDisabled = await isUserDisabled();
+  // CRITICAL: Validate session validity for authenticated users
+  // This prevents "zombie" sessions where cookie exists but session is invalid
+  try {
+    const user = await getCurrentUserServer();
+    if (!user) {
+      // Session ID exists but no valid data = invalid session
+      // Clear cookie and redirect to login
+      const response = NextResponse.redirect(new URL("/login", request.url));
 
-  if (userDisabled) {
-    // If user is disabled and not on disabled user routes, redirect to disabled page
-    if (!isDisabledUserRoute(pathname)) {
-      return NextResponse.redirect(new URL("/disabled", request.url));
+      // Clear the session cookie by setting it to expire immediately
+      // Must match exact settings from your current cookie configuration
+      response.cookies.set("session", "", {
+        expires: new Date(0), // Expire immediately
+        path: "/",
+        domain: "localhost", // Match your current domain
+        httpOnly: true,
+        secure: false, // Match your current setting (not secure in dev)
+        sameSite: "lax" // Match your current setting
+      });
+
+      // Also clear the CSRF token cookie
+      response.cookies.set("csrfToken", "", {
+        expires: new Date(0), // Expire immediately
+        path: "/",
+        domain: "localhost", // Match your current domain
+        httpOnly: false, // CSRF token is not HttpOnly
+        secure: false, // Match your current setting
+        sameSite: "lax" // Match your current setting
+      });
+
+      return response;
     }
-    // Allow disabled users to access disabled user routes
+
+    // Check if user is disabled
+    const userDisabled = user.disabled === true;
+
+    if (userDisabled) {
+      // If user is disabled and not on disabled user routes, redirect to disabled page
+      if (!isDisabledUserRoute(pathname)) {
+        return NextResponse.redirect(new URL("/disabled", request.url));
+      }
+      // Allow disabled users to access disabled user routes
+      return NextResponse.next();
+    } else {
+      // If enabled user is on disabled page, redirect to dashboard
+      if (pathname === "/disabled") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
+    // Session is valid and user is enabled - allow access
     return NextResponse.next();
-  } else {
-    // If enabled user is on disabled page, redirect to dashboard
-    if (pathname === "/disabled") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+  } catch {
+    // If session validation fails, clear the cookie and redirect to login
+    const response = NextResponse.redirect(new URL("/login", request.url));
+    response.cookies.set("session", "", {
+      expires: new Date(0),
+      path: "/",
+      domain: "localhost",
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax"
+    });
+    return response;
   }
-
-  return NextResponse.next();
 }
 
 export const config = {

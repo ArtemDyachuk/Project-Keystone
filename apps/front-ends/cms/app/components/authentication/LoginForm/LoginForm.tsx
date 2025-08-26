@@ -25,8 +25,17 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
     setError("");
 
     try {
-      await loginAction(email, password, redirectUrl);
-      // If we reach here without error, login was successful
+      const result = await loginAction(email, password, redirectUrl);
+
+      // Check if login was successful
+      if (result && !result.success) {
+        // Show the actual error message from backend
+        setError(result.error || "Login failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // If we reach here, login was successful
       // The loginAction will handle the redirect
     } catch (error) {
       // Only show error if it's not a redirect
