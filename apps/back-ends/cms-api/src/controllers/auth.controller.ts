@@ -651,6 +651,14 @@ export class AuthController {
           userTenantId = tenantRecord._id.toString();
           userRoles = userMembership.roles || [];
 
+          // Check if user is disabled
+          if (userMembership.disabled === true) {
+            throw new HttpException(
+              'This account has been disabled',
+              HttpStatus.FORBIDDEN
+            );
+          }
+
           const corporation = await Corporation.findOne({ tenantId: tenantRecord._id });
           if (corporation) {
             selectedCorporationId = corporation._id.toString();
@@ -669,6 +677,7 @@ export class AuthController {
         tenantId: userTenantId,
         selectedCorporationId: selectedCorporationId,
         roles: userRoles,
+        disabled: false, // User passed disabled check, so they are not disabled
       });
 
       // Generate CSRF token for this session
