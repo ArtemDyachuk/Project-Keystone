@@ -301,9 +301,15 @@ export class UserController {
 
       const user = await this.userService.updateUser(id, updateUserRequest, tenantId);
       
-      // If the user being updated is the current user and roles were changed, update their session
-      if (id === sessionData.user.uid && updateUserRequest.roles !== undefined) {
-        await this.sessionService.updateRoles(sessionId, updateUserRequest.roles);
+      // If roles were changed, update all sessions for this user
+      if (updateUserRequest.roles !== undefined) {
+        // Update the current user's session if they're updating themselves
+        if (id === sessionData.user.uid) {
+          await this.sessionService.updateRoles(sessionId, updateUserRequest.roles);
+        }
+        
+        // Update all other sessions for this user so they get new permissions immediately
+        await this.sessionService.updateUserRoles(id, updateUserRequest.roles);
       }
       
       return {
@@ -350,10 +356,8 @@ export class UserController {
 
       await this.userService.setUserRoles(id, body.roles, tenantId);
       
-      // If the user being updated is the current user, update their session
-      if (id === sessionData.user.uid) {
-        await this.sessionService.updateRoles(sessionId, body.roles);
-      }
+      // Update all sessions for this user so they get new permissions immediately
+      await this.sessionService.updateUserRoles(id, body.roles);
       
       return {
         success: true,

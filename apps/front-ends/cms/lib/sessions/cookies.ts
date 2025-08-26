@@ -24,8 +24,9 @@ function getDefaultCookieConfig(): CookieConfig {
     sameSite: 'lax',
     maxAge: 24 * 60 * 60, // 24 hours in seconds
     path: '/',
-    // In development, set domain to localhost to allow cross-port access
-    ...(isProduction ? {} : { domain: 'localhost' }),
+    // In development, don't set domain to allow cross-port access
+    // The cookie will be valid for the current origin (localhost:3000)
+    // but can still be sent to localhost:3001 due to SameSite=Lax
   };
 }
 

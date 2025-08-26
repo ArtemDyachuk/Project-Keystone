@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TenantSwitcher } from "@/app/components/tenants";
 import { logoutAction } from "@/app/actions";
 import styles from "./CMSNavigation.module.css";
@@ -40,9 +41,9 @@ export function CMSNavigation({ className, userData, selectedCorporation, userCo
             selectedCorporation={selectedCorporation}
             userCorporations={userCorporations}
           />
-          <span className={styles.userInfo}>
+          <Link href="/account" className={styles.userInfo}>
             {displayName}
-          </span>
+          </Link>
           <form action={logoutAction} style={{ display: "inline" }}>
             <button type="submit" className={styles.logoutButton}>
               Logout

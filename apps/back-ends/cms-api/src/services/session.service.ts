@@ -210,6 +210,44 @@ export class SessionService {
     return true;
   }
 
+  /**
+   * Update roles for all sessions of a specific user
+   * This is used when admin changes user roles
+   */
+  async updateUserRoles(userUid: string, newRoles: string[]): Promise<number> {
+    let updatedCount = 0;
+
+    try {
+      // Get all session IDs for this user from Redis
+      if (this.redisService.isConnected()) {
+        const client = this.redisService.getClient();
+        if (client) {
+          const sessionIds = await client.smembers(`user:${userUid}:sessions`);
+
+          // Update each session
+          for (const sessionId of sessionIds) {
+            const success = await this.updateRoles(sessionId, newRoles);
+            if (success) updatedCount++;
+          }
+        }
+      }
+
+      // Also update memory fallback sessions
+      for (const [sessionId, session] of this.memoryFallback.entries()) {
+        if (session.uid === userUid) {
+          const success = await this.updateRoles(sessionId, newRoles);
+          if (success) updatedCount++;
+        }
+      }
+
+      this.logger.log(`Updated roles for ${updatedCount} sessions of user ${userUid} to [${newRoles.join(', ')}]`);
+    } catch (error) {
+      this.logger.error(`Failed to update roles for user ${userUid}:`, error);
+    }
+
+    return updatedCount;
+  }
+
   async deleteAllUserSessions(userUid: string): Promise<number> {
     let deletedCount = 0;
 
