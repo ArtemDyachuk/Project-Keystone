@@ -1,5 +1,5 @@
 {
-  "name": "@keystone/cms-ui",
+  "name": "@keystone/ui",
   "version": "0.0.1",
   "license": "AGPL-3.0",
   "main": "./dist/index.js",
