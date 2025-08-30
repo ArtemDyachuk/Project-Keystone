@@ -20,6 +20,7 @@ const allNavigationItems: NavItem[] = [
   { href: "/users", label: "Users", icon: "👥" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
   { href: "/system", label: "System", icon: "🛠" },
+  { href: "/documentation", label: "Documentation", icon: "📚" },
 ];
 
 export async function Sidebar({ className }: SidebarProps) {
@@ -58,6 +59,9 @@ export async function Sidebar({ className }: SidebarProps) {
         );
       case "/system":
         // Show System link to Global admins and readers
+        return user.roles.some(role => role.startsWith("Global:"));
+      case "/documentation":
+        // Show Documentation to Global admins and readers
         return user.roles.some(role => role.startsWith("Global:"));
       default:
         return false;

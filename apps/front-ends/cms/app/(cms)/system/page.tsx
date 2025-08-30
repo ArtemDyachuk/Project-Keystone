@@ -40,6 +40,19 @@ export default function SystemPage() {
                 </ul>
               </div>
             </Link>
+
+            <Link href="/system/rbac/component-test" className={styles.toolCard}>
+              <div className={styles.toolIcon}>🧪</div>
+              <div className={styles.toolContent}>
+                <h3>Component Access Testing</h3>
+                <p>Test which UI components each role can access</p>
+                <ul>
+                  <li>Component-level permission testing</li>
+                  <li>Page access validation</li>
+                  <li>Role behavior verification</li>
+                </ul>
+              </div>
+            </Link>
           </div>
         </div>
 
@@ -95,21 +108,48 @@ export default function SystemPage() {
       </div>
 
       <div className={styles.info}>
-        <h3>About System Administration</h3>
-        <p>
-          This section provides tools for system administrators to test, monitor, and configure
-          the Keystone CMS system. The RBAC testing tools are particularly useful for:
-        </p>
-        <ul>
-          <li><strong>Development:</strong> Verify access control logic during development</li>
-          <li><strong>Testing:</strong> Ensure security policies work correctly</li>
-          <li><strong>Performance:</strong> Monitor system performance under load</li>
-          <li><strong>Security:</strong> Validate security boundaries and prevent vulnerabilities</li>
-        </ul>
-        <p>
-          <strong>Note:</strong> These tools are intended for system administrators and developers.
-          Regular users should not have access to this section.
-        </p>
+        <h3>Quick RBAC Reference</h3>
+        <div className={styles.quickRef}>
+          <div className={styles.refSection}>
+            <h4>🔑 Key Commands</h4>
+            <ul>
+              <li><strong>Add Permission:</strong> Edit <code>packages/rbac/src/roles.config.ts</code></li>
+              <li><strong>Add Role:</strong> Define in <code>roles.config.ts</code> then rebuild</li>
+              <li><strong>Protect Component:</strong> Wrap with <code>&lt;PermissionGuard&gt;</code></li>
+              <li><strong>Test Changes:</strong> Run component access tests</li>
+            </ul>
+          </div>
+
+          <div className={styles.refSection}>
+            <h4>📁 Key Files</h4>
+            <ul>
+              <li><strong>Roles:</strong> <code>packages/rbac/src/roles.config.ts</code></li>
+              <li><strong>Service:</strong> <code>app/services/rbac.service.ts</code></li>
+              <li><strong>Guards:</strong> <code>app/components/rbac/guards/</code></li>
+              <li><strong>Documentation:</strong> <code>app/(cms)/system/rbac/README.md</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div className={styles.workflow}>
+          <h4>🔄 Workflow for New Features</h4>
+          <ol>
+            <li>Define permissions in <code>roles.config.ts</code></li>
+            <li>Assign to appropriate roles</li>
+            <li>Protect components with guards</li>
+            <li>Add to test suite</li>
+            <li>Rebuild package & test</li>
+          </ol>
+        </div>
+
+        <div className={styles.docsLink}>
+          <p>
+            <strong>📚 Full Documentation:</strong>
+            <Link href="/documentation">
+              View Complete RBAC Guide
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
