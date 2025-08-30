@@ -16,6 +16,12 @@ export const PERMISSIONS = {
    USER_INVITE: "user:invite",
    USER_MANAGE: "user:manage",
 
+   // Corporation permissions
+   CORPORATION_CREATE: "corporation:create",
+   CORPORATION_READ: "corporation:read",
+   CORPORATION_UPDATE: "corporation:update",
+   CORPORATION_DELETE: "corporation:delete",
+
    // Global permissions (override all resource-specific permissions)
    GLOBAL_READ: "global:read",
    GLOBAL_ADMIN: "global:admin",
@@ -45,6 +51,10 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.USER_UPDATE,
             PERMISSIONS.USER_DELETE,
             PERMISSIONS.USER_MANAGE,
+            PERMISSIONS.CORPORATION_READ,
+            PERMISSIONS.CORPORATION_CREATE,
+            PERMISSIONS.CORPORATION_UPDATE,
+            PERMISSIONS.CORPORATION_DELETE,
          ],
       },
       Admin: {
@@ -60,6 +70,9 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.USER_UPDATE,
             PERMISSIONS.USER_DELETE,
             PERMISSIONS.USER_MANAGE,
+            PERMISSIONS.CORPORATION_READ,
+            PERMISSIONS.CORPORATION_CREATE,
+            PERMISSIONS.CORPORATION_UPDATE,
          ],
       },
       Reader: {
@@ -68,6 +81,7 @@ export const ROLES_CONFIG: ResourceRoles = {
          description: "View-only access to tenant resources",
          permissions: [
             PERMISSIONS.TENANT_READ,
+            PERMISSIONS.CORPORATION_READ,
          ],
       },
    },
@@ -87,6 +101,7 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.USER_DELETE,
             PERMISSIONS.USER_MANAGE,
             PERMISSIONS.TENANT_READ,
+            PERMISSIONS.CORPORATION_READ,
          ],
       },
       Reader: {
@@ -96,6 +111,7 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.USER_READ,
             PERMISSIONS.TENANT_READ,
+            PERMISSIONS.CORPORATION_READ,
          ],
       },
    },
