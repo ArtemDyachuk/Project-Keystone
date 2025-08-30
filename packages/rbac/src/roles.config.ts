@@ -8,8 +8,6 @@ export const PERMISSIONS = {
    TENANT_UPDATE: "tenant:update",
    TENANT_DELETE: "tenant:delete",
 
-
-
    // User permissions
    USER_CREATE: "user:create",
    USER_READ: "user:read",
@@ -23,6 +21,13 @@ export const PERMISSIONS = {
    GLOBAL_ADMIN: "global:admin",
 } as const;
 
+// Helper function to get all resource permissions (excluding global ones)
+export const getAllResourcePermissions = (): string[] => {
+   return Object.values(PERMISSIONS).filter(permission => 
+      !permission.startsWith("global:")
+   );
+};
+
 // Define the role configuration with simplified permissions
 export const ROLES_CONFIG: ResourceRoles = {
    Tenant: {
@@ -35,6 +40,10 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.TENANT_UPDATE,
             PERMISSIONS.TENANT_DELETE,
             PERMISSIONS.USER_READ,
+            PERMISSIONS.USER_CREATE,
+            PERMISSIONS.USER_INVITE,
+            PERMISSIONS.USER_UPDATE,
+            PERMISSIONS.USER_DELETE,
             PERMISSIONS.USER_MANAGE,
          ],
       },
@@ -46,6 +55,10 @@ export const ROLES_CONFIG: ResourceRoles = {
             PERMISSIONS.TENANT_READ,
             PERMISSIONS.TENANT_UPDATE,
             PERMISSIONS.USER_READ,
+            PERMISSIONS.USER_CREATE,
+            PERMISSIONS.USER_INVITE,
+            PERMISSIONS.USER_UPDATE,
+            PERMISSIONS.USER_DELETE,
             PERMISSIONS.USER_MANAGE,
          ],
       },
@@ -55,7 +68,6 @@ export const ROLES_CONFIG: ResourceRoles = {
          description: "View-only access to tenant resources",
          permissions: [
             PERMISSIONS.TENANT_READ,
-            PERMISSIONS.USER_READ,
          ],
       },
    },
@@ -96,9 +108,8 @@ export const ROLES_CONFIG: ResourceRoles = {
          permissions: [
             PERMISSIONS.GLOBAL_ADMIN,
             PERMISSIONS.GLOBAL_READ,
-            // Include all specific permissions for clarity
-            PERMISSIONS.TENANT_CREATE, PERMISSIONS.TENANT_READ, PERMISSIONS.TENANT_UPDATE, PERMISSIONS.TENANT_DELETE,
-            PERMISSIONS.USER_CREATE, PERMISSIONS.USER_INVITE, PERMISSIONS.USER_READ, PERMISSIONS.USER_UPDATE, PERMISSIONS.USER_DELETE, PERMISSIONS.USER_MANAGE,
+            // Get all resource permissions automatically
+            ...getAllResourcePermissions(),
          ],
       },
       Reader: {

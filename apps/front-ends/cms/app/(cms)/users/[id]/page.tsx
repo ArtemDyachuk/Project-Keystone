@@ -6,6 +6,8 @@ import { Card } from "@keystone/ui";
 import { FullPageLoader } from "@/components/loaders";
 import styles from "./page.module.css";
 import { getRolesByCategory } from "@keystone/rbac";
+import { PermissionGuard } from "@/app/components/rbac/guards/PermissionGuard";
+import { PERMISSIONS } from "@keystone/rbac";
 
 interface FirebaseUser {
   uid: string;
@@ -298,130 +300,135 @@ export default function EditUserPage() {
           </div>
         </Card>
 
-        <Card className={styles.editCard}>
-          <h2>Edit User</h2>
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.formGroup}>
-              <label htmlFor="displayName" className={styles.formLabel}>
-                Display Name
-              </label>
-              <input
-                type="text"
-                id="displayName"
-                name="displayName"
-                value={form.displayName}
-                onChange={handleInputChange}
-                className={styles.input}
-                placeholder="Enter display name"
-                disabled={saving}
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.checkboxLabel}>
+        <PermissionGuard
+          permission={PERMISSIONS.USER_UPDATE}
+          fallback={null}
+        >
+          <Card className={styles.editCard}>
+            <h2>Edit User</h2>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <div className={styles.formGroup}>
+                <label htmlFor="displayName" className={styles.formLabel}>
+                  Display Name
+                </label>
                 <input
-                  type="checkbox"
-                  name="disabled"
-                  checked={form.disabled}
+                  type="text"
+                  id="displayName"
+                  name="displayName"
+                  value={form.displayName}
                   onChange={handleInputChange}
+                  className={styles.input}
+                  placeholder="Enter display name"
                   disabled={saving}
-                  className={styles.checkbox}
                 />
-                <span>Disable User Account</span>
-              </label>
-              <p className={styles.helpText}>
-                Disabled users cannot sign in to the system.
-              </p>
-
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>
-                User Roles
-              </label>
-              <div className={styles.rolesContainer}>
-                {Object.entries(rolesByCategory).map(([category, roles]) => (
-                  <div key={category} className={styles.roleCategory}>
-                    <h4 className={styles.categoryTitle}>{category} Roles</h4>
-                    <div className={styles.roleOptions}>
-                      {roles.map((role) => {
-                        const isSelected = form.roles.includes(role.value);
-                        const isDisabled = !isSelected && !canAddRole(role.value);
-                        return (
-                          <label
-                            key={role.value}
-                            className={`${styles.roleOption} ${isSelected ? styles.selected : ""} ${isDisabled ? styles.disabled : ""}`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleRoleToggle(role.value)}
-                              disabled={saving || isDisabled}
-                              className={styles.roleCheckbox}
-                            />
-                            <div className={styles.roleInfo}>
-                              <span className={styles.roleLabel}>{role.label}</span>
-                              <span className={styles.roleDescription}>{role.description}</span>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
               </div>
-              <p className={styles.helpText}>
-                Select one role per category. Users can have multiple roles from different categories.
-              </p>
-              {form.roles.length > 0 && (
-                <div className={styles.selectedRoles}>
-                  <strong>Selected Roles:</strong> {form.roles.join(", ")}
+
+              <div className={styles.formGroup}>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    name="disabled"
+                    checked={form.disabled}
+                    onChange={handleInputChange}
+                    disabled={saving}
+                    className={styles.checkbox}
+                  />
+                  <span>Disable User Account</span>
+                </label>
+                <p className={styles.helpText}>
+                  Disabled users cannot sign in to the system.
+                </p>
+
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  User Roles
+                </label>
+                <div className={styles.rolesContainer}>
+                  {Object.entries(rolesByCategory).map(([category, roles]) => (
+                    <div key={category} className={styles.roleCategory}>
+                      <h4 className={styles.categoryTitle}>{category} Roles</h4>
+                      <div className={styles.roleOptions}>
+                        {roles.map((role) => {
+                          const isSelected = form.roles.includes(role.value);
+                          const isDisabled = !isSelected && !canAddRole(role.value);
+                          return (
+                            <label
+                              key={role.value}
+                              className={`${styles.roleOption} ${isSelected ? styles.selected : ""} ${isDisabled ? styles.disabled : ""}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleRoleToggle(role.value)}
+                                disabled={saving || isDisabled}
+                                className={styles.roleCheckbox}
+                              />
+                              <div className={styles.roleInfo}>
+                                <span className={styles.roleLabel}>{role.label}</span>
+                                <span className={styles.roleDescription}>{role.description}</span>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className={styles.helpText}>
+                  Select one role per category. Users can have multiple roles from different categories.
+                </p>
+                {form.roles.length > 0 && (
+                  <div className={styles.selectedRoles}>
+                    <strong>Selected Roles:</strong> {form.roles.join(", ")}
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div className={styles.errorMessage}>
+                  <p>{error}</p>
                 </div>
               )}
-            </div>
 
-            {error && (
-              <div className={styles.errorMessage}>
-                <p>{error}</p>
+              {success && (
+                <div className={styles.successMessage}>
+                  <p>{success}</p>
+                </div>
+              )}
+
+              <div className={styles.formActions}>
+                <button
+                  type="submit"
+                  className={styles.saveButton}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
               </div>
-            )}
+            </form>
+          </Card>
 
-            {success && (
-              <div className={styles.successMessage}>
-                <p>{success}</p>
+          <Card className={styles.dangerCard}>
+            <h2>Danger Zone</h2>
+            <p>These actions are irreversible. Please proceed with caution.</p>
+
+            <div className={styles.dangerActions}>
+              <div className={styles.dangerAction}>
+                <h3>Delete User</h3>
+                <p>Permanently remove this user from the system. This will also immediately log them out from all active sessions.</p>
+                <button
+                  onClick={handleDelete}
+                  className={styles.deleteButton}
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete User"}
+                </button>
               </div>
-            )}
-
-            <div className={styles.formActions}>
-              <button
-                type="submit"
-                className={styles.saveButton}
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
             </div>
-          </form>
-        </Card>
-
-        <Card className={styles.dangerCard}>
-          <h2>Danger Zone</h2>
-          <p>These actions are irreversible. Please proceed with caution.</p>
-
-          <div className={styles.dangerActions}>
-            <div className={styles.dangerAction}>
-              <h3>Delete User</h3>
-              <p>Permanently remove this user from the system. This will also immediately log them out from all active sessions.</p>
-              <button
-                onClick={handleDelete}
-                className={styles.deleteButton}
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete User"}
-              </button>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </PermissionGuard>
       </div>
     </div>
   );

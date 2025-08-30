@@ -469,3 +469,12 @@
       width: 100%;
    }
 }
+
+/* Read-only message for users without edit permissions */
+.readOnlyMessage {
+   color: var(--text-secondary);
+   font-style: italic;
+   text-align: center;
+   padding: 2rem;
+   margin: 0;
+}

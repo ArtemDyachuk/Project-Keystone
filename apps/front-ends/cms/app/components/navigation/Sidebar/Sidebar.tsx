@@ -1,6 +1,5 @@
 import { getSidebarState } from "@/lib/auth-cookies";
 import { getCurrentUserServer } from "@/lib/sessions/server";
-import { UserServiceClient } from "@/app/services/user.service";
 import { SidebarClient } from "./SidebarClient";
 
 interface SidebarProps {
@@ -20,6 +19,7 @@ const allNavigationItems: NavItem[] = [
   { href: "/corporations", label: "Corporations", icon: "🏢" },
   { href: "/users", label: "Users", icon: "👥" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/system", label: "System", icon: "🛠" },
 ];
 
 export async function Sidebar({ className }: SidebarProps) {
@@ -29,19 +29,36 @@ export async function Sidebar({ className }: SidebarProps) {
   // Get current user using the working function from dashboard
   const user = await getCurrentUserServer();
 
-  // Filter navigation items based on user permissions
+  // Filter navigation items based on user permissions and roles
   const navigationItems = user ? allNavigationItems.filter(item => {
     switch (item.href) {
       case "/dashboard":
         return true; // Dashboard is always accessible
       case "/tenants":
-        return UserServiceClient.canAccessTenants(user);
+        // Show Tenants link to anyone with any Tenant role (Tenant:Owner, Tenant:Admin, Tenant:Reader)
+        return user.roles.some(role => role.startsWith("Tenant:"));
       case "/corporations":
-        return UserServiceClient.canAccessCorporations(user);
+        // Show Corporations link to anyone with any Tenant role (same as tenants for now)
+        return user.roles.some(role => role.startsWith("Tenant:"));
       case "/users":
-        return UserServiceClient.canAccessUsers(user);
+        // Show Users link to:
+        // - Anyone with any User role (User:Admin, User:Reader, etc.)
+        // - Tenant owners and admins (they manage users in their tenant)
+        // - Global admins and readers (they can access everything)
+        return user.roles.some(role =>
+          role.startsWith("User:") ||
+          (role.startsWith("Tenant:") && (role.includes("Admin") || role.includes("Owner"))) ||
+          role.startsWith("Global:")
+        );
       case "/settings":
-        return UserServiceClient.canAccessSettings(user);
+        // Show Settings to Tenant admins and owners, Global admins
+        return user.roles.some(role =>
+          role.startsWith("Tenant:") && (role.includes("Admin") || role.includes("Owner")) ||
+          role === "Global:Admin"
+        );
+      case "/system":
+        // Show System link to Global admins and readers
+        return user.roles.some(role => role.startsWith("Global:"));
       default:
         return false;
     }

@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card } from "@keystone/ui";
 import styles from "./page.module.css";
 import { getRolesByCategory } from "@keystone/rbac";
+import { PermissionGuard } from "@/app/components/rbac/guards/PermissionGuard";
+import { UnauthorizedMessage } from "@/app/components/rbac/errors/unauthorized/UnauthorizedMessage";
+import { PERMISSIONS } from "@keystone/rbac";
 
 interface SendInviteForm {
    email: string;
@@ -123,135 +126,145 @@ export default function SendInvitePage() {
    };
 
    return (
-      <div className={styles.container}>
-         <div className={styles.header}>
-            <h1>Send User Invite</h1>
-            <p>Invite a new user to join your tenant</p>
-         </div>
+      <PermissionGuard
+         permission={PERMISSIONS.USER_INVITE}
+         fallback={
+            <UnauthorizedMessage
+               title="Cannot Invite Users"
+               message="You don't have permission to invite new users to the system. Only users with User Admin or Tenant Admin roles can invite new users."
+            />
+         }
+      >
+         <div className={styles.container}>
+            <div className={styles.header}>
+               <h1>Send User Invite</h1>
+               <p>Invite a new user to join your tenant</p>
+            </div>
 
-         <Card className={styles.formCard}>
-            <form onSubmit={handleSubmit} className={styles.form}>
-               <div className={styles.formGroup}>
-                  <label htmlFor="email" className={styles.label}>
-                     Email Address *
-                  </label>
-                  <input
-                     type="email"
-                     id="email"
-                     name="email"
-                     value={form.email}
-                     onChange={handleInputChange}
-                     required
-                     className={styles.input}
-                     placeholder="user@example.com"
-                     disabled={loading}
-                  />
-               </div>
-
-               <div className={styles.formGroup}>
-                  <label htmlFor="firstName" className={styles.label}>
-                     First Name *
-                  </label>
-                  <input
-                     type="text"
-                     id="firstName"
-                     name="firstName"
-                     value={form.firstName}
-                     onChange={handleInputChange}
-                     required
-                     className={styles.input}
-                     placeholder="John"
-                     disabled={loading}
-                  />
-               </div>
-
-               <div className={styles.formGroup}>
-                  <label htmlFor="lastName" className={styles.label}>
-                     Last Name *
-                  </label>
-                  <input
-                     type="text"
-                     id="lastName"
-                     name="lastName"
-                     value={form.lastName}
-                     onChange={handleInputChange}
-                     required
-                     className={styles.input}
-                     placeholder="Doe"
-                     disabled={loading}
-                  />
-               </div>
-
-               <div className={styles.formGroup}>
-                  <label className={styles.label}>
-                     User Roles
-                  </label>
-                  <div className={styles.rolesContainer}>
-                     {Object.entries(rolesByCategory).map(([category, roles]) => (
-                        <div key={category} className={styles.roleCategory}>
-                           <h4 className={styles.categoryTitle}>{category} Roles</h4>
-                           <div className={styles.roleOptions}>
-                              {roles.map((role) => {
-                                 const isSelected = form.roles.includes(role.value);
-                                 const isDisabled = !isSelected && !canAddRole(role.value);
-                                 return (
-                                    <label
-                                       key={role.value}
-                                       className={`${styles.roleOption} ${isSelected ? styles.selected : ""} ${isDisabled ? styles.disabled : ""}`}
-                                    >
-                                       <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() => handleRoleToggle(role.value)}
-                                          disabled={loading || isDisabled}
-                                          className={styles.roleCheckbox}
-                                       />
-                                       <div className={styles.roleInfo}>
-                                          <span className={styles.roleLabel}>{role.label}</span>
-                                          <span className={styles.roleDescription}>{role.description}</span>
-                                       </div>
-                                    </label>
-                                 );
-                              })}
-                           </div>
-                        </div>
-                     ))}
+            <Card className={styles.formCard}>
+               <form onSubmit={handleSubmit} className={styles.form}>
+                  <div className={styles.formGroup}>
+                     <label htmlFor="email" className={styles.label}>
+                        Email Address *
+                     </label>
+                     <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={form.email}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="user@example.com"
+                        disabled={loading}
+                     />
                   </div>
-                  <p className={styles.helpText}>
-                     Select one role per category. Users can have multiple roles from different categories.
-                  </p>
-                  {form.roles.length > 0 && (
-                     <div className={styles.selectedRoles}>
-                        <strong>Selected Roles:</strong> {form.roles.join(", ")}
+
+                  <div className={styles.formGroup}>
+                     <label htmlFor="firstName" className={styles.label}>
+                        First Name *
+                     </label>
+                     <input
+                        type="text"
+                        id="firstName"
+                        name="firstName"
+                        value={form.firstName}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="John"
+                        disabled={loading}
+                     />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                     <label htmlFor="lastName" className={styles.label}>
+                        Last Name *
+                     </label>
+                     <input
+                        type="text"
+                        id="lastName"
+                        name="lastName"
+                        value={form.lastName}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="Doe"
+                        disabled={loading}
+                     />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                     <label className={styles.label}>
+                        User Roles
+                     </label>
+                     <div className={styles.rolesContainer}>
+                        {Object.entries(rolesByCategory).map(([category, roles]) => (
+                           <div key={category} className={styles.roleCategory}>
+                              <h4 className={styles.categoryTitle}>{category} Roles</h4>
+                              <div className={styles.roleOptions}>
+                                 {roles.map((role) => {
+                                    const isSelected = form.roles.includes(role.value);
+                                    const isDisabled = !isSelected && !canAddRole(role.value);
+                                    return (
+                                       <label
+                                          key={role.value}
+                                          className={`${styles.roleOption} ${isSelected ? styles.selected : ""} ${isDisabled ? styles.disabled : ""}`}
+                                       >
+                                          <input
+                                             type="checkbox"
+                                             checked={isSelected}
+                                             onChange={() => handleRoleToggle(role.value)}
+                                             disabled={loading || isDisabled}
+                                             className={styles.roleCheckbox}
+                                          />
+                                          <div className={styles.roleInfo}>
+                                             <span className={styles.roleLabel}>{role.label}</span>
+                                             <span className={styles.roleDescription}>{role.description}</span>
+                                          </div>
+                                       </label>
+                                    );
+                                 })}
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                     <p className={styles.helpText}>
+                        Select one role per category. Users can have multiple roles from different categories.
+                     </p>
+                     {form.roles.length > 0 && (
+                        <div className={styles.selectedRoles}>
+                           <strong>Selected Roles:</strong> {form.roles.join(", ")}
+                        </div>
+                     )}
+                  </div>
+
+                  {error && (
+                     <div className={styles.errorMessage}>
+                        <p>{error}</p>
                      </div>
                   )}
-               </div>
 
-               {error && (
-                  <div className={styles.errorMessage}>
-                     <p>{error}</p>
+                  <div className={styles.formActions}>
+                     <button
+                        type="button"
+                        onClick={handleCancel}
+                        className={styles.cancelButton}
+                        disabled={loading}
+                     >
+                        Cancel
+                     </button>
+                     <button
+                        type="submit"
+                        className={styles.submitButton}
+                        disabled={loading || !form.email.trim() || !form.firstName.trim() || !form.lastName.trim()}
+                     >
+                        {loading ? "Sending Invite..." : "Send Invite"}
+                     </button>
                   </div>
-               )}
-
-               <div className={styles.formActions}>
-                  <button
-                     type="button"
-                     onClick={handleCancel}
-                     className={styles.cancelButton}
-                     disabled={loading}
-                  >
-                     Cancel
-                  </button>
-                  <button
-                     type="submit"
-                     className={styles.submitButton}
-                     disabled={loading || !form.email.trim() || !form.firstName.trim() || !form.lastName.trim()}
-                  >
-                     {loading ? "Sending Invite..." : "Send Invite"}
-                  </button>
-               </div>
-            </form>
-         </Card>
-      </div>
+               </form>
+            </Card>
+         </div>
+      </PermissionGuard>
    );
 }

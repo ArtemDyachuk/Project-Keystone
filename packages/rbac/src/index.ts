@@ -2,7 +2,7 @@
 export type { RoleDefinition, ResourceRoles, RoleConfig, RoleOption } from "./types";
 
 // Export constants
-export { PERMISSIONS, ROLES_CONFIG } from "./roles.config";
+export { PERMISSIONS, ROLES_CONFIG, getAllResourcePermissions } from "./roles.config";
 
 // Export helper functions
 export {
