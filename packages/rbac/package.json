@@ -1,5 +1,5 @@
 {
-  "name": "@keystone/cms-rbac",
+  "name": "@keystone/rbac",
   "version": "0.0.1",
   "license": "AGPL-3.0",
   "description": "Role-based access control (RBAC) system for Keystone",

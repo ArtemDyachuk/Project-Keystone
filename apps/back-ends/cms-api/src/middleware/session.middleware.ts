@@ -25,8 +25,6 @@ export class SessionMiddleware implements NestMiddleware {
           req.user = session.user;
           req.sessionId = sessionId;
           this.logger.debug(`Session validated for user: ${session.user.uid}`);
-          this.logger.debug(`DEBUG: Set req.user = ${JSON.stringify(session.user)}`);
-          this.logger.debug(`DEBUG: Set req.sessionId = ${sessionId}`);
         } else {
           this.logger.debug(`Invalid session ID: ${sessionId}`);
         }

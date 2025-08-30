@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Req, Body, Param, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Req, Body, Param, HttpException, HttpStatus, UseGuards, Logger } from '@nestjs/common';
 import { Request } from 'express';
 
 // Extend Request interface to include user and sessionId
@@ -20,6 +20,8 @@ import type { CreateUserRequest, UpdateUserRequest } from '../services/user.serv
  */
 @Controller('user')
 export class UserController {
+  private readonly logger = new Logger(UserController.name);
+
   constructor(
     private readonly sessionService: SessionService,
     private readonly userService: UserService,
@@ -35,19 +37,15 @@ export class UserController {
   @Get('me')
   async getCurrentUser(@Req() request: RequestWithUser) {
     try {
-      // Debug: Log what we're actually receiving
-      console.log('🔍 DEBUG getCurrentUser:');
-      console.log('  - request.user:', request.user);
-      console.log('  - request.sessionId:', request.sessionId);
-      console.log('  - request.cookies:', request.cookies);
-      console.log('  - request.headers.cookie:', request.headers.cookie);
+      // Session middleware should have already validated the session
+      // and populated request.user and request.sessionId
 
       // Session middleware should have already validated the session
       // and populated request.user and request.sessionId
       if (!request.user?.uid) {
         return {
           success: false,
-          message: '❌ No session data found',
+          message: 'No session data found',
           note: 'You may not be logged in or session has expired',
           timestamp: new Date().toISOString(),
           authenticated: false,
@@ -69,7 +67,7 @@ export class UserController {
       };
 
     } catch (error) {
-      console.error('❌ Get current user failed:', error);
+      this.logger.error('Get current user failed', error);
 
       return {
         success: false,
@@ -117,7 +115,7 @@ export class UserController {
         }
       };
     } catch (error) {
-      console.error('❌ Get user profile failed:', error);
+      this.logger.error('Get user profile failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -149,16 +147,13 @@ export class UserController {
       }
 
       const users = await this.userService.getUsersInTenant(tenantId);
-      console.log('🔍 DEBUG getUsers:');
-      console.log('  - tenantId:', tenantId);
-      console.log('  - users result:', users);
 
       return {
         success: true,
         ...users
       };
     } catch (error) {
-      console.error('❌ Get users failed:', error);
+      this.logger.error('Get users failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -201,7 +196,7 @@ export class UserController {
         user
       };
     } catch (error) {
-      console.error('❌ Get user by ID failed:', error);
+      this.logger.error('Get user by ID failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -247,7 +242,7 @@ export class UserController {
         user
       };
     } catch (error) {
-      console.error('❌ Create user failed:', error);
+      this.logger.error('Create user failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -308,7 +303,7 @@ export class UserController {
         user
       };
     } catch (error) {
-      console.error('❌ Update user failed:', error);
+      this.logger.error('Update user failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -355,7 +350,7 @@ export class UserController {
         message: 'User roles updated successfully'
       };
     } catch (error) {
-      console.error('❌ Set user roles failed:', error);
+      this.logger.error('Set user roles failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -398,7 +393,7 @@ export class UserController {
         message: 'User deleted successfully'
       };
     } catch (error) {
-      console.error('❌ Delete user failed:', error);
+      this.logger.error('Delete user failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -451,7 +446,7 @@ export class UserController {
         }
       };
     } catch (error) {
-      console.error('❌ Send invite failed:', error);
+      this.logger.error('Send invite failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -497,7 +492,7 @@ export class UserController {
         message: 'Invite cancelled successfully'
       };
     } catch (error) {
-      console.error('❌ Cancel invite failed:', error);
+      this.logger.error('Cancel invite failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -547,7 +542,7 @@ export class UserController {
         targetUser: targetUid
       };
     } catch (error) {
-      console.error('❌ Failed to invalidate user sessions:', error);
+      this.logger.error('Failed to invalidate user sessions', error);
       return {
         success: false,
         message: 'Failed to invalidate user sessions',

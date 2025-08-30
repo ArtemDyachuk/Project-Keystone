@@ -87,7 +87,7 @@ export class AuthController {
         user
       };
     } catch (error) {
-      console.error('❌ Email verification failed:', error);
+      this.logger.error('Email verification failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -178,7 +178,7 @@ export class AuthController {
         }
       };
     } catch (error) {
-      console.error('❌ Set password failed:', error);
+      this.logger.error('Set password failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -286,7 +286,7 @@ export class AuthController {
         ...(process.env.NODE_ENV === 'development' && { resetLink })
       };
     } catch (error) {
-      console.error('❌ Forgot password failed:', error);
+      this.logger.error('Forgot password failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -427,7 +427,7 @@ export class AuthController {
         }
       };
     } catch (error) {
-      console.error('❌ Reset password failed:', error);
+      this.logger.error('Reset password failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -588,7 +588,7 @@ export class AuthController {
           }
         }
       } catch (error) {
-        console.log('Could not determine corporation or roles, will set to null/empty:', error);
+        this.logger.warn('Could not determine corporation or roles, will set to null/empty', error);
       }
 
       // Create session
@@ -734,7 +734,7 @@ export class AuthController {
         const deleted = await this.sessionService.deleteSession(sessionId);
         // Delete the CSRF token for this session
         await this.csrfService.deleteToken(sessionId);
-        console.log('🔄 Session and CSRF token deleted:', { sessionId, deleted });
+        this.logger.debug('Session and CSRF token deleted', { sessionId, deleted });
       }
 
       return {
@@ -742,7 +742,7 @@ export class AuthController {
         message: 'Logged out successfully'
       };
     } catch (error) {
-      console.error('❌ Logout failed:', error);
+      this.logger.error('Logout failed', error);
 
       return {
         success: true, // Always return success for logout
@@ -770,7 +770,7 @@ export class AuthController {
         message: `Currently ${sessionCounts.total} active sessions (Redis: ${sessionCounts.redis}, Memory: ${sessionCounts.memory})`
       };
     } catch (error) {
-      console.error('❌ Session debug failed:', error);
+      this.logger.error('Session debug failed', error);
       return {
         success: false,
         message: 'Failed to get session debug info'

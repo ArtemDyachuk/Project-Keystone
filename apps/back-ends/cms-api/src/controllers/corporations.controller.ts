@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req, Logger } from '@nestjs/common';
 import { Request } from 'express';
 import { Corporation, TenantMembership } from '@keystone/database';
 import { SessionService } from '../services/session.service';
@@ -18,6 +18,8 @@ export class UpdateCorporationDto {
 
 @Controller('corporations')
 export class CorporationsController {
+   private readonly logger = new Logger(CorporationsController.name);
+
    constructor(
       private readonly sessionService: SessionService,
       private readonly corporationService: CorporationService
@@ -159,7 +161,7 @@ export class CorporationsController {
             corporationId: id
          };
       } catch (error) {
-         console.error('❌ Select corporation failed:', error);
+         this.logger.error('Select corporation failed', error);
          if (error instanceof HttpException) {
             throw error;
          }
