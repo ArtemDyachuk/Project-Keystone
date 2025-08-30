@@ -1,6 +1,3 @@
-import { TenantService, connectToDatabase } from "@keystone/database";
-import { ITenant } from "@keystone/database";
-import { getUserDataFromJWT } from "@/lib/auth-utils";
 import { config } from "@/lib/config";
 import { getAuthCookies, setAuthCookiesInAction } from "@/lib/auth-cookies";
 
@@ -17,39 +14,51 @@ export interface SerializedTenant {
  */
 export class TenantServiceClient {
   /**
-   * Ensure database connection is established
+   * Ensure backend API is accessible
    */
   private static async ensureConnection() {
     try {
-      await connectToDatabase();
+      const response = await fetch(`${config.apiBaseUrl}/api/health`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend API returned ${response.status}`);
+      }
     } catch (error) {
-      console.error("Failed to connect to database:", error);
-      throw new Error("Database connection failed");
+      console.error("Failed to connect to backend API:", error);
+      throw new Error("Backend API connection failed");
     }
   }
 
-  /**
-   * Convert MongoDB object to plain object for React serialization
-   */
-  private static serializeTenant(tenant: ITenant): SerializedTenant {
-    return {
-      _id: tenant._id?.toString() || "",
-      name: tenant.name,
-      createdAt: tenant.createdAt,
-      updatedAt: tenant.updatedAt,
-    };
-  }
+
 
   /**
-   * Get tenants by their IDs
+   * Get tenants by their IDs via backend API
    * @param tenantIds Array of tenant IDs to fetch
    * @returns Promise<Tenant[]> Array of tenant objects
    */
   static async getTenantsByIds(tenantIds: string[]): Promise<SerializedTenant[]> {
     try {
       await this.ensureConnection();
-      const tenants = await TenantService.getTenantsByIds(tenantIds);
-      return tenants.map(tenant => this.serializeTenant(tenant));
+
+      // Call backend API to get tenants
+      const response = await fetch(`${config.apiBaseUrl}/api/tenants/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tenantIds }),
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.tenants || [];
     } catch (error) {
       console.error("Failed to fetch tenants by IDs:", error);
       throw new Error(`Failed to fetch tenants: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -57,7 +66,7 @@ export class TenantServiceClient {
   }
 
   /**
-   * Get a single tenant by ID with user access validation
+   * Get a single tenant by ID via backend API
    * @param tenantId The tenant ID to fetch
    * @returns Promise<Tenant | null> Tenant object or null if not found/unauthorized
    */
@@ -65,20 +74,21 @@ export class TenantServiceClient {
     try {
       await this.ensureConnection();
 
-      // SECURITY: Validate user has access to this tenant
-      const userData = await getUserDataFromJWT();
-      if (!userData?.tenantIds || !userData.tenantIds.includes(tenantId)) {
-        console.warn(`Unauthorized tenant access attempt blocked for user: ${userData?.username || 'unknown'}`);
-        return null; // Return null instead of throwing error to avoid information disclosure
+      // Call backend API to get tenant
+      const response = await fetch(`${config.apiBaseUrl}/api/tenants/${tenantId}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`Backend API returned ${response.status}`);
       }
 
-      const tenant = await TenantService.getTenantById(tenantId);
-
-      if (!tenant) {
-        return null;
-      }
-
-      return this.serializeTenant(tenant);
+      const data = await response.json();
+      return data.tenant || null;
     } catch (error) {
       console.error("Failed to fetch tenant by ID:", error);
       throw new Error(`Failed to fetch tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -91,7 +101,7 @@ export class TenantServiceClient {
    * @param updates Tenant data to update (any fields)
    * @returns Promise<SerializedTenant | null> Updated tenant or null if failed
    */
-  static async updateTenant(tenantId: string, updates: Record<string, any>): Promise<SerializedTenant | null> {
+  static async updateTenant(tenantId: string, updates: Record<string, string | number | boolean | Date | null | undefined>): Promise<SerializedTenant | null> {
     try {
       // Get tokens from HTTP-only cookies
       const { accessToken, refreshToken } = await getAuthCookies();
@@ -125,8 +135,8 @@ export class TenantServiceClient {
         await setAuthCookiesInAction(result.tokens);
       }
 
-      // Convert the result to our serialized format
-      return this.serializeTenant(result);
+      // Return the result directly since it's already in the correct format
+      return result;
     } catch (error) {
       console.error("Failed to update tenant via API:", error);
       throw new Error(`Failed to update tenant: ${error instanceof Error ? error.message : 'Unknown error'}`);

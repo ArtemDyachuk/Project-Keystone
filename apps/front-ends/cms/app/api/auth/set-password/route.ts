@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { config } from "@/lib/config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call our backend set-password endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/set-password`, {
+    const response = await fetch(`${config.apiBaseUrl}/api/auth/set-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

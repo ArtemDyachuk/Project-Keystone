@@ -3,6 +3,7 @@ import { SignupService } from "./signup.service";
 import { TenantService } from "./tenant.service";
 import { UserService } from "./user.service";
 import { FirebaseServerClient } from "@keystone/auth";
+import { SignupVerification, Tenant, TenantMembership } from "@keystone/database";
 
 export interface CreateInviteDto {
    email: string;
@@ -67,7 +68,6 @@ export class InviteService {
          }
 
          // Get the tenant information from the verification record
-         const { Tenant } = await import("@keystone/database");
          const inviterTenant = await Tenant.findById(verificationData.tenantId);
 
          if (!inviterTenant?.gipTenantId) {
@@ -148,7 +148,6 @@ export class InviteService {
          if (uid.startsWith('invite-')) {
             // This is a pending invite, just delete the verification record
             const inviteId = uid.replace('invite-', '');
-            const { SignupVerification } = await import("@keystone/database");
             
             const deleted = await SignupVerification.findByIdAndDelete(inviteId);
             if (deleted) {
@@ -160,7 +159,6 @@ export class InviteService {
          }
 
          // This is an active user, proceed with Firebase deletion
-         const { Tenant } = await import("@keystone/database");
          const tenant = await Tenant.findById(tenantId);
          if (!tenant?.gipTenantId) {
             throw new HttpException("Tenant not found", HttpStatus.NOT_FOUND);
@@ -177,7 +175,6 @@ export class InviteService {
          await this.firebaseClient.deleteUser(uid, tenant.gipTenantId);
 
          // Remove TenantMembership if it exists
-         const { TenantMembership } = await import("@keystone/database");
          await TenantMembership.findOneAndDelete({
             userId: uid,
             tenantId: tenant._id

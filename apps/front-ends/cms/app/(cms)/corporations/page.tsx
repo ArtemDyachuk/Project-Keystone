@@ -1,5 +1,6 @@
 import { getCurrentUserServer } from "@/lib/sessions/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 interface Corporation {
@@ -70,12 +71,12 @@ export default async function CorporationsPage() {
                            </p>
                         </div>
                         <div className={styles.corporationActions}>
-                           <a
+                           <Link
                               href={`/corporations/${corporation._id || 'unknown'}`}
                               className={styles.manageButton}
                            >
                               ⚙️ Manage
-                           </a>
+                           </Link>
                         </div>
                      </div>
                   ))}
@@ -84,9 +85,9 @@ export default async function CorporationsPage() {
          </div>
 
          <div className={styles.createSection}>
-            <a href="/corporations/create" className={styles.createButton}>
+            <Link href="/corporations/create" className={styles.createButton}>
                ➕ Create New Corporation
-            </a>
+            </Link>
          </div>
       </div>
    );

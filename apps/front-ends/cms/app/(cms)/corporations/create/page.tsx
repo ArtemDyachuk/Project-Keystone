@@ -57,9 +57,9 @@ export default async function CreateCorporationPage() {
       <div className={styles.container}>
          <div className={styles.header}>
             <div className={styles.breadcrumb}>
-               <a href="/corporations" className={styles.breadcrumbLink}>
+               <Link href="/corporations" className={styles.breadcrumbLink}>
                   ← Corporations
-               </a>
+               </Link>
             </div>
             <h1>🏢 Create Corporation</h1>
             <p>Create a new corporation in your organization.</p>

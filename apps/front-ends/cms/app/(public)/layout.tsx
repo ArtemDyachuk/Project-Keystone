@@ -1,5 +1,6 @@
 import { PublicNavigation } from '../components/navigation';
 import { getCurrentUserServer } from '@/lib/sessions/server';
+import type { UserData } from '@/lib/auth-utils';
 
 export default async function PublicLayout({
   children,
@@ -10,11 +11,12 @@ export default async function PublicLayout({
   const sessionUser = await getCurrentUserServer();
 
   // Map to the shape expected by PublicNavigation (it uses displayName/email)
-  const userForNav = sessionUser
-    ? ({
+  const userForNav: UserData | null = sessionUser
+    ? {
+      sub: sessionUser.uid,
       email: sessionUser.email,
-      displayName: sessionUser.displayName,
-    } as any)
+      displayName: sessionUser.displayName || undefined,
+    }
     : null;
 
   return (

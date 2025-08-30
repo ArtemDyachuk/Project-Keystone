@@ -1,15 +1,17 @@
 import styles from "./dashboard.module.css";
 import { getCurrentUserServer } from "@/lib/sessions/server";
+import type { CurrentUser } from "@/lib/sessions/utils";
+import type { Corporation } from "@/app/components/corporations/types";
 
 // Force dynamic rendering since layout uses cookies
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   // Fetch real session data via server-side cookie forwarding
-  let userData = null as any;
-  let error = null as any;
-  let userCorporations = [] as any[];
-  let selectedCorporation = null as any;
+  let userData: CurrentUser | null = null;
+  let error: string | null = null;
+  let userCorporations: Corporation[] = [];
+  let selectedCorporation: Corporation | null = null;
 
   try {
     userData = await getCurrentUserServer();
@@ -31,7 +33,7 @@ export default async function DashboardPage() {
       if (response.ok) {
         const data = await response.json();
         userCorporations = data.corporations || [];
-        selectedCorporation = userCorporations.find((c: any) => c._id === userData.selectedCorporationId) || null;
+        selectedCorporation = userCorporations.find((c: Corporation) => c._id === userData?.selectedCorporationId) || null;
       }
     }
   } catch (err) {

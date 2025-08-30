@@ -8,62 +8,19 @@ import { InviteService } from '../services/invite.service';
 import { TenantService } from '../services/tenant.service';
 import { SignupService } from '../services/signup.service';
 import { Logger } from '@nestjs/common';
+import {
+  SignupWithEmailLinkDto,
+  LoginDto,
+  VerifyEmailDto,
+  SetPasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  InitiateSignupDto,
+  VerifySignupTokenDto,
+  CompleteInviteDto
+} from '../dto/auth.dto';
 
-// DTOs for request validation
-export class SignupWithEmailLinkDto {
-  firstName!: string;
-  lastName!: string;
-  email!: string;
-  companyName!: string;
-}
-
-export class InitiateSignupDto {
-  email!: string;
-  companyName!: string;
-  firstName!: string;
-  lastName!: string;
-}
-
-export class VerifySignupTokenDto {
-  token!: string;
-}
-
-
-
-export class CompleteInviteDto {
-  token!: string;
-  password!: string;
-}
-
-export class VerifyEmailDto {
-  uid!: string;
-  tenantId!: string;
-}
-
-export class SetPasswordDto {
-  uid!: string;
-  password!: string;
-  tenantId?: string;
-}
-
-
-
-export class ForgotPasswordDto {
-  email!: string;
-  tenantId?: string;
-}
-
-export class ResetPasswordDto {
-  email!: string;
-  password!: string;
-  oobCode!: string;
-  tenantId?: string;
-}
-
-export class LoginDto {
-  email!: string;
-  password!: string;
-}
+// DTOs are now imported from ../dto/auth.dto
 
 @Controller('auth')
 export class AuthController {
@@ -87,59 +44,25 @@ export class AuthController {
    */
   @Post('signup-email-link')
   async signupWithEmailLink(@Body() signupDto: SignupWithEmailLinkDto) {
-    try {
-      // Validate input
-      if (!signupDto.firstName?.trim()) {
-        throw new HttpException('First name is required', HttpStatus.BAD_REQUEST);
-      }
+    // Validation is now handled by DTOs with class-validator
+    // Error handling is now handled by global exception filter
+    // Response formatting is now handled by response interceptor
 
-      if (!signupDto.lastName?.trim()) {
-        throw new HttpException('Last name is required', HttpStatus.BAD_REQUEST);
-      }
+    await this.signupService.initiateSignup({
+      email: signupDto.email.trim().toLowerCase(),
+      companyName: signupDto.companyName.trim(),
+      firstName: signupDto.firstName.trim(),
+      lastName: signupDto.lastName.trim(),
+    });
 
-      if (!signupDto.email?.trim()) {
-        throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
-      }
-
-      if (!signupDto.companyName?.trim()) {
-        throw new HttpException('Company name is required', HttpStatus.BAD_REQUEST);
-      }
-
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(signupDto.email)) {
-        throw new HttpException('Please enter a valid email address', HttpStatus.BAD_REQUEST);
-      }
-
-      // Use the new unified SignupService instead of old logic
-      await this.signupService.initiateSignup({
+    return {
+      message: 'Signup verification email sent! Please check your email and click the verification link.',
+      data: {
         email: signupDto.email.trim().toLowerCase(),
         companyName: signupDto.companyName.trim(),
-        firstName: signupDto.firstName.trim(),
-        lastName: signupDto.lastName.trim(),
-      });
-
-      return {
-        success: true,
-        message: 'Signup verification email sent! Please check your email and click the verification link.',
-        data: {
-          email: signupDto.email.trim().toLowerCase(),
-          companyName: signupDto.companyName.trim(),
-          expiresAt: new Date(Date.now() + (15 * 60 * 1000)).toISOString(), // 15 minutes from now
-        }
-      };
-    } catch (error) {
-      console.error('❌ Signup with email link failed:', error);
-
-      if (error instanceof HttpException) {
-        throw error;
+        expiresAt: new Date(Date.now() + (15 * 60 * 1000)).toISOString(), // 15 minutes from now
       }
-
-      throw new HttpException(
-        'Failed to start signup process. Please try again.',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+    };
   }
 
   /**

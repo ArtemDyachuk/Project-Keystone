@@ -1,5 +1,6 @@
 import { getCurrentUserServer } from "@/lib/sessions/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { TenantManagement } from "@/components/tenants";
 import styles from "./page.module.css";
 
@@ -50,9 +51,9 @@ export default async function TenantPage({ params }: TenantPageProps) {
         <div className={styles.error}>
           <h1>Tenant Not Found</h1>
           <p>The tenant you're looking for doesn't exist or you don't have access to it.</p>
-          <a href="/tenants" className={styles.backButton}>
+          <Link href="/tenants" className={styles.backButton}>
             ← Back to Tenants
-          </a>
+          </Link>
         </div>
       </div>
     );

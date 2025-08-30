@@ -1,5 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Req, Body, Param, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+
+// Extend Request interface to include user and sessionId
+interface RequestWithUser extends Request {
+  user?: any;
+  sessionId?: string;
+}
 import { SessionService } from '../services/session.service';
 import { SessionGuard } from '../guards/session.guard';
 import { UserService } from '../services/user.service';
@@ -26,59 +32,40 @@ export class UserController {
    * Get current user data with session recovery
    * GET /user/me
    */
-  @UseGuards(SessionGuard)
   @Get('me')
-  async getCurrentUser(@Req() request: Request & { user?: any; sessionId?: string }) {
+  async getCurrentUser(@Req() request: RequestWithUser) {
     try {
+      // Debug: Log what we're actually receiving
+      console.log('🔍 DEBUG getCurrentUser:');
+      console.log('  - request.user:', request.user);
+      console.log('  - request.sessionId:', request.sessionId);
+      console.log('  - request.cookies:', request.cookies);
+      console.log('  - request.headers.cookie:', request.headers.cookie);
 
-      // Get sessionId from HttpOnly cookie
-      const sessionId = request.cookies?.session;
-
-      if (!sessionId) {
+      // Session middleware should have already validated the session
+      // and populated request.user and request.sessionId
+      if (!request.user?.uid) {
         return {
           success: false,
-          message: 'No active session',
+          message: '❌ No session data found',
+          note: 'You may not be logged in or session has expired',
+          timestamp: new Date().toISOString(),
           authenticated: false,
           debug: {
+            user: request.user,
+            sessionId: request.sessionId,
             cookiesReceived: request.cookies,
             cookieHeader: request.headers.cookie
           }
         };
       }
 
-      // Try to get existing session first
-      const sessionData = await this.sessionService.getSession(sessionId);
-
-      // console.log('🍪 Session data:', sessionData);
-
-      if (sessionData) {
-        // Session exists and is valid
-        return {
-          success: true,
-          authenticated: true,
-          user: sessionData.user,
-          sessionId: sessionData.sessionId
-        };
-      }
-
-      // Session doesn't exist or expired - try to recover from Firebase
-      console.log('🔄 Session not found, attempting recovery for sessionId:', sessionId);
-
-      // In a proper implementation, we'd validate the sessionId format or store it in database
-      // For now, we'll assume any cookie with "session" name is legitimate but expired
-      // This means user was logged in but backend restarted and lost the session
-
-      // Since we can't recover without additional info, we need the user to login again
-      // But we can provide a better error message
+      // Session is valid and user data is available
       return {
-        success: false,
-        message: 'Session expired due to server restart. Please login again.',
-        authenticated: false,
-        needsReauth: true,
-        debug: {
-          sessionId: sessionId.substring(0, 8) + '...', // Partial ID for debugging
-          reason: 'Session not found in memory (likely server restart)'
-        }
+        success: true,
+        authenticated: true,
+        user: request.user,
+        sessionId: request.sessionId
       };
 
     } catch (error) {
@@ -147,27 +134,25 @@ export class UserController {
    * Get all users in the current tenant
    * GET /user/users
    */
-  @UseGuards(SessionGuard)
   @Get('users')
-  async getUsers(@Req() request: Request & { user?: any; sessionId?: string }) {
+  async getUsers(@Req() request: RequestWithUser) {
     try {
-      const sessionId = request.cookies?.session;
-      if (!sessionId) {
+      // Session middleware already validated the session and set request.user
+      if (!request.user?.uid) {
         throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
       }
 
-      const sessionData = await this.sessionService.getSession(sessionId);
-      if (!sessionData) {
-        throw new HttpException('Invalid or expired session', HttpStatus.UNAUTHORIZED);
-      }
-
-      // Get tenant ID directly from user's session
-      const tenantId = sessionData.user.tenantId;
+      // Get tenant ID directly from the validated user data
+      const tenantId = request.user.tenantId;
       if (!tenantId) {
         throw new HttpException('User not associated with a tenant', HttpStatus.BAD_REQUEST);
       }
 
       const users = await this.userService.getUsersInTenant(tenantId);
+      console.log('🔍 DEBUG getUsers:');
+      console.log('  - tenantId:', tenantId);
+      console.log('  - users result:', users);
+
       return {
         success: true,
         ...users
@@ -192,7 +177,7 @@ export class UserController {
    */
   @UseGuards(SessionGuard)
   @Get('users/:id')
-  async getUserById(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }) {
+  async getUserById(@Param('id') id: string, @Req() request: RequestWithUser) {
     try {
       const sessionId = request.cookies?.session;
       if (!sessionId) {

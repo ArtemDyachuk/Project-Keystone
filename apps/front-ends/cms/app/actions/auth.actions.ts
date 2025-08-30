@@ -3,6 +3,7 @@
 import { AuthServiceClient } from "@/app/services/auth.service";
 import { setSessionCookie, deleteSessionCookie, setCSRFCookie, deleteCSRFCookie } from "@/lib/sessions/cookies";
 import { redirect } from "next/navigation";
+import { config } from "@/lib/config";
 
 export interface SignupWithEmailLinkData {
   firstName: string;
@@ -155,7 +156,7 @@ export async function setPasswordAction(data: SetPasswordData) {
       // Auto-login the user after setting password
       try {
         // Call the login endpoint to create a session
-        const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        const loginResponse = await fetch(`${config.apiBaseUrl}/api/auth/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -182,7 +183,7 @@ export async function setPasswordAction(data: SetPasswordData) {
           if (loginResult.user?.uid) {
             console.log("🔍 Checking tenant requirement for user:", loginResult.user.uid);
 
-            const tenantResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/check-requirement`, {
+            const tenantResponse = await fetch(`${config.apiBaseUrl}/api/tenants/check-requirement`, {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
@@ -345,11 +346,25 @@ export async function loginAction(email: string, password: string, redirectUrl: 
       };
     }
 
-    // Call the auth service
-    const result = await AuthServiceClient.login({ email, password });
+    // Make direct API call to backend
+    const response = await fetch(`${config.apiBaseUrl}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      }),
+    });
 
-    if (!result.success) {
-      return result;
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.message || "Login failed"
+      };
     }
 
     // Set HttpOnly session cookie and CSRF token cookie
@@ -361,10 +376,20 @@ export async function loginAction(email: string, password: string, redirectUrl: 
       await setCSRFCookie(result.csrfToken);
     }
 
+    // For server-side Redis sessions, we just need to set the basic cookie
+    // The backend will handle all session validation
+    console.log('✅ Session cookies set for Redis session:', {
+      sessionId: result.sessionId ? result.sessionId.substring(0, 8) + '...' : 'not set',
+      csrfToken: result.csrfToken ? result.csrfToken.substring(0, 8) + '...' : 'not set'
+    });
+
+    // Small delay to ensure cookies are committed
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     // Check if user needs to create a tenant
     if (result.user?.uid) {
       // Make a direct API call to check tenant requirement
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/check-requirement`, {
+      const response = await fetch(`${config.apiBaseUrl}/api/tenants/check-requirement`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -404,7 +429,7 @@ export async function loginAction(email: string, password: string, redirectUrl: 
 export async function logoutAction() {
   try {
     // Call backend to destroy session
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
+    await fetch(`${config.apiBaseUrl}/api/auth/logout`, {
       method: "POST",
       credentials: 'include', // Include cookies
     });
@@ -437,7 +462,7 @@ export async function logoutAction() {
  */
 export async function autoLogin(request: AutoLoginRequest) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+    const response = await fetch(`${config.apiBaseUrl}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

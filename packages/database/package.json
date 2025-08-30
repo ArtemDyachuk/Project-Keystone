@@ -1,7 +1,7 @@
 {
-  "name": "@keystone/database",
+  "name": "@keystone/cms-database",
   "version": "0.0.1",
-  "private": true,
+  "license": "AGPL-3.0",
   "description": "Shared MongoDB database connection and utilities",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

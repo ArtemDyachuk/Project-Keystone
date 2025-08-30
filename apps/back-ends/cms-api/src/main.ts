@@ -1,9 +1,18 @@
+/**
+ * @license
+ * Copyright (c) 2024 Project Keystone
+ * Licensed under the GNU Affero General Public License v3.0
+ * See LICENSE file for full license text
+ */
+
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { GlobalExceptionFilter } from './filters/global-exception.filter';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   // Simple environment validation - only check critical vars
@@ -13,6 +22,14 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+
+  // Add global filters and validation
+  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
 
   // Trust proxy headers (environment-aware)
   // Production: Client → Cloudflare → Render → Your App = 2 hops

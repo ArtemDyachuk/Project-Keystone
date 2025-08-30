@@ -1,5 +1,6 @@
 import { getCurrentUserServer } from "@/lib/sessions/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 interface Tenant {
@@ -69,12 +70,12 @@ export default async function TenantsPage() {
                   </p>
                 </div>
                 <div className={styles.tenantActions}>
-                  <a
+                  <Link
                     href={`/tenants/${tenant._id || 'unknown'}`}
                     className={styles.manageButton}
                   >
                     ⚙️ Manage
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -83,9 +84,9 @@ export default async function TenantsPage() {
       </div>
 
       <div className={styles.createSection}>
-        <a href="/tenants/create" className={styles.createButton}>
+        <Link href="/tenants/create" className={styles.createButton}>
           ➕ Create New Organization
-        </a>
+        </Link>
       </div>
     </div>
   );

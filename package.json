@@ -1,7 +1,7 @@
 {
   "name": "@keystone/source",
   "version": "0.0.1",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0",
   "scripts": {
     "build": "turbo build",
     "build:safe": "npm test && turbo build",

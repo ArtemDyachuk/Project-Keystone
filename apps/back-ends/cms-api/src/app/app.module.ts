@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +18,7 @@ import { InviteService } from '../services/invite.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 import { SessionGuard } from '../guards/session.guard';
 import { SignupService } from "../services/signup.service";
+import { SessionMiddleware } from '../middleware/session.middleware';
 
 @Module({
   imports: [
@@ -42,4 +43,10 @@ import { SignupService } from "../services/signup.service";
     SignupService,
   ],
 })
-export class AppModule { }
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SessionMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}

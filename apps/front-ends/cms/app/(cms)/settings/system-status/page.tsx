@@ -1,7 +1,6 @@
 import styles from './page.module.css';
 import { config } from '../../../../lib/config';
 import ConnectionTest from '../../../components/ConnectionTest';
-import { connectToDatabase } from '@keystone/database';
 
 export default async function SystemStatusPage() {
   // Server-side data fetching using shared TenantService
@@ -14,16 +13,22 @@ export default async function SystemStatusPage() {
 
   const startTime = Date.now();
   try {
-    // Connect to database - removed tenant count for security
-    // In multi-tenant systems, public pages should not expose tenant information
-    await connectToDatabase();
+    // Test backend API connection instead of direct database access
+    const response = await fetch(`${config.apiBaseUrl}/api/health`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
 
-    serverSideData = {
-      success: true,
-      tenantCount: 0, // Hidden for security in multi-tenant system
-      responseTime: Date.now() - startTime,
-      error: null
-    };
+    if (response.ok) {
+      serverSideData = {
+        success: true,
+        tenantCount: 0, // Hidden for security in multi-tenant system
+        responseTime: Date.now() - startTime,
+        error: null
+      };
+    } else {
+      throw new Error(`Backend API returned ${response.status}`);
+    }
   } catch (error) {
     serverSideData = {
       success: false,
@@ -40,8 +45,8 @@ export default async function SystemStatusPage() {
       <div className={styles.grid}>
         {/* Server-side data fetching result */}
         <div className={styles.card}>
-          <h2>🗄️ Server-Side Database Test</h2>
-          <p>Direct database access from server component using shared TenantService:</p>
+          <h2>🗄️ Backend API Connection Test</h2>
+          <p>Testing connection to the backend API:</p>
           <div style={{
             padding: '1rem',
             backgroundColor: serverSideData.success ? '#f0f9ff' : '#fef2f2',
@@ -56,7 +61,7 @@ export default async function SystemStatusPage() {
               <p style={{ color: '#ef4444' }}><strong>Error:</strong> {serverSideData.error}</p>
             )}
             <small style={{ color: '#6b7280' }}>
-              💡 This data was fetched on the server using the shared @keystone/database package
+              💡 This data was fetched by testing the backend API connection
             </small>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUserServer } from "@/lib/sessions/server";
+import { config } from "@/lib/config";
 
 export interface UpdateUserRequest {
   displayName?: string | null;
@@ -24,7 +25,7 @@ export async function updateUserAction(userId: string, data: UpdateUserRequest) 
     }
 
     // Call the user service to update the user
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${userId}`, {
+    const response = await fetch(`${config.apiBaseUrl}/api/user/${userId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -62,7 +63,7 @@ export async function getUserAction(userId: string) {
       throw new Error("Unauthorized: Can only view your own account");
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${userId}`, {
+    const response = await fetch(`${config.apiBaseUrl}/api/user/${userId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { Corporation } from "../../corporations/types";
 import { updateSelectedCorporationAndRedirect } from "@/app/actions/corporation.actions";
 import { FullPageLoader } from "@/app/components/loaders";
@@ -122,9 +123,9 @@ export function TenantSwitcherClient({ selectedCorporation, userCorporations }: 
 
             {/* Footer */}
             <div className={styles.dropdownFooter}>
-              <a href="/corporations" className={styles.manageButton}>
+              <Link href="/corporations" className={styles.manageButton}>
                 Manage Corporations
-              </a>
+              </Link>
             </div>
           </div>
         )}

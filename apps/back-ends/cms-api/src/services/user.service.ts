@@ -1,6 +1,6 @@
 import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { FirebaseServerClient } from '@keystone/auth';
-import { Tenant, TenantMembership, SignupVerification } from '@keystone/database';
+import { Tenant, TenantMembership, SignupVerification, ISignupVerification } from '@keystone/database';
 import { Types } from 'mongoose';
 import { SessionService } from './session.service';
 
@@ -173,7 +173,7 @@ export class UserService {
       });
 
       // Transform pending invites to user format
-      const inviteUsers = pendingInvites.map(invite => ({
+      const inviteUsers = pendingInvites.map((invite: ISignupVerification) => ({
         uid: `invite-${invite._id?.toString() || 'unknown'}`, // Temporary ID for invites
         email: invite.email,
         emailVerified: false,

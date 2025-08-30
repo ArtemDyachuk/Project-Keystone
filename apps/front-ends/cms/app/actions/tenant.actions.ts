@@ -196,7 +196,7 @@ export async function createTenant(name: string) {
  * Server action to update tenant
  * Takes tenantId and updateData object, returns result
  */
-export async function updateTenant(tenantId: string, updateData: Record<string, any>) {
+export async function updateTenant(tenantId: string, updateData: Record<string, string | number | boolean | Date | null | undefined>) {
   try {
     if (!tenantId) {
       throw new Error("Tenant ID is required");

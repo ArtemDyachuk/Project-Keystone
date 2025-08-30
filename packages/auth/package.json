@@ -1,7 +1,7 @@
 {
-  "name": "@keystone/auth",
+  "name": "@keystone/cms-auth",
   "version": "0.0.1",
-  "private": true,
+  "license": "AGPL-3.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",

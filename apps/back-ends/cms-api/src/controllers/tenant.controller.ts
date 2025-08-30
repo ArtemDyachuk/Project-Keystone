@@ -1,6 +1,12 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, Headers, UnauthorizedException, UseGuards, Req } from '@nestjs/common';
 import { Request } from 'express';
-import { TenantService as DatabaseTenantService } from '@keystone/database';
+
+// Extend Request interface to include user and sessionId
+interface RequestWithUser extends Request {
+  user?: any;
+  sessionId?: string;
+}
+import { TenantService as DatabaseTenantService, TenantMembership, Corporation, Tenant } from '@keystone/database';
 import { SessionGuard } from '../guards/session.guard';
 import { TenantService, CreateTenantRequest } from '../services/tenant.service';
 import { SessionService } from '../services/session.service';
@@ -49,7 +55,7 @@ export class TenantController {
    */
   @UseGuards(SessionGuard)
   @Get('check-requirement')
-  async checkTenantRequirement(@Req() request: Request & { user?: any; sessionId?: string }) {
+  async checkTenantRequirement(@Req() request: RequestWithUser) {
     try {
       if (!request.user?.uid) {
         throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
@@ -82,14 +88,13 @@ export class TenantController {
    */
   @Get(':id')
   @UseGuards(SessionGuard)
-  async getTenantById(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }): Promise<any> {
+  async getTenantById(@Param('id') id: string, @Req() request: RequestWithUser): Promise<any> {
     try {
       if (!request.user?.uid) {
         throw new HttpException("Authentication required", HttpStatus.UNAUTHORIZED);
       }
 
       // Check if user has access to this tenant via TenantMembership
-      const { TenantMembership } = await import('@keystone/database');
       const membership = await TenantMembership.findOne({
         userId: request.user.uid,
         tenantId: id,
@@ -242,8 +247,6 @@ export class TenantController {
       }
 
       // Get user's tenant memberships
-      const { TenantMembership } = await import('@keystone/database');
-
       const memberships = await TenantMembership.find({
         userId: request.user.uid,
         isActive: true
@@ -257,7 +260,6 @@ export class TenantController {
       }
 
       // Get corporations for each tenant
-      const { Corporation } = await import('@keystone/database');
       const tenantIds = memberships.map(m => m.tenantId);
       const corporations = await Corporation.find({
         tenantId: { $in: tenantIds }
@@ -294,8 +296,6 @@ export class TenantController {
       }
 
       // Get user's tenant memberships
-      const { TenantMembership } = await import('@keystone/database');
-
       const memberships = await TenantMembership.find({
         userId: request.user.uid,
         isActive: true
@@ -308,7 +308,6 @@ export class TenantController {
       }
 
       // Get full tenant details for each membership
-      const { Tenant } = await import('@keystone/database');
       const tenantIds = memberships.map(m => m.tenantId);
       
       const tenants = await Tenant.find({
@@ -344,7 +343,6 @@ export class TenantController {
       }
 
       // Check if user has access to this tenant via TenantMembership
-      const { TenantMembership } = await import('@keystone/database');
       const membership = await TenantMembership.findOne({
         userId: request.user.uid,
         tenantId: id,
@@ -403,7 +401,6 @@ export class TenantController {
       }
 
       // Check if user has access to this tenant via TenantMembership
-      const { TenantMembership } = await import('@keystone/database');
       const membership = await TenantMembership.findOne({
         userId: request.user.uid,
         tenantId: id,

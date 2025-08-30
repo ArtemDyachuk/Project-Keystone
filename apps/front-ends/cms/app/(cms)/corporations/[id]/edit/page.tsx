@@ -1,5 +1,6 @@
 import { getCurrentUserServer } from "@/lib/sessions/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { updateCorporation } from "@/app/actions/corporation.actions";
 import { DeleteCorporationButton } from "@/app/components/corporations/DeleteCorporationButton";
 import styles from "./page.module.css";
@@ -51,9 +52,9 @@ export default async function EditCorporationPage({ params }: EditCorporationPag
         <div className={styles.error}>
           <h1>Corporation Not Found</h1>
           <p>The corporation you're looking for doesn't exist or you don't have access to it.</p>
-          <a href="/corporations" className={styles.backButton}>
+          <Link href="/corporations" className={styles.backButton}>
             ← Back to Corporations
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -63,13 +64,13 @@ export default async function EditCorporationPage({ params }: EditCorporationPag
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.breadcrumb}>
-          <a href="/corporations" className={styles.breadcrumbLink}>
+          <Link href="/corporations" className={styles.breadcrumbLink}>
             ← Corporations
-          </a>
+          </Link>
           <span className={styles.separator}>/</span>
-          <a href={`/corporations/${id}`} className={styles.breadcrumbLink}>
+          <Link href={`/corporations/${id}`} className={styles.breadcrumbLink}>
             {corporation.name}
-          </a>
+          </Link>
         </div>
         <h1>✏️ Edit Corporation</h1>
         <p>Update corporation information and settings.</p>
@@ -141,9 +142,9 @@ function EditCorporationForm({ corporation }: { corporation: Corporation }) {
         <button type="submit" className={styles.saveButton}>
           💾 Save Changes
         </button>
-        <a href={`/corporations/${corporation._id}`} className={styles.cancelButton}>
+        <Link href={`/corporations/${corporation._id}`} className={styles.cancelButton}>
           Cancel
-        </a>
+        </Link>
         <DeleteCorporationButton
           corporationId={corporation._id}
           corporationName={corporation.name}

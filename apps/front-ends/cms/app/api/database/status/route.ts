@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
-import { initializeDatabase, getDatabaseStatus } from "../../../../lib/database";
+import { config } from "../../../../lib/config";
 
 export async function GET() {
   try {
-    // Initialize database connection if not already done
-    await initializeDatabase();
-    
-    const status = getDatabaseStatus();
-    
-    return NextResponse.json({
-      status: "ok",
-      database: status,
-      timestamp: new Date().toISOString()
+    // Test backend API connection instead of direct database access
+    const response = await fetch(`${config.apiBaseUrl}/api/health`, {
+      method: 'GET',
+      cache: 'no-store',
     });
+
+    if (response.ok) {
+      return NextResponse.json({
+        status: "ok",
+        database: {
+          connected: true
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      throw new Error(`Backend API returned ${response.status}`);
+    }
   } catch (error) {
     console.error("Database status check failed:", error);
     

@@ -76,7 +76,15 @@ SignupVerificationSchema.index({ token: 1, type: 1 });
 SignupVerificationSchema.index({ email: 1, type: 1 });
 SignupVerificationSchema.index({ tenantId: 1, type: 1 }); // Add tenant separation index
 
-export const SignupVerification = model<ISignupVerification>(
-  "SignupVerification",
-  SignupVerificationSchema
-);
+// Safe model compilation - check if model already exists
+let SignupVerification: any;
+
+try {
+  // Try to get existing model first
+  SignupVerification = model("SignupVerification");
+} catch {
+  // If model doesn't exist, compile it
+  SignupVerification = model<ISignupVerification>("SignupVerification", SignupVerificationSchema);
+}
+
+export { SignupVerification };

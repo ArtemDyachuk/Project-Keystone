@@ -2,6 +2,7 @@ import { Sidebar, CMSNavigation } from "@/app/components/navigation";
 import { Footer } from "@/app/components/navigation/Footer/Footer";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { getCurrentUserServer } from "@/lib/sessions/server";
+import type { Corporation } from "@/app/components/corporations/types";
 // import { TenantServiceClient } from "@/app/services";
 import styles from "./styles.module.css";
 
@@ -17,8 +18,8 @@ export default async function DashboardLayout({
   const userData = await getCurrentUserServer();
 
   // Get user's corporations from database
-  let userCorporations: Array<{ _id: string; name: string }> = [];
-  let selectedCorporation: { _id: string; name: string } | null = null;
+  let userCorporations: Corporation[] = [];
+  let selectedCorporation: Corporation | null = null;
 
   if (userData) {
     try {
@@ -37,7 +38,7 @@ export default async function DashboardLayout({
       if (response.ok) {
         const data = await response.json();
         userCorporations = data.corporations || [];
-        selectedCorporation = userCorporations.find((c: any) => c._id === userData.selectedCorporationId) || null;
+        selectedCorporation = userCorporations.find((c: Corporation) => c._id === userData.selectedCorporationId) || null;
       }
     } catch (error) {
       console.error("Failed to fetch user corporations:", error);

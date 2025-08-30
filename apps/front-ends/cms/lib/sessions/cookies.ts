@@ -25,8 +25,8 @@ function getDefaultCookieConfig(): CookieConfig {
     maxAge: 24 * 60 * 60, // 24 hours in seconds
     path: '/',
     // In development, don't set domain to allow cross-port access
-    // The cookie will be valid for the current origin (localhost:3000)
-    // but can still be sent to localhost:3001 due to SameSite=Lax
+    // This allows cookies to be sent from localhost:3000 to localhost:3001
+    domain: undefined,
   };
 }
 

@@ -1,5 +1,6 @@
 import { getCurrentUserServer } from "@/lib/sessions/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { DeleteCorporationButton } from "@/app/components/corporations/DeleteCorporationButton";
 import styles from "./page.module.css";
 
@@ -50,9 +51,9 @@ export default async function CorporationPage({ params }: CorporationPageProps) 
         <div className={styles.error}>
           <h1>Corporation Not Found</h1>
           <p>The corporation you're looking for doesn't exist or you don't have access to it.</p>
-          <a href="/corporations" className={styles.backButton}>
+          <Link href="/corporations" className={styles.backButton}>
             ← Back to Corporations
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -62,9 +63,9 @@ export default async function CorporationPage({ params }: CorporationPageProps) 
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.breadcrumb}>
-          <a href="/corporations" className={styles.breadcrumbLink}>
+          <Link href="/corporations" className={styles.breadcrumbLink}>
             ← Corporations
-          </a>
+          </Link>
         </div>
         <h1>🏢 {corporation.name}</h1>
         <p>Manage corporation settings and information.</p>
@@ -108,9 +109,9 @@ export default async function CorporationPage({ params }: CorporationPageProps) 
         </div>
 
         <div className={styles.actions}>
-          <a href={`/corporations/${id}/edit`} className={styles.editButton}>
+          <Link href={`/corporations/${id}/edit`} className={styles.editButton}>
             ✏️ Edit Corporation
-          </a>
+          </Link>
           <DeleteCorporationButton
             corporationId={corporation._id}
             corporationName={corporation.name}

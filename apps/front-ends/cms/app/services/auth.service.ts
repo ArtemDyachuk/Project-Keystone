@@ -36,7 +36,7 @@ export interface AuthResponse {
   emailLink?: string;
   sessionId?: string; // For login response
   csrfToken?: string; // For login response
-  data?: any; // For additional response data
+  data?: Record<string, unknown>; // For additional response data
   needsTenant?: boolean; // For tenant creation flow
   redirectUrl?: string; // For tenant creation redirect
 }

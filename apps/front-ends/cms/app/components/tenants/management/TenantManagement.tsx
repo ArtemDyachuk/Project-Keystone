@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Tenant } from "../types";
 import { TenantEditForm } from "./TenantEditForm";
 import { TenantDeleteButton } from "./TenantDeleteButton";
@@ -34,9 +35,9 @@ export function TenantManagement({ tenant }: TenantManagementProps) {
       <TenantDeleteButton tenant={tenant} />
 
       <div className={styles.backSection}>
-        <a href="/tenants" className={styles.backButton}>
+        <Link href="/tenants" className={styles.backButton}>
           ← Back to Organizations
-        </a>
+        </Link>
       </div>
     </div>
   );

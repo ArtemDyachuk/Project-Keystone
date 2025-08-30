@@ -2,6 +2,38 @@
 
 A **production-ready** full-stack monorepo built with **Turborepo**, featuring true shared packages between **Next.js** frontend and **NestJS** backend with **MongoDB** database.
 
+## 📄 License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+### 🆓 Free Use
+
+- **Personal use**: ✅ Free
+- **Educational use**: ✅ Free
+- **Contributing to the project**: ✅ Free
+- **Modifying for personal use**: ✅ Free
+
+### 💰 Commercial Use
+
+**Commercial use requires a paid license:**
+
+<!-- Pricing is not finalized -->
+
+### 🚨 Important
+
+**Unauthorized commercial use is a violation of the license and subject to legal action.**
+
+For commercial licensing inquiries: [your-email@domain.com]
+
+## 🔐 Why AGPL-3.0?
+
+The AGPL-3.0 license ensures:
+
+- **Code remains open source** and available to the community
+- **Modifications must be shared** back to the community
+- **Commercial use requires licensing** to support development
+- **Legal protection** against unauthorized commercial use
+
 ## 🏗️ **True Monorepo Architecture**
 
 ```
@@ -9,7 +41,7 @@ Frontend (Vercel) ⟷ Shared Packages ⟷ Backend (Render.com) ⟷ MongoDB Atlas
 ```
 
 - **Frontend**: Next.js CMS with server-side database access (Vercel)
-- **Backend**: NestJS API with shared business logic (Render.com)  
+- **Backend**: NestJS API with shared business logic (Render.com)
 - **Database**: MongoDB Atlas (shared connection & models)
 - **Monorepo**: Turborepo with native Vercel support
 
@@ -112,12 +144,12 @@ npm run build:cms-api  # Backend only
 
 ## 💰 **Cost Breakdown**
 
-| Service | Free Tier | Paid Tier | Usage |
-|---------|-----------|-----------|-------|
-| **Vercel** | 100GB bandwidth | $20/month | Frontend hosting |
-| **Render.com** | Cold starts | $7/month | Backend API |
-| **MongoDB Atlas** | 512MB | $9/month | Database |
-| **Total** | **$0/month** | **$36/month** | Full stack |
+| Service           | Free Tier       | Paid Tier     | Usage            |
+| ----------------- | --------------- | ------------- | ---------------- |
+| **Vercel**        | 100GB bandwidth | $20/month     | Frontend hosting |
+| **Render.com**    | Cold starts     | $7/month      | Backend API      |
+| **MongoDB Atlas** | 512MB           | $9/month      | Database         |
+| **Total**         | **$0/month**    | **$36/month** | Full stack       |
 
 ## 🔧 **Environment Variables**
 
@@ -229,7 +261,7 @@ Visit your deployed apps to see these features in action:
 - **🔗 Connection Tests**: Multiple database connection methods
 - **📊 Real-time Data**: Server-rendered tenant counts and response times
 
-### Backend Features  
+### Backend Features
 
 - **🔍 Health Check**: `/api/health` - Database connection status
 - **👥 Tenant API**: `/api/tenants` - Full CRUD operations
@@ -266,12 +298,12 @@ npm run build:safe
 
 ### **🎯 What We Test**
 
-| Security Area | Tests | What It Prevents |
-|--------------|-------|------------------|
-| **Tenant Isolation** | 32 tests | Users accessing other organizations' data |
-| **Authentication** | 25 tests | Unauthorized access, invalid tokens |
-| **API Security** | 17 tests | Route protection, request validation |
-| **Attack Prevention** | 12 tests | JWT tampering, cross-tenant attacks |
+| Security Area         | Tests    | What It Prevents                          |
+| --------------------- | -------- | ----------------------------------------- |
+| **Tenant Isolation**  | 32 tests | Users accessing other organizations' data |
+| **Authentication**    | 25 tests | Unauthorized access, invalid tokens       |
+| **API Security**      | 17 tests | Route protection, request validation      |
+| **Attack Prevention** | 12 tests | JWT tampering, cross-tenant attacks       |
 
 ### **⚡ Manual Testing (When You Need It)**
 

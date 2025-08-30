@@ -1,6 +1,7 @@
 import { Tenant } from "../app/components/tenants/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+import { config } from "./config";
+const API_BASE = config.apiBaseUrl;
 
 export interface CreateTenantDto {
   name: string;

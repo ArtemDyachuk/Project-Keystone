@@ -1,7 +1,7 @@
 import { getAuthCookies } from "./auth-cookies";
 
 // Temporary stub implementation while auth is being refactored
-function decodeJwtToken(token: string): any {
+function decodeJwtToken(token: string): Record<string, unknown> | null {
   try {
     // Simple JWT decode without verification (for development only)
     const base64Url = token.split('.')[1];
@@ -52,20 +52,20 @@ export async function getUserDataFromJWT(): Promise<UserData | null> {
     const customSelectedTenantId = decoded["custom:selectedTenantId"];
 
     // Convert comma-separated string to array
-    const tenantIds = customTenantIds
+    const tenantIds = customTenantIds && typeof customTenantIds === 'string'
       ? customTenantIds.split(",").map((id: string) => id.trim()).filter(Boolean)
       : undefined;
 
     return {
-      sub: decoded.sub,
-      email: decoded.email,
-      username: decoded.username,
-      email_verified: decoded.email_verified,
-      firstName: decoded.given_name,      // Map given_name to firstName
-      lastName: decoded.family_name,      // Map family_name to lastName
-      displayName: decoded.displayName, // Map displayName
+      sub: decoded.sub as string,
+      email: decoded.email as string | undefined,
+      username: decoded.username as string | undefined,
+      email_verified: decoded.email_verified as boolean | undefined,
+      firstName: decoded.given_name as string | undefined,      // Map given_name to firstName
+      lastName: decoded.family_name as string | undefined,      // Map family_name to lastName
+      displayName: decoded.displayName as string | undefined, // Map displayName
       tenantIds: tenantIds,
-      selectedTenantId: customSelectedTenantId,
+      selectedTenantId: customSelectedTenantId as string | undefined,
     };
   } catch {
     // Silent fail for production - don't expose internal errors

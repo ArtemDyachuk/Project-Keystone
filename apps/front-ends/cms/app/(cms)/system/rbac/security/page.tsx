@@ -193,10 +193,16 @@ export default function RBACSecurityPage() {
   const [results, setResults] = useState<CategoryResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>("all");
 
   const runSecurityTests = () => {
     setIsRunning(true);
     const newResults: CategoryResult[] = [];
+
+    // Filter users based on selected role
+    const usersToTest = selectedRole === "all" 
+      ? TEST_USERS 
+      : { [selectedRole]: TEST_USERS[selectedRole] };
 
     SECURITY_TESTS.forEach((category) => {
       const categoryResult: CategoryResult = {
@@ -220,8 +226,8 @@ export default function RBACSecurityPage() {
         let total = 0;
         let passed = 0;
 
-                // Test each user type
-        Object.entries(TEST_USERS).forEach(([userName, user]) => {
+        // Test each user type (filtered by selection)
+        Object.entries(usersToTest).forEach(([userName, user]) => {
           const hasAccess = RBACService.hasPermission(user, test.permission);
           testResult.actualResults[userName] = hasAccess;
           total++;
@@ -230,11 +236,7 @@ export default function RBACSecurityPage() {
           if (hasAccess === shouldHaveAccess) {
             passed++;
           }
-
-
         });
-
-
 
         testResult.passed = passed;
         testResult.total = total;
@@ -252,13 +254,7 @@ export default function RBACSecurityPage() {
     setIsRunning(false);
   };
 
-  const getStatusIcon = (status: "PASSED" | "FAILED") => {
-    return status === "PASSED" ? "✅" : "❌";
-  };
 
-  const getStatusColor = (status: "PASSED" | "FAILED") => {
-    return status === "PASSED" ? "var(--success)" : "var(--error)";
-  };
 
   return (
     <div className={styles.container}>
@@ -268,6 +264,23 @@ export default function RBACSecurityPage() {
       </div>
 
       <div className={styles.controls}>
+        <div className={styles.inputGroup}>
+          <label htmlFor="role-select">Select Role to Test:</label>
+          <select
+            id="role-select"
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            className={styles.roleSelect}
+          >
+            <option value="all">All Roles (Comprehensive Test)</option>
+            {Object.keys(TEST_USERS).map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className={styles.debugToggle}>
           <label>
             <input
@@ -284,7 +297,7 @@ export default function RBACSecurityPage() {
           disabled={isRunning}
           className={styles.runButton}
         >
-          {isRunning ? "Running Tests..." : "🔒 Run Security Tests"}
+          {isRunning ? "Running Tests..." : `🔒 Test ${selectedRole === "all" ? "All Roles" : selectedRole}`}
         </button>
       </div>
 
@@ -292,54 +305,73 @@ export default function RBACSecurityPage() {
         <div className={styles.results}>
           <h2>Security Test Results</h2>
 
+          {/* Summary Stats */}
+          <div className={styles.summary}>
+            <div className={styles.summaryCard}>
+              <span className={styles.summaryNumber}>
+                {results.filter(r => r.totalPassed === r.totalTests).length}
+              </span>
+              <span className={styles.summaryLabel}>Categories Passed</span>
+            </div>
+            <div className={styles.summaryCard}>
+              <span className={styles.summaryNumber}>
+                {results.filter(r => r.totalPassed !== r.totalTests).length}
+              </span>
+              <span className={styles.summaryLabel}>Categories Failed</span>
+            </div>
+            <div className={styles.summaryCard}>
+              <span className={styles.summaryNumber}>
+                {results.reduce((total, category) => total + category.totalPassed, 0)}
+              </span>
+              <span className={styles.summaryLabel}>Tests Passed</span>
+            </div>
+            <div className={styles.summaryCard}>
+              <span className={styles.summaryNumber}>
+                {results.reduce((total, category) => total + (category.totalTests - category.totalPassed), 0)}
+              </span>
+              <span className={styles.summaryLabel}>Tests Failed</span>
+            </div>
+          </div>
+
           {results.map((category) => (
-            <div key={category.category} className={styles.categoryCard}>
-              <div className={styles.categoryHeader}>
-                <h3>{category.category}</h3>
-                <p>{category.description}</p>
-                <div className={styles.categorySummary}>
-                  <span className={styles.summaryText}>
-                    {category.totalPassed}/{category.totalTests} tests passed
-                  </span>
-                  <span
-                    className={styles.summaryStatus}
-                    style={{
-                      color: category.totalPassed === category.totalTests
-                        ? "var(--success)"
-                        : "var(--error)"
-                    }}
-                  >
+            <div key={category.category} className={styles.pageCard}>
+              <div className={styles.pageHeader}>
+                <div className={styles.pageInfo}>
+                  <h3>{category.category}</h3>
+                  <p>{category.description}</p>
+                </div>
+                <div className={styles.pageStatus}>
+                  <span className={`${styles.statusBadge} ${category.totalPassed === category.totalTests ? styles.pass : styles.fail}`}>
                     {category.totalPassed === category.totalTests ? "✅ PASSED" : "❌ FAILED"}
                   </span>
                 </div>
               </div>
 
-              <div className={styles.testsList}>
+              <div className={styles.componentsGrid}>
                 {category.tests.map((test, index) => (
-                  <div key={index} className={styles.testItem}>
-                    <div className={styles.testHeader}>
-                      <span className={styles.permission}>{test.permission}</span>
-                      <span
-                        className={styles.testStatus}
-                        style={{ color: getStatusColor(test.status) }}
-                      >
-                        {getStatusIcon(test.status)} {test.status}
+                  <div key={index} className={styles.componentCard}>
+                    <div className={styles.componentHeader}>
+                      <h4>{test.permission}</h4>
+                      <span className={`${styles.statusBadge} ${test.status === "PASSED" ? styles.pass : styles.fail}`}>
+                        {test.status}
                       </span>
                     </div>
 
-                    <div className={styles.testDetails}>
-                      <div className={styles.expectedSection}>
-                        <strong>Expected:</strong> {test.expected.length > 0 ? test.expected.join(", ") : "None"}
+                    <div className={styles.componentDetails}>
+                      <div className={styles.detailItem}>
+                        <span className={styles.label}>Expected Access:</span>
+                        <span className={styles.description}>
+                          {test.expected.length > 0 ? test.expected.join(", ") : "None"}
+                        </span>
                       </div>
 
-                      <div className={styles.actualSection}>
-                        <strong>Actual Results:</strong>
+                      <div className={styles.detailItem}>
+                        <span className={styles.label}>Test Results:</span>
                         <div className={styles.userResults}>
                           {Object.entries(test.actualResults).map(([userName, hasAccess]) => (
                             <span
                               key={userName}
-                              className={`${styles.userResult} ${test.expected.includes(userName) === hasAccess ? styles.correct : styles.incorrect
-                                }`}
+                              className={`${styles.userResult} ${test.expected.includes(userName) === hasAccess ? styles.correct : styles.incorrect}`}
                             >
                               {userName}: {hasAccess ? "✅" : "❌"}
                             </span>
@@ -347,8 +379,11 @@ export default function RBACSecurityPage() {
                         </div>
                       </div>
 
-                      <div className={styles.testSummary}>
-                        {test.passed}/{test.total} tests passed
+                      <div className={styles.detailItem}>
+                        <span className={styles.label}>Summary:</span>
+                        <span className={styles.description}>
+                          {test.passed}/{test.total} tests passed
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -369,6 +404,12 @@ export default function RBACSecurityPage() {
         </ul>
         <p><strong>Security Goal:</strong> All tests should pass to ensure proper access control.</p>
         <p><strong>Debug Mode:</strong> Enable to see detailed permission checking logs in the console.</p>
+        <p><strong>Status Legend:</strong></p>
+        <ul>
+          <li><strong>✅ PASSED:</strong> All tests in category passed successfully</li>
+          <li><strong>❌ FAILED:</strong> Some tests in category failed</li>
+          <li><strong>🔒 Test:</strong> Run tests for specific role or all roles</li>
+        </ul>
       </div>
     </div>
   );

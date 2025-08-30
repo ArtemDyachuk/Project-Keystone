@@ -3,26 +3,22 @@
 import Link from "next/link";
 import { TenantSwitcher } from "@/app/components/tenants";
 import { logoutAction } from "@/app/actions";
+import type { CurrentUser } from "@/lib/sessions/utils";
+import type { Corporation } from "@/app/components/corporations/types";
 import styles from "./CMSNavigation.module.css";
 
 interface CMSNavigationProps {
   className?: string; // for dark mode
-  userData: any;
-  selectedCorporation: any;
-  userCorporations: any[];
+  userData: CurrentUser | null;
+  selectedCorporation: Corporation | null;
+  userCorporations: Corporation[];
 }
 
 export function CMSNavigation({ className, userData, selectedCorporation, userCorporations }: CMSNavigationProps) {
   // Client-safe display name extraction
-  const getDisplayName = (user: any): string => {
+  const getDisplayName = (user: CurrentUser): string => {
     if (user?.displayName) {
       return user.displayName;
-    }
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    if (user?.firstName) {
-      return user.firstName;
     }
     if (user?.email) {
       return user.email.split('@')[0];

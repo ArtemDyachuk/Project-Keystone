@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus, UseGuards, Req } from '@nestjs/common';
 import { Request } from 'express';
-import { Corporation } from '@keystone/database';
+import { Corporation, TenantMembership } from '@keystone/database';
 import { SessionService } from '../services/session.service';
 import { CorporationService } from '../services/corporation.service';
 import { SessionGuard } from '../guards/session.guard';
@@ -72,7 +72,6 @@ export class CorporationsController {
       }
 
       // Get user's tenant automatically
-      const { TenantMembership } = await import('@keystone/database');
       const membership = await TenantMembership.findOne({
          userId: request.user.uid,
          isActive: true
@@ -133,7 +132,6 @@ export class CorporationsController {
          }
 
          // Check if user has access to this corporation via TenantMembership
-         const { TenantMembership, Corporation } = await import('@keystone/database');
          const corporation = await Corporation.findById(id);
 
          if (!corporation) {

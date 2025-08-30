@@ -29,9 +29,9 @@ export function DeleteCorporationButton({ corporationId, corporationName }: Dele
       } else {
         throw new Error("Delete operation failed");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check if this is a Next.js redirect (which is not an error)
-      if (error?.digest?.includes('NEXT_REDIRECT')) {
+      if (error && typeof error === 'object' && 'digest' in error && typeof error.digest === 'string' && error.digest.includes('NEXT_REDIRECT')) {
         // This is a successful redirect, not an error
         // The user will be redirected to /corporations
         return;

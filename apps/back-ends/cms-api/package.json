@@ -1,7 +1,7 @@
 {
   "name": "@keystone/cms-api",
   "version": "0.0.1",
-  "private": true,
+  "license": "AGPL-3.0",
   "scripts": {
     "prebuild": "cd ../../../packages/database && npm run build && cd ../auth && npm run build && cd ../rbac && npm run build",
     "build": "tsc",
@@ -24,6 +24,8 @@
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@types/cookie-parser": "^1.4.9",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
     "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",
