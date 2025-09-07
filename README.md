@@ -15,24 +15,22 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 ### 💰 Commercial Use
 
-**Commercial use requires a paid license:**
-
-<!-- Pricing is not finalized -->
+**Commercial licensing coming soon** - Currently in active development.
 
 ### 🚨 Important
 
-**Unauthorized commercial use is a violation of the license and subject to legal action.**
+**This project is currently in active development. The AGPL-3.0 license will apply upon release.**
 
-For commercial licensing inquiries: [your-email@domain.com]
+## 🔐 Why AGPL-3.0? (Upon Release)
 
-## 🔐 Why AGPL-3.0?
-
-The AGPL-3.0 license ensures:
+The AGPL-3.0 license will ensure:
 
 - **Code remains open source** and available to the community
 - **Modifications must be shared** back to the community
 - **Commercial use requires licensing** to support development
 - **Legal protection** against unauthorized commercial use
+
+**Note**: Currently in active development - license terms will apply upon official release.
 
 ## 🏗️ **True Monorepo Architecture**
 
@@ -101,7 +99,7 @@ Project-Keystone/
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
+git clone https://github.com/ArtemDyachuk/Project-Keystone.git
 cd Project-Keystone
 
 # Install dependencies
@@ -142,14 +140,9 @@ npm run build:cms-api  # Backend only
 1. Deploy to Render.com using the configuration in `apps/back-ends/cms-api/`
 2. See: [Render Deployment Guide](apps/back-ends/cms-api/RENDER_DEPLOYMENT.md)
 
-## 💰 **Cost Breakdown**
+## 💰 **Cost Breakdown** (Coming Soon)
 
-| Service           | Free Tier       | Paid Tier     | Usage            |
-| ----------------- | --------------- | ------------- | ---------------- |
-| **Vercel**        | 100GB bandwidth | $20/month     | Frontend hosting |
-| **Render.com**    | Cold starts     | $7/month      | Backend API      |
-| **MongoDB Atlas** | 512MB           | $9/month      | Database         |
-| **Total**         | **$0/month**    | **$36/month** | Full stack       |
+Pricing details will be available upon release.
 
 ## 🔧 **Environment Variables**
 
@@ -162,7 +155,7 @@ MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
 ### Frontend Additional
 
 ```bash
-NEXT_PUBLIC_API_URL=https://your-backend.onrender.com
+NEXT_PUBLIC_API_URL=https://backend.onrender.com
 ```
 
 ## 📦 **Shared Packages**
@@ -358,4 +351,4 @@ Detailed testing guides are in `/documentation/`:
 
 ## 📄 **License**
 
-This project is licensed under the MIT License.
+This project is currently in active development. Upon release, it will be licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
