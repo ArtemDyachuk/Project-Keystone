@@ -71,6 +71,14 @@ Project-Keystone/
 │           │   └── database/          # Database integration
 │           └── RENDER_DEPLOYMENT.md
 ├── packages/
+│   ├── auth/                 # 🔐 Firebase authentication
+│   │   ├── src/
+│   │   │   ├── firebase/              # Firebase client & server
+│   │   │   ├── types.ts               # Authentication types
+│   │   │   ├── config.ts              # Environment configuration
+│   │   │   └── index.ts               # Main exports
+│   │   ├── setup-firebase.sh          # Automated Firebase setup
+│   │   └── package.json
 │   ├── database/             # 🔗 Shared MongoDB package
 │   │   ├── src/
 │   │   │   ├── connection.ts          # Database connection
@@ -197,20 +205,58 @@ async findAll() {
 - 🏗️ **Shared Services**: Business logic reused across frontend/backend
 - 🔐 **Type Safety**: TypeScript interfaces shared everywhere
 
+### `@keystone/auth` - Firebase Authentication
+
+**Server-side Firebase authentication with multi-tenancy support:**
+
+```typescript
+import { FirebaseAdminClient } from '@keystone/auth';
+
+const adminClient = new FirebaseAdminClient();
+
+// Create user with tenant
+const user = await adminClient.createUser({
+  email: 'user@example.com',
+  password: 'SecurePass123!',
+  tenantId: 'tenant-123',
+});
+
+// Verify ID token
+const user = await adminClient.verifyIdToken(idToken);
+
+// Multi-tenant operations
+const tenant = await adminClient.createTenant({
+  tenantId: 'tenant-123',
+  displayName: 'My Organization',
+});
+```
+
+**Features:**
+
+- 🔐 **Google Identity Platform**: Enterprise-grade multi-tenancy
+- 🏢 **Tenant Isolation**: Users isolated by tenant with custom domains
+- 🚀 **Automated Setup**: One-command Firebase project configuration
+- 🔒 **MFA Support**: TOTP multi-factor authentication
+- 🛡️ **Type Safety**: Full TypeScript support with comprehensive types
+- ⚡ **Server-Side**: Admin SDK for secure backend operations
+
 ### `@keystone/rbac` - Role-Based Access Control
 
 **Comprehensive permission system with predefined roles:**
 
 ```typescript
-import { 
-  PERMISSIONS, 
-  ROLES_CONFIG, 
-  roleHasPermission, 
-  getAllPermissionsForRole 
+import {
+  PERMISSIONS,
+  ROLES_CONFIG,
+  roleHasPermission,
+  getAllPermissionsForRole,
 } from '@keystone/rbac';
 
 // Check if user has permission
-const canCreateUser = roleHasPermission('Tenant:Admin', PERMISSIONS.USER_CREATE);
+const canCreateUser = roleHasPermission(
+  'Tenant:Admin',
+  PERMISSIONS.USER_CREATE,
+);
 
 // Get all permissions for a role
 const adminPermissions = getAllPermissionsForRole('Tenant:Owner');
