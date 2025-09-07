@@ -367,6 +367,17 @@ export async function loginAction(email: string, password: string, redirectUrl: 
       };
     }
 
+    // Check if MFA is required
+    if (result.mfaRequired) {
+      return {
+        success: false,
+        mfaRequired: true,
+        email: result.email,
+        mfa: result.mfa,
+        message: result.message || "MFA verification required"
+      };
+    }
+
     // Set HttpOnly session cookie and CSRF token cookie
     if (result.sessionId) {
       await setSessionCookie(result.sessionId);
@@ -453,6 +464,80 @@ export async function logoutAction() {
     await deleteSessionCookie();
     await deleteCSRFCookie();
     redirect("/");
+  }
+}
+
+/**
+ * Login with MFA verification code
+ */
+export async function loginWithMfaAction(email: string, password: string, verificationCode: string, redirectUrl: string = "/dashboard") {
+  try {
+    if (!email?.trim()) {
+      return {
+        success: false,
+        error: "Email is required"
+      };
+    }
+
+    if (!password?.trim()) {
+      return {
+        success: false,
+        error: "Password is required"
+      };
+    }
+
+    if (!verificationCode?.trim()) {
+      return {
+        success: false,
+        error: "Verification code is required"
+      };
+    }
+
+    // Make direct API call to backend MFA login endpoint
+    const response = await fetch(`${config.apiBaseUrl}/api/auth/login/totp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        verificationCode: verificationCode.trim(),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.message || "MFA login failed"
+      };
+    }
+
+    // Set HttpOnly session cookie and CSRF token cookie
+    if (result.sessionId) {
+      await setSessionCookie(result.sessionId);
+    }
+
+    if (result.csrfToken) {
+      await setCSRFCookie(result.csrfToken);
+    }
+
+    console.log('✅ MFA login successful, redirecting to:', redirectUrl);
+
+    // Redirect to the specified URL
+    redirect(redirectUrl);
+  } catch (error) {
+    // Re-throw Next.js redirect so it isn't treated as an error
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
+    console.error("❌ MFA login error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
   }
 }
 

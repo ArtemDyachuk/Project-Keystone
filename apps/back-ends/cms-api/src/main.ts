@@ -35,7 +35,7 @@ async function bootstrap() {
   // Production: Client → Cloudflare → Render → Your App = 2 hops
   // Development: No proxy (direct connection)
   const hops = process.env.NODE_ENV === 'production' ? 2 : 0;
-  (app.getHttpAdapter().getInstance() as any).set?.('trust proxy', hops);
+  (app.getHttpAdapter().getInstance() as { set?: (key: string, value: number) => void }).set?.('trust proxy', hops);
 
   // Basic security headers
   app.use(helmet());
@@ -91,7 +91,7 @@ async function bootstrap() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req: any) => {
+    skip: (req: { path: string; cookies?: { session?: string } }) => {
       const path = req.path;
 
       // Always skip health checks and static files
@@ -163,6 +163,19 @@ async function bootstrap() {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 50, // 50 uploads per hour
     message: { error: 'Too many upload requests. Please try again in 1 hour.' },
+  }));
+
+  // Strict rate limiting for MFA endpoints
+  app.use('/api/auth/mfa/totp/finish', rateLimit({
+    ...rateLimitOptions,
+    max: 5, // 5 attempts per 15 minutes per IP
+    message: { error: 'Too many MFA verification attempts. Please try again in 15 minutes.' },
+  }));
+
+  app.use('/api/auth/login/totp', rateLimit({
+    ...rateLimitOptions,
+    max: 5, // 5 attempts per 15 minutes per IP
+    message: { error: 'Too many MFA login attempts. Please try again in 15 minutes.' },
   }));
 
   // Session-aware API rate limiting (authenticated users bypass limits)

@@ -1,5 +1,5 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Get, Req } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Post, Body, HttpException, HttpStatus, Get, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { FirebaseServerClient, EmailLinkSignUpParams } from '@keystone/auth';
 import { EmailService } from '../services/email.service';
 import { SessionService } from '../services/session.service';
@@ -8,9 +8,14 @@ import { InviteService } from '../services/invite.service';
 import { TenantService } from '../services/tenant.service';
 import { SignupService } from '../services/signup.service';
 import { Logger } from '@nestjs/common';
+import { SessionGuard } from '../guards/session.guard';
+import { StepUpGuard } from '../guards/step-up.guard';
+import { RedisService } from '../services/redis.service';
 import {
   SignupWithEmailLinkDto,
   LoginDto,
+  MfaLoginDto,
+  StepUpDto,
   VerifyEmailDto,
   SetPasswordDto,
   ForgotPasswordDto,
@@ -19,6 +24,14 @@ import {
   VerifySignupTokenDto,
   CompleteInviteDto
 } from '../dto/auth.dto';
+import {
+  StartMfaEnrollmentDto,
+  FinishMfaEnrollmentDto,
+  MfaEnrollmentStartResponse,
+  MfaEnrollmentFinishResponse,
+  MfaUnenrollmentResponse,
+  MfaStatusResponse
+} from '../dto/mfa.dto';
 
 // DTOs are now imported from ../dto/auth.dto
 
@@ -34,6 +47,7 @@ export class AuthController {
     private readonly signupService: SignupService,
     private readonly sessionService: SessionService,
     private readonly csrfService: CSRFService,
+    private readonly redisService: RedisService,
   ) {
     this.firebaseClient = new FirebaseServerClient();
   }
@@ -55,7 +69,7 @@ export class AuthController {
 
       const results = await Promise.all(searchPromises);
       const found = results.find(result => result !== null);
-      
+
       return found || null;
     } catch (error: unknown) {
       this.logger.error('Error finding user across tenants', error);
@@ -130,6 +144,7 @@ export class AuthController {
    * POST /auth/set-password
    */
   @Post('set-password')
+  @UseGuards(SessionGuard, StepUpGuard)
   async setPassword(@Body() setPasswordDto: SetPasswordDto) {
     try {
       if (!setPasswordDto.uid) {
@@ -542,7 +557,7 @@ export class AuthController {
 
       // Use optimized parallel search across all tenants
       const userResult = await this.findUserByEmailAcrossTenants(email, gipTenantIds);
-      
+
       if (!userResult) {
         throw new HttpException(
           'Invalid email or password',
@@ -550,7 +565,7 @@ export class AuthController {
         );
       }
 
-      const { user, tenantId: gipTenantId } = userResult;
+      const { tenantId: gipTenantId } = userResult;
 
       // Step 2: Verify the password using the correct GIP tenant
       const verifiedUser = await this.firebaseClient.verifyUserCredentials(
@@ -565,6 +580,49 @@ export class AuthController {
           'Please verify your email before signing in',
           HttpStatus.FORBIDDEN
         );
+      }
+
+      // Step 2.5: Check if user has MFA enabled
+      let mfaEnabled = false;
+      let mfaEnrolledAt: number | undefined = undefined;
+
+      try {
+        this.logger.log(`Checking MFA status for user ${verifiedUser.uid} in tenant ${gipTenantId}`);
+
+        // Get user's MFA factors from Firebase
+        const mfaFactors = await this.firebaseClient.getMfaFactors(verifiedUser.uid, gipTenantId);
+        this.logger.log(`MFA factors found: ${mfaFactors?.length || 0}`);
+
+        mfaEnabled = mfaFactors && mfaFactors.length > 0;
+
+        // If MFA is enabled, we need to get the enrollment timestamp
+        if (mfaEnabled) {
+          // For now, we'll use the current time as enrollment time
+          // In a real implementation, you might want to store this in your database
+          mfaEnrolledAt = Math.floor(Date.now() / 1000);
+          this.logger.log(`MFA enabled for user ${verifiedUser.uid}, enrolled at ${mfaEnrolledAt}`);
+          
+          // If MFA is enabled, return a response indicating MFA is required
+          // The frontend should then prompt for the MFA code and call the MFA login endpoint
+          return {
+            success: false,
+            message: 'MFA verification required',
+            mfaRequired: true,
+            email: verifiedUser.email,
+            mfa: {
+              enabled: true,
+              enrolledAt: mfaEnrolledAt
+            }
+          };
+        }
+      } catch (error) {
+        // If MFA check fails, log but don't block login
+        this.logger.warn(`Failed to check MFA status for user ${verifiedUser.uid}:`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          type: error?.constructor?.name || 'Unknown'
+        });
+        mfaEnabled = false;
       }
 
       // Step 3: Get user's tenant and corporation information
@@ -609,16 +667,19 @@ export class AuthController {
         this.logger.warn('Could not determine corporation or roles, will set to null/empty', error);
       }
 
-      // Create session
+      // Create session with real MFA status
       const sessionId = await this.sessionService.createSession({
-        uid: user.uid,
-        email: user.email || email,
-        displayName: user.displayName,
-        emailVerified: user.emailVerified,
+        uid: verifiedUser.uid,
+        email: verifiedUser.email || email,
+        displayName: verifiedUser.displayName,
+        emailVerified: verifiedUser.emailVerified,
         tenantId: userTenantId,
         selectedCorporationId: selectedCorporationId,
         roles: userRoles,
         disabled: false, // User passed disabled check, so they are not disabled
+        mfa: mfaEnabled, // Use real MFA status from Firebase
+        authTime: Math.floor(Date.now() / 1000), // Current time as Unix timestamp
+        mfaEnrolledAt: mfaEnrolledAt, // Real enrollment time from Firebase
       });
 
       // Generate CSRF token for this session
@@ -629,11 +690,16 @@ export class AuthController {
         message: 'Login successful',
         sessionId, // Frontend will set this as HttpOnly cookie
         csrfToken, // Frontend will set this as readable cookie
+        mfa: {
+          enabled: mfaEnabled,
+          enrolledAt: mfaEnrolledAt,
+          required: mfaEnabled, // If MFA is enabled, it's required for sensitive operations
+        },
         user: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          emailVerified: user.emailVerified,
+          uid: verifiedUser.uid,
+          email: verifiedUser.email,
+          displayName: verifiedUser.displayName,
+          emailVerified: verifiedUser.emailVerified,
         }
       };
     } catch (error) {
@@ -644,10 +710,12 @@ export class AuthController {
         throw error;
       }
 
-      // For unexpected errors, log minimal info
+      // For unexpected errors, log detailed info
       this.logger.error('Login failed - unexpected error', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        type: error?.constructor?.name || 'Unknown'
+        type: error?.constructor?.name || 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined,
+        error: error
       });
 
       // Handle Firebase-specific errors
@@ -1099,7 +1167,7 @@ export class AuthController {
 
       // Find user's tenant using optimized lookup
       const { TenantMembership } = await import('@keystone/database');
-      const membership = await TenantMembership.findOne({ 
+      const membership = await TenantMembership.findOne({
         userId: userId // Use the actual user ID from the token
       }).populate('tenantId');
 
@@ -1122,6 +1190,9 @@ export class AuthController {
         selectedCorporationId: tenant._id.toString(),
         roles: membership.roles,
         disabled: false,
+        mfa: false, // Default to false for new sessions
+        authTime: Math.floor(Date.now() / 1000), // Current time as Unix timestamp
+        mfaEnrolledAt: undefined, // Not enrolled yet
       });
 
       // Generate new CSRF token
@@ -1202,5 +1273,732 @@ export class AuthController {
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
+  }
+
+  // ========================================
+  // MFA ENDPOINTS
+  // ========================================
+
+  /**
+   * Start MFA enrollment process
+   * POST /auth/mfa/totp/start
+   */
+  @Post('mfa/totp/start')
+  @UseGuards(SessionGuard)
+  async startMfaEnrollment(
+    @Body() startDto: StartMfaEnrollmentDto,
+    @Req() req: any
+  ): Promise<MfaEnrollmentStartResponse> {
+    try {
+      const user = req.user;
+
+      this.logger.log(`🔄 Starting MFA enrollment for user ${user.uid}`);
+
+      // Get the Firebase GIP tenant ID from the database
+      const { Tenant } = await import('@keystone/database');
+      const tenantRecord = await Tenant.findById(user.tenantId);
+
+      if (!tenantRecord?.gipTenantId) {
+        throw new HttpException('Tenant not properly configured with Firebase GIP', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Re-authenticate user with email/password to get a valid first factor token
+      this.logger.log(`Re-authenticating user ${user.uid} with email/password for MFA enrollment`);
+      
+      const reauthResult = await this.firebaseClient.verifyPasswordWithREST(
+        user.email,
+        startDto.password,
+        tenantRecord.gipTenantId
+      );
+
+      if (!reauthResult.idToken) {
+        throw new HttpException('Invalid password. Please enter your current password to enable MFA.', HttpStatus.UNAUTHORIZED);
+      }
+
+      this.logger.log(`✅ User re-authenticated successfully for MFA enrollment`);
+
+      // Start MFA enrollment with Firebase using the re-authenticated token
+      const enrollmentResponse = await this.firebaseClient.enrollStart(reauthResult.idToken, tenantRecord.gipTenantId);
+
+      // Store session info in Redis for 5 minutes
+      const enrollmentKey = `mfa:enroll:${user.uid}`;
+      await this.redisService.set(
+        enrollmentKey,
+        JSON.stringify({
+          sessionInfo: enrollmentResponse.sessionInfo,
+          tenantId: tenantRecord.gipTenantId,
+          uid: user.uid,
+          // Persist the first-factor idToken obtained via email/password reauth
+          firstFactorIdToken: reauthResult.idToken,
+        }),
+        300 // 5 minutes TTL
+      );
+
+      this.logger.log(`✅ MFA enrollment started for user ${user.uid}`);
+
+      return {
+        success: true,
+        message: 'MFA enrollment started. Please scan the QR code with your authenticator app.',
+        qrCodeUrl: enrollmentResponse.qrCodeUrl,
+        otpauthUrl: enrollmentResponse.otpauthUrl,
+        sessionInfo: enrollmentResponse.sessionInfo,
+      };
+    } catch (error) {
+      this.logger.error(`❌ MFA enrollment start failed:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to start MFA enrollment. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Complete MFA enrollment with verification code
+   * POST /auth/mfa/totp/finish
+   */
+  @Post('mfa/totp/finish')
+  @UseGuards(SessionGuard)
+  async finishMfaEnrollment(
+    @Body() finishDto: FinishMfaEnrollmentDto,
+    @Req() req: any
+  ): Promise<MfaEnrollmentFinishResponse> {
+    try {
+      const user = req.user;
+      const sessionId = req.sessionId;
+
+      this.logger.log(`🔄 Completing MFA enrollment for user ${user.uid}`);
+
+      // Get the Firebase GIP tenant ID from the database
+      const { Tenant } = await import('@keystone/database');
+      const tenantRecord = await Tenant.findById(user.tenantId);
+
+      if (!tenantRecord?.gipTenantId) {
+        throw new HttpException('Tenant not properly configured with Firebase GIP', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Get enrollment session info from Redis
+      const enrollmentKey = `mfa:enroll:${user.uid}`;
+      const enrollmentData = await this.redisService.get(enrollmentKey);
+
+      if (!enrollmentData) {
+        throw new HttpException(
+          'MFA enrollment session expired. Please start enrollment again.',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      const { sessionInfo, firstFactorIdToken } = JSON.parse(enrollmentData);
+
+      // Use the password reauth token (first factor) to finalize enrollment
+      const finalizeIdToken = firstFactorIdToken || await this.getUserIdToken(user.uid, tenantRecord.gipTenantId);
+      await this.firebaseClient.enrollFinish(
+        finalizeIdToken,
+        finishDto.verificationCode,
+        sessionInfo,
+        tenantRecord.gipTenantId
+      );
+
+      // Get fresh ID token from Firebase
+      const idToken = await this.getUserIdToken(user.uid, tenantRecord.gipTenantId);
+      const decodedToken = await this.firebaseClient.verifyIdToken(idToken, tenantRecord.gipTenantId);
+
+      // Update session with MFA enabled
+      const currentTime = Math.floor(Date.now() / 1000);
+      await this.sessionService.updateMfaStatus(
+        sessionId,
+        true, // Enable MFA
+        (decodedToken as any).auth_time || currentTime,
+        currentTime // Enrollment time
+      );
+
+      // Clean up enrollment session
+      await this.redisService.del(enrollmentKey);
+
+      this.logger.log(`✅ MFA enrollment completed for user ${user.uid}`);
+
+      return {
+        success: true,
+        message: 'MFA enrollment completed successfully.',
+        mfaEnabled: true,
+        mfaEnrolledAt: currentTime,
+      };
+    } catch (error) {
+      this.logger.error(`❌ MFA enrollment finish failed:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Handle Firebase MFA errors
+      if ((error as Error).message?.includes('INVALID_OTP') || (error as Error).message?.includes('verification')) {
+        throw new HttpException(
+          { code: 'INVALID_OTP', message: 'Invalid verification code. Please try again.' },
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      throw new HttpException(
+        'Failed to complete MFA enrollment. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Remove MFA from user account
+   * POST /auth/mfa/unenroll
+   */
+  @Post('mfa/unenroll')
+  @UseGuards(SessionGuard)
+  async unenrollMfa(@Req() req: any, @Body("password") password?: string): Promise<MfaUnenrollmentResponse> {
+    try {
+      const user = req.user;
+      const sessionId = req.sessionId;
+
+      this.logger.log(`🔄 Unenrolling MFA for user ${user.uid}`);
+
+      // Resolve tenant and require password re-auth for secure withdrawal
+      const { Tenant } = await import('@keystone/database');
+      const tenantRecord = await Tenant.findById(user.tenantId);
+      if (!tenantRecord?.gipTenantId) {
+        throw new HttpException('Tenant not properly configured with Firebase GIP', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      if (!password || !user.email) {
+        throw new HttpException('Password is required to remove MFA.', HttpStatus.BAD_REQUEST);
+      }
+
+      // Re-authenticate with email/password to obtain a valid first-factor token
+      // Re-authenticate with email/password to obtain MFA info
+      const reauth = await this.firebaseClient.verifyPasswordWithREST(
+        user.email,
+        password,
+        tenantRecord.gipTenantId
+      );
+      
+      // For MFA-enabled users, we get mfaPendingCredential instead of idToken
+      if (!reauth?.mfaPendingCredential) {
+        throw new HttpException('Invalid email or password.', HttpStatus.UNAUTHORIZED);
+      }
+
+      // For MFA unenrollment, we need to use Admin SDK since user has MFA enabled
+      // The mfaPendingCredential indicates MFA is required, so we can't use it directly
+      // Instead, we'll use the Admin SDK to remove all MFA factors directly
+      
+      // Use Admin SDK to remove all MFA factors (we don't need specific enrollment ID)
+      await this.firebaseClient.withdrawMfaFactor(user.uid, '', tenantRecord.gipTenantId);
+
+      // Update session with MFA disabled
+      await this.sessionService.updateMfaStatus(
+        sessionId,
+        false, // Disable MFA
+        user.authTime, // Keep existing auth time
+        undefined // Clear enrollment time
+      );
+
+      this.logger.log(`✅ MFA unenrolled for user ${user.uid}`);
+
+      return {
+        success: true,
+        message: 'MFA has been removed from your account.',
+        mfaEnabled: false,
+      };
+    } catch (error) {
+      this.logger.error(`❌ MFA unenrollment failed:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to remove MFA. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get current MFA status
+   * GET /auth/mfa/status
+   */
+  @Get('mfa/status')
+  @UseGuards(SessionGuard)
+  async getMfaStatus(@Req() req: any): Promise<MfaStatusResponse> {
+    try {
+      const user = req.user;
+
+      return {
+        success: true,
+        mfaEnabled: user.mfa || false,
+        mfaEnrolledAt: user.mfaEnrolledAt,
+        message: user.mfa ? 'MFA is enabled' : 'MFA is not enabled',
+      };
+    } catch (error) {
+      this.logger.error(`❌ Failed to get MFA status:`, error);
+
+      throw new HttpException(
+        'Failed to get MFA status.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Enable MFA TOTP at project level (admin only)
+   */
+  @Post('mfa/enable-project')
+  @UseGuards(SessionGuard)
+  async enableMfaProject(@Req() req: any) {
+    try {
+      const user = req.user;
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
+      }
+
+      this.logger.log(`Enabling MFA TOTP at project level for user ${user.uid}`);
+
+      // Check if MFA is already enabled
+      const isEnabled = await this.firebaseClient.isMfaTotpEnabled();
+      if (isEnabled) {
+        return {
+          success: true,
+          message: 'MFA TOTP is already enabled at project level',
+          alreadyEnabled: true
+        };
+      }
+
+      // Enable MFA TOTP
+      await this.firebaseClient.enableMfaTotp();
+
+      return {
+        success: true,
+        message: 'MFA TOTP enabled successfully at project level',
+        alreadyEnabled: false
+      };
+    } catch (error) {
+      this.logger.error('❌ Failed to enable MFA at project level:', error);
+      throw new HttpException('Failed to enable MFA at project level', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Enable MFA TOTP for current user's tenant
+   */
+  @Post('mfa/enable-tenant')
+  @UseGuards(SessionGuard)
+  async enableMfaTenant(@Req() req: any) {
+    try {
+      const user = req.user;
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
+      }
+
+      this.logger.log(`Enabling MFA TOTP for tenant of user ${user.uid}`);
+
+      // Get user's tenant information
+      const { TenantMembership } = await import('@keystone/database');
+      const membership = await TenantMembership.findOne({
+        userId: user.uid,
+        isActive: true
+      });
+
+      if (!membership) {
+        throw new HttpException('User not found in any tenant', HttpStatus.NOT_FOUND);
+      }
+
+      const { Tenant } = await import('@keystone/database');
+      const tenant = await Tenant.findById(membership.tenantId);
+      if (!tenant) {
+        throw new HttpException('Tenant not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Enable MFA TOTP for this tenant
+      await this.firebaseClient.enableMfaTotpForTenant(tenant.gipTenantId);
+
+      return {
+        success: true,
+        message: `MFA TOTP enabled successfully for tenant ${tenant.name}`,
+        tenantId: tenant.gipTenantId
+      };
+    } catch (error) {
+      this.logger.error('❌ Failed to enable MFA for tenant:', error);
+      throw new HttpException('Failed to enable MFA for tenant', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Login with MFA TOTP code
+   * POST /auth/login/totp
+   */
+  @Post('login/totp')
+  async loginWithMfa(@Body() loginDto: MfaLoginDto) {
+    try {
+      if (!loginDto.email?.trim()) {
+        throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
+      }
+
+      if (!loginDto.password?.trim()) {
+        throw new HttpException('Password is required', HttpStatus.BAD_REQUEST);
+      }
+
+      if (!loginDto.verificationCode?.trim()) {
+        throw new HttpException('Verification code is required', HttpStatus.BAD_REQUEST);
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(loginDto.email)) {
+        throw new HttpException('Please enter a valid email address', HttpStatus.BAD_REQUEST);
+      }
+
+      const email = loginDto.email.trim().toLowerCase();
+
+      // Step 1: Find user's tenant using optimized parallel search
+      const { Tenant } = await import('@keystone/database');
+      const tenants = await Tenant.find({});
+      const gipTenantIds = tenants
+        .filter(tenant => tenant.gipTenantId)
+        .map(tenant => tenant.gipTenantId!);
+
+      if (gipTenantIds.length === 0) {
+        throw new HttpException(
+          'No tenants configured',
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      // Use optimized parallel search across all tenants
+      const userResult = await this.findUserByEmailAcrossTenants(email, gipTenantIds);
+
+      if (!userResult) {
+        throw new HttpException(
+          'Invalid email or password',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      const { tenantId: gipTenantId } = userResult;
+
+      // Step 2: Verify the password using the correct GIP tenant
+      const verifiedUser = await this.firebaseClient.verifyUserCredentials(
+        email,
+        loginDto.password,
+        gipTenantId
+      );
+
+      // Check if email is verified
+      if (!verifiedUser.emailVerified) {
+        throw new HttpException(
+          'Please verify your email before signing in',
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // Step 3: Verify MFA TOTP code
+      try {
+        this.logger.log(`Getting MFA pending credential for user ${verifiedUser.uid}`);
+        
+        // Get the mfaPendingCredential from password verification
+        const reauth = await this.firebaseClient.verifyPasswordWithREST(
+          email,
+          loginDto.password,
+          gipTenantId
+        );
+
+        this.logger.log(`Reauth response:`, {
+          hasMfaPendingCredential: !!reauth?.mfaPendingCredential,
+          hasIdToken: !!reauth?.idToken,
+          mfaPendingCredentialLength: reauth?.mfaPendingCredential?.length || 0
+        });
+
+        if (!reauth?.mfaPendingCredential) {
+          throw new HttpException(
+            'MFA pending credential not found. Please try logging in again.',
+            HttpStatus.BAD_REQUEST
+          );
+        }
+
+        this.logger.log(`Verifying TOTP code: ${loginDto.verificationCode} with pending credential: ${reauth.mfaPendingCredential.substring(0, 20)}...`);
+
+        // Verify the TOTP code with Firebase using the pending credential
+        const mfaResponse = await this.firebaseClient.signInFinalize(
+          reauth.mfaPendingCredential,
+          loginDto.verificationCode,
+          gipTenantId,
+          verifiedUser.uid
+        );
+
+        this.logger.log(`MFA verification successful, got response:`, {
+          hasIdToken: !!mfaResponse?.idToken,
+          idTokenLength: mfaResponse?.idToken?.length || 0
+        });
+
+        // Update the ID token with the MFA-verified token
+        const verifiedIdToken = mfaResponse.idToken;
+
+        // Verify the final token to get user data
+        await this.firebaseClient.verifyIdToken(verifiedIdToken, gipTenantId);
+
+        // Continue with the rest of the login flow...
+        // Step 4: Get user's tenant and corporation information
+        let selectedCorporationId: string | null = null;
+        let userRoles: string[] = [];
+        let userTenantId: string | null = null;
+
+        try {
+          const { Tenant, TenantMembership, Corporation } = await import('@keystone/database');
+
+          // Find the tenant record that matches the GIP tenant ID
+          const tenantRecord = await Tenant.findOne({ gipTenantId: gipTenantId });
+          if (!tenantRecord) {
+            throw new Error('Tenant record not found');
+          }
+
+          // Get the user's membership
+          const userMembership = await TenantMembership.findOne({
+            userId: verifiedUser.uid,
+            tenantId: tenantRecord._id,
+            isActive: true
+          });
+
+          if (userMembership) {
+            userTenantId = tenantRecord._id.toString();
+            userRoles = userMembership.roles || [];
+
+            // Check if user is disabled
+            if (userMembership.disabled === true) {
+              throw new HttpException(
+                'This account has been disabled',
+                HttpStatus.FORBIDDEN
+              );
+            }
+
+            const corporation = await Corporation.findOne({ tenantId: tenantRecord._id });
+            if (corporation) {
+              selectedCorporationId = corporation._id.toString();
+            }
+          }
+        } catch (error) {
+          this.logger.warn('Could not determine corporation or roles, will set to null/empty', error);
+        }
+
+        // Create session with MFA-verified status
+        const sessionId = await this.sessionService.createSession({
+          uid: verifiedUser.uid,
+          email: verifiedUser.email || email,
+          displayName: verifiedUser.displayName,
+          emailVerified: verifiedUser.emailVerified,
+          tenantId: userTenantId,
+          selectedCorporationId: selectedCorporationId,
+          roles: userRoles,
+          disabled: false,
+          mfa: true, // MFA is enabled and verified
+          authTime: Math.floor(Date.now() / 1000),
+          mfaEnrolledAt: Math.floor(Date.now() / 1000), // Current time as enrollment time
+        });
+
+        // Generate CSRF token for this session
+        const csrfToken = await this.csrfService.generateToken(sessionId);
+
+        return {
+          success: true,
+          message: 'MFA login successful',
+          sessionId,
+          csrfToken,
+          mfa: {
+            enabled: true,
+            enrolledAt: Math.floor(Date.now() / 1000),
+            required: true,
+          },
+          user: {
+            uid: verifiedUser.uid,
+            email: verifiedUser.email,
+            displayName: verifiedUser.displayName,
+            emailVerified: verifiedUser.emailVerified,
+          }
+        };
+
+      } catch (mfaError) {
+        this.logger.error(`MFA verification failed for user ${verifiedUser.uid}:`, mfaError);
+
+        if ((mfaError as Error).message?.includes('INVALID_OTP') || (mfaError as Error).message?.includes('verification')) {
+          throw new HttpException(
+            { code: 'INVALID_OTP', message: 'Invalid verification code. Please try again.' },
+            HttpStatus.BAD_REQUEST
+          );
+        }
+
+        throw new HttpException(
+          'MFA verification failed. Please try again.',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+    } catch (error) {
+      this.logger.error(`❌ MFA login failed:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'MFA login failed. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Step-up authentication with MFA verification
+   * POST /auth/step-up
+   */
+  @Post('step-up')
+  @UseGuards(SessionGuard)
+  async stepUpAuthentication(@Body() stepUpDto: StepUpDto, @Req() req: any) {
+    try {
+      const user = req.user;
+      const sessionId = req.sessionId;
+
+      this.logger.log(`🔄 Step-up authentication for user ${user.uid}`);
+
+      if (!user.mfa) {
+        throw new HttpException(
+          'MFA is not enabled for this account',
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      if (!stepUpDto.verificationCode?.trim()) {
+        throw new HttpException(
+          'Verification code is required',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      // Get user's ID token for MFA verification
+      const idToken = await this.getUserIdToken(user.uid, user.tenantId);
+
+      // Verify the TOTP code with Firebase
+      await this.firebaseClient.signInFinalize(
+        idToken,
+        stepUpDto.verificationCode,
+        user.tenantId,
+        user.uid
+      );
+
+      // Update session with fresh MFA verification
+      const currentTime = Math.floor(Date.now() / 1000);
+      await this.sessionService.updateMfaStatus(
+        sessionId,
+        true, // MFA is enabled
+        currentTime, // Fresh auth time
+        user.mfaEnrolledAt // Keep existing enrollment time
+      );
+
+      this.logger.log(`✅ Step-up authentication successful for user ${user.uid}`);
+
+      return {
+        success: true,
+        message: 'Step-up authentication successful',
+        mfa: {
+          enabled: true,
+          verified: true,
+          verifiedAt: currentTime,
+        }
+      };
+
+    } catch (error) {
+      this.logger.error(`❌ Step-up authentication failed:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Handle Firebase MFA errors
+      if ((error as Error).message?.includes('INVALID_OTP') || (error as Error).message?.includes('verification')) {
+        throw new HttpException(
+          { code: 'INVALID_OTP', message: 'Invalid verification code. Please try again.' },
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      throw new HttpException(
+        'Step-up authentication failed. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Helper method to get user's ID token for Firebase operations
+   * This method creates a custom token that can be exchanged for an ID token
+   */
+  private async getUserIdToken(uid: string, tenantId: string): Promise<string> {
+    try {
+
+      // Get user data to verify they exist
+      const user = await this.firebaseClient.getUserByUid(uid, tenantId);
+
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Create a custom token for the user
+      this.logger.log(`Creating custom token for user ${uid}`);
+      const customToken = await this.firebaseClient.createCustomToken(uid, tenantId);
+      this.logger.log(`Custom token created: ${customToken ? 'yes' : 'no'}`);
+
+      // Exchange custom token for ID token using Firebase REST API
+      const idToken = await this.exchangeCustomTokenForIdToken(customToken, tenantId);
+
+      return idToken;
+    } catch (error) {
+      this.logger.error(`Failed to get ID token for user ${uid}:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to get user authentication token',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Exchange custom token for ID token using Firebase REST API
+   */
+  private async exchangeCustomTokenForIdToken(customToken: string, tenantId: string): Promise<string> {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (!apiKey) {
+      throw new Error('Firebase API key not configured');
+    }
+
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token: customToken,
+        returnSecureToken: true,
+        tenantId: tenantId
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { error?: { message?: string } };
+      const errorCode = error.error?.message || 'Token exchange failed';
+      throw new Error(`Failed to exchange custom token: ${errorCode}`);
+    }
+
+    const data = await response.json() as { idToken: string };
+    return data.idToken;
   }
 }

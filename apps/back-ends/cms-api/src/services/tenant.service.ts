@@ -62,10 +62,7 @@ export class TenantService {
       const sanitizedDisplayName = this.sanitizeFirebaseDisplayName(request.name);
       
       const tenantConfig = {
-        tenantId: "",
-        displayName: sanitizedDisplayName,
-        allowPasswordSignup: true,
-        enableEmailLinkSignin: true
+        displayName: sanitizedDisplayName
       };
 
       const gipTenant = await this.firebaseClient.createTenant(tenantConfig);

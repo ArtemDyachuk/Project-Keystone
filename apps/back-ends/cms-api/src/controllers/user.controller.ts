@@ -8,6 +8,7 @@ interface RequestWithUser extends Request {
 }
 import { SessionService } from '../services/session.service';
 import { SessionGuard } from '../guards/session.guard';
+import { StepUpGuard } from '../guards/step-up.guard';
 import { UserService } from '../services/user.service';
 import { InviteService } from '../services/invite.service';
 import type { CreateInviteDto } from '../services/invite.service';
@@ -213,7 +214,7 @@ export class UserController {
    * Create a new user
    * POST /user/users
    */
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionGuard, StepUpGuard)
   @Post('users')
   async createUser(@Body() createUserRequest: CreateUserRequest, @Req() request: Request & { user?: any; sessionId?: string }) {
     try {
@@ -259,7 +260,7 @@ export class UserController {
    * Update a user
    * PUT /user/users/:id
    */
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionGuard, StepUpGuard)
   @Put('users/:id')
   async updateUser(@Param('id') id: string, @Body() updateUserRequest: UpdateUserRequest, @Req() request: Request & { user?: any; sessionId?: string }) {
     try {

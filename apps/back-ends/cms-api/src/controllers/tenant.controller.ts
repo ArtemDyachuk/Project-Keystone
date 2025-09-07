@@ -8,6 +8,7 @@ interface RequestWithUser extends Request {
 }
 import { TenantService as DatabaseTenantService, TenantMembership, Corporation, Tenant } from '@keystone/database';
 import { SessionGuard } from '../guards/session.guard';
+import { StepUpGuard } from '../guards/step-up.guard';
 import { TenantService, CreateTenantRequest } from '../services/tenant.service';
 import { SessionService } from '../services/session.service';
 
@@ -331,7 +332,7 @@ export class TenantController {
    * PUT /tenants/:id
    */
   @Put(':id')
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionGuard, StepUpGuard)
   async updateTenant(
     @Param('id') id: string,
     @Body() updateTenantDto: UpdateTenantDto,
@@ -393,7 +394,7 @@ export class TenantController {
    * DELETE /tenants/:id
    */
   @Delete(':id')
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionGuard, StepUpGuard)
   async deleteTenant(@Param('id') id: string, @Req() request: Request & { user?: any; sessionId?: string }): Promise<{ success: boolean; message: string }> {
     try {
       if (!request.user?.uid) {

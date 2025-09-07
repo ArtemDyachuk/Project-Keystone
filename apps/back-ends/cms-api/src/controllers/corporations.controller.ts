@@ -4,6 +4,7 @@ import { Corporation, TenantMembership } from '@keystone/database';
 import { SessionService } from '../services/session.service';
 import { CorporationService } from '../services/corporation.service';
 import { SessionGuard } from '../guards/session.guard';
+import { StepUpGuard } from '../guards/step-up.guard';
 import { RbacGuard } from '../guards/rbac.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 
@@ -177,7 +178,7 @@ export class CorporationsController {
     * DELETE /corporations/:id
     */
    @Delete(':id')
-   @UseGuards(SessionGuard, RbacGuard)
+   @UseGuards(SessionGuard, RbacGuard, StepUpGuard)
    @RequirePermission('corporation:delete')
    async deleteCorporation(@Param('id') id: string, @Req() request: Request & { user?: { uid: string; selectedCorporationId?: string }; sessionId?: string }) {
       if (!request.user?.uid) {

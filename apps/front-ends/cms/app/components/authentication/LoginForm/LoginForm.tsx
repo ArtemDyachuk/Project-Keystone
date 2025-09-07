@@ -5,7 +5,7 @@ import styles from "./styles.module.css";
 import Link from "next/link";
 import { Button, Input } from "@keystone/ui";
 import { AuthForm } from "../AuthForm";
-import { loginAction } from "@/app/actions";
+import { loginAction, loginWithMfaAction } from "@/app/actions";
 
 interface LoginFormProps {
   redirectUrl: string;
@@ -16,6 +16,8 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
 
   // Removed checkAuth useEffect - middleware handles this now
 
@@ -25,14 +27,32 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
     setError("");
 
     try {
-      const result = await loginAction(email, password, redirectUrl);
+      if (mfaRequired) {
+        // Handle MFA verification
+        const result = await loginWithMfaAction(email, password, verificationCode, redirectUrl);
+        
+        if (result && !result.success) {
+          setError(result.error || "MFA verification failed");
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Handle regular login
+        const result = await loginAction(email, password, redirectUrl);
 
-      // Check if login was successful
-      if (result && !result.success) {
-        // Show the actual error message from backend
-        setError(result.error || "Login failed");
-        setIsLoading(false);
-        return;
+        // Check if MFA is required
+        if (result && result.mfaRequired) {
+          setMfaRequired(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Check if login was successful
+        if (result && !result.success) {
+          setError(result.error || "Login failed");
+          setIsLoading(false);
+          return;
+        }
       }
 
       // If we reach here, login was successful
@@ -74,6 +94,24 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
           />
         </div>
 
+        {mfaRequired && (
+          <div className={styles.field}>
+            <label htmlFor="verificationCode">Verification Code</label>
+            <Input
+              id="verificationCode"
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              placeholder="Enter 6-digit code from your authenticator app"
+              maxLength={6}
+              required
+            />
+            <p className={styles.mfaHelp}>
+              Open your authenticator app and enter the 6-digit code
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className={styles.error}>
             ❌ {error}
@@ -81,7 +119,10 @@ export function LoginForm({ redirectUrl }: LoginFormProps) {
         )}
 
         <Button type="submit" className={styles.submitButton} disabled={isLoading}>
-          {isLoading ? "Logging in..." : "Login"}
+          {isLoading 
+            ? (mfaRequired ? "Verifying..." : "Logging in...") 
+            : (mfaRequired ? "Verify & Login" : "Login")
+          }
         </Button>
 
         <div className={styles.forgotPassword}>

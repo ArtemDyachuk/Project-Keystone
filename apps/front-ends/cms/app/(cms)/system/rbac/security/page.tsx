@@ -17,6 +17,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["User:Reader"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
   "User:Admin": {
     uid: "test-user-admin",
@@ -27,6 +29,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["User:Admin"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
   "Tenant:Reader": {
     uid: "test-tenant-reader",
@@ -37,6 +41,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["Tenant:Reader"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
   "Tenant:Admin": {
     uid: "test-tenant-admin",
@@ -47,6 +53,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["Tenant:Admin"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
   "Tenant:Owner": {
     uid: "test-tenant-owner",
@@ -57,6 +65,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["Tenant:Owner"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
   "Global:Reader": {
     uid: "test-global-reader",
@@ -67,6 +77,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["Global:Reader"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
   "Global:Admin": {
     uid: "test-global-admin",
@@ -77,6 +89,8 @@ const TEST_USERS: Record<string, CurrentUser> = {
     selectedCorporationId: null,
     roles: ["Global:Admin"],
     disabled: false,
+    mfa: false,
+    authTime: Math.floor(Date.now() / 1000),
   },
 };
 

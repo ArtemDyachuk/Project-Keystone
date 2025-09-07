@@ -9,6 +9,9 @@ export interface CurrentUser {
   selectedCorporationId: string | null;
   roles: string[];
   disabled?: boolean; // Optional flag to indicate if user account is disabled
+  mfa: boolean; // Whether user has MFA enabled
+  authTime: number; // Unix timestamp of last authentication
+  mfaEnrolledAt?: number; // Unix timestamp when MFA was enrolled
 }
 
 /**

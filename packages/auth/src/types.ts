@@ -59,6 +59,9 @@ export interface UserSession {
   selectedCorporationId: string | null; // Current active corporation for multi-tenant users
   roles: string[];
   disabled?: boolean; // Optional flag to indicate if user account is disabled
+  mfa: boolean; // Whether user has MFA enabled
+  authTime: number; // Unix timestamp of last authentication (from Firebase token)
+  mfaEnrolledAt?: number; // Unix timestamp when MFA was enrolled (undefined if not enrolled)
   createdAt: Date;
   expiresAt: Date;
 }
@@ -96,6 +99,9 @@ export interface RedisSessionData {
   tenantId: string | null;
   selectedCorporationId: string | null;
   roles: string[];
+  mfa: boolean; // Whether user has MFA enabled
+  authTime: number; // Unix timestamp of last authentication
+  mfaEnrolledAt?: number; // Unix timestamp when MFA was enrolled
   createdAt: number; // Unix timestamp for Redis efficiency
   lastActivity: number; // Unix timestamp for activity tracking
 }
@@ -127,4 +133,24 @@ export interface TenantConfig {
 export interface FirebaseAuthError extends Error {
   code: string;
   message: string;
+}
+
+// MFA Types
+export interface MfaEnrollResponse {
+  sessionInfo: string;
+  qrCodeUrl?: string;
+  otpauthUrl?: string;
+}
+
+export interface MfaSignInResponse {
+  idToken: string;
+  refreshToken: string;
+  expiresIn: string;
+  localId: string;
+}
+
+export interface MfaFactor {
+  id: string;
+  label: string;
+  type: 'totp' | 'sms' | 'phone';
 }

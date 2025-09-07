@@ -17,6 +17,7 @@ import { CorporationService } from '../services/corporation.service';
 import { InviteService } from '../services/invite.service';
 import { TenantAccessGuard } from '../guards/tenant-access.guard';
 import { SessionGuard } from '../guards/session.guard';
+import { StepUpGuard } from '../guards/step-up.guard';
 import { SignupService } from "../services/signup.service";
 import { SessionMiddleware } from '../middleware/session.middleware';
 
@@ -32,6 +33,7 @@ import { SessionMiddleware } from '../middleware/session.middleware';
     AppService,
     TenantAccessGuard,
     SessionGuard,
+    StepUpGuard,
     EmailService,
     RedisService,
     SessionService,

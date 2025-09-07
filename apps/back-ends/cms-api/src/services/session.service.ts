@@ -23,6 +23,9 @@ export class SessionService {
     const session: UserSession = {
       ...user,
       selectedCorporationId: user.selectedCorporationId || user.tenantId,
+      mfa: user.mfa || false, // Default to false if not provided
+      authTime: user.authTime || Math.floor(Date.now() / 1000), // Default to current time if not provided
+      mfaEnrolledAt: user.mfaEnrolledAt, // Keep undefined if not provided
       createdAt: now,
       expiresAt,
     };
@@ -476,5 +479,77 @@ export class SessionService {
     if (cleaned > 0) {
       this.logger.log(`Cleaned up ${cleaned} expired sessions from memory`);
     }
+  }
+
+  /**
+   * Update MFA status in session
+   */
+  async updateMfaStatus(sessionId: string, mfa: boolean, authTime?: number, mfaEnrolledAt?: number): Promise<boolean> {
+    const sessionData = await this.getSession(sessionId);
+    if (!sessionData) return false;
+
+    const updatedSession: UserSession = {
+      ...sessionData.user,
+      mfa,
+      authTime: authTime || sessionData.user.authTime,
+      mfaEnrolledAt: mfaEnrolledAt !== undefined ? mfaEnrolledAt : sessionData.user.mfaEnrolledAt,
+      expiresAt: new Date(Date.now() + this.sessionTTL * 1000), // Extend expiry
+    };
+
+    // Update in Redis
+    const success = await this.redisService.set(
+      `session:${sessionId}`,
+      JSON.stringify(updatedSession),
+      this.sessionTTL
+    );
+
+    if (!success) {
+      // Update in memory fallback
+      this.memoryFallback.set(sessionId, updatedSession);
+    }
+
+    this.logger.log(`Updated MFA status for user ${sessionData.user.uid}: mfa=${mfa}, authTime=${updatedSession.authTime}`);
+    return true;
+  }
+
+  /**
+   * Check if MFA verification is fresh (within maxAgeSec seconds)
+   */
+  async isMfaValid(sessionId: string, maxAgeSec: number = 600): Promise<boolean> {
+    const sessionData = await this.getSession(sessionId);
+    if (!sessionData || !sessionData.user.mfa) return false;
+
+    const now = Math.floor(Date.now() / 1000);
+    const authTime = sessionData.user.authTime;
+    const age = now - authTime;
+
+    return age <= maxAgeSec;
+  }
+
+  /**
+   * Rotate session with MFA fields while preserving existing fields
+   */
+  async rotateSessionWithMfa(
+    oldSessionId: string, 
+    mfa: boolean, 
+    authTime: number, 
+    mfaEnrolledAt?: number
+  ): Promise<string | null> {
+    const existingSession = await this.getSession(oldSessionId);
+    if (!existingSession) return null;
+
+    // Create new session with updated MFA fields, preserving all other fields
+    const newSessionId = await this.createSession({
+      ...existingSession.user,
+      mfa,
+      authTime,
+      mfaEnrolledAt,
+    });
+
+    // Delete old session
+    await this.deleteSession(oldSessionId);
+
+    this.logger.log(`Session rotated with MFA for user ${existingSession.user.uid}: ${oldSessionId.substring(0, 8)}... -> ${newSessionId.substring(0, 8)}...`);
+    return newSessionId;
   }
 }
