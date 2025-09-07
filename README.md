@@ -78,6 +78,13 @@ Project-Keystone/
 │   │   │   ├── repositories/          # Data access layer
 │   │   │   └── services/              # Business logic
 │   │   └── package.json
+│   ├── rbac/                 # 🔐 Role-based access control
+│   │   ├── src/
+│   │   │   ├── types.ts               # TypeScript interfaces
+│   │   │   ├── roles.config.ts        # Role definitions & permissions
+│   │   │   ├── helpers.ts             # Permission checking utilities
+│   │   │   └── index.ts               # Main exports
+│   │   └── package.json
 │   └── ui/                   # 🎨 Shared React components
 │       ├── src/
 │       │   ├── components/            # Button, Card, Input, etc.
@@ -189,6 +196,33 @@ async findAll() {
 - 📊 **Shared Models**: Mongoose schemas used by both apps
 - 🏗️ **Shared Services**: Business logic reused across frontend/backend
 - 🔐 **Type Safety**: TypeScript interfaces shared everywhere
+
+### `@keystone/rbac` - Role-Based Access Control
+
+**Comprehensive permission system with predefined roles:**
+
+```typescript
+import { 
+  PERMISSIONS, 
+  ROLES_CONFIG, 
+  roleHasPermission, 
+  getAllPermissionsForRole 
+} from '@keystone/rbac';
+
+// Check if user has permission
+const canCreateUser = roleHasPermission('Tenant:Admin', PERMISSIONS.USER_CREATE);
+
+// Get all permissions for a role
+const adminPermissions = getAllPermissionsForRole('Tenant:Owner');
+```
+
+**Features:**
+
+- 🔐 **Predefined Roles**: Tenant Owner, Admin, Reader, Global Admin
+- 🎯 **Resource-Specific**: Separate permissions for tenants, users, corporations
+- 🔄 **Permission Inheritance**: Roles can inherit from other roles
+- 🛡️ **Type Safety**: Full TypeScript support with interfaces
+- ⚡ **Helper Functions**: Easy permission checking and role management
 
 ### `@keystone/ui` - Shared Component Library
 
