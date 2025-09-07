@@ -39,6 +39,31 @@ export class AuthController {
   }
 
   /**
+   * Find user by email across all tenants (optimized for login)
+   */
+  private async findUserByEmailAcrossTenants(email: string, tenantIds: string[]): Promise<{ user: any; tenantId: string } | null> {
+    try {
+      // Search tenants in parallel for better performance
+      const searchPromises = tenantIds.map(async (tenantId) => {
+        try {
+          const user = await this.firebaseClient.getUserByEmail(email, tenantId);
+          return { user, tenantId };
+        } catch {
+          return null; // User not found in this tenant
+        }
+      });
+
+      const results = await Promise.all(searchPromises);
+      const found = results.find(result => result !== null);
+      
+      return found || null;
+    } catch (error: unknown) {
+      this.logger.error('Error finding user across tenants', error);
+      return null;
+    }
+  }
+
+  /**
    * Start signup process with email verification link
    * POST /auth/signup-email-link
    */
@@ -501,38 +526,31 @@ export class AuthController {
 
       const email = loginDto.email.trim().toLowerCase();
 
-      // Step 1: Find the user by email in Firebase to get their UID
-      // We need to search across all GIP tenants since we don't know which one they belong to
-      let user: any = null;
-      let gipTenantId: string | null = null;
-
-      // Get all tenants from the database to search for the user
+      // Step 1: Find user's tenant using optimized parallel search
       const { Tenant } = await import('@keystone/database');
       const tenants = await Tenant.find({});
+      const gipTenantIds = tenants
+        .filter(tenant => tenant.gipTenantId)
+        .map(tenant => tenant.gipTenantId!);
 
-      // Search for the user in each GIP tenant
-      for (const tenant of tenants) {
-        if (tenant.gipTenantId) {
-          try {
-            const foundUser = await this.firebaseClient.getUserByEmail(email, tenant.gipTenantId);
-            if (foundUser) {
-              user = foundUser;
-              gipTenantId = tenant.gipTenantId;
-              break;
-            }
-          } catch {
-            // User not found in this tenant, continue searching
-            continue;
-          }
-        }
+      if (gipTenantIds.length === 0) {
+        throw new HttpException(
+          'No tenants configured',
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
       }
 
-      if (!user || !gipTenantId) {
+      // Use optimized parallel search across all tenants
+      const userResult = await this.findUserByEmailAcrossTenants(email, gipTenantIds);
+      
+      if (!userResult) {
         throw new HttpException(
           'Invalid email or password',
           HttpStatus.UNAUTHORIZED
         );
       }
+
+      const { user, tenantId: gipTenantId } = userResult;
 
       // Step 2: Verify the password using the correct GIP tenant
       const verifiedUser = await this.firebaseClient.verifyUserCredentials(
@@ -1024,6 +1042,110 @@ export class AuthController {
       throw new HttpException(
         'Failed to verify token. Please try again.',
         HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Refresh access token using refresh token
+   * POST /auth/refresh
+   */
+  @Post('refresh')
+  async refreshToken(@Body() refreshDto: { refreshToken: string; email: string }) {
+    try {
+      if (!refreshDto.refreshToken?.trim()) {
+        throw new HttpException('Refresh token is required', HttpStatus.BAD_REQUEST);
+      }
+
+      if (!refreshDto.email?.trim()) {
+        throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const email = refreshDto.email.trim().toLowerCase();
+
+      // First, verify the refresh token and get user ID
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      if (!apiKey) {
+        throw new HttpException('Firebase API key not configured', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      const response = await fetch(`https://securetoken.googleapis.com/v1/token?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          grant_type: 'refresh_token',
+          refresh_token: refreshDto.refreshToken,
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json() as { error?: { message?: string } };
+        throw new HttpException(
+          error.error?.message || 'Token refresh failed',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+
+      const tokenData = await response.json() as {
+        user_id: string;
+        access_token: string;
+        id_token: string;
+        refresh_token: string;
+        expires_in: string;
+      };
+      const userId = tokenData.user_id;
+
+      // Find user's tenant using optimized lookup
+      const { TenantMembership } = await import('@keystone/database');
+      const membership = await TenantMembership.findOne({ 
+        userId: userId // Use the actual user ID from the token
+      }).populate('tenantId');
+
+      if (!membership || !membership.tenantId) {
+        throw new HttpException('User not found in any tenant', HttpStatus.UNAUTHORIZED);
+      }
+
+      const tenant = membership.tenantId as any;
+      if (!tenant.gipTenantId) {
+        throw new HttpException('Tenant not properly configured', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Create new session with refreshed tokens
+      const sessionId = await this.sessionService.createSession({
+        uid: tokenData.user_id,
+        email: email,
+        displayName: null,
+        emailVerified: true,
+        tenantId: tenant.gipTenantId,
+        selectedCorporationId: tenant._id.toString(),
+        roles: membership.roles,
+        disabled: false,
+      });
+
+      // Generate new CSRF token
+      const csrfToken = await this.csrfService.generateToken(sessionId);
+
+      return {
+        success: true,
+        accessToken: tokenData.access_token,
+        idToken: tokenData.id_token,
+        refreshToken: tokenData.refresh_token,
+        expiresIn: parseInt(tokenData.expires_in),
+        sessionId,
+        csrfToken,
+      };
+    } catch (error: unknown) {
+      this.logger.error('Token refresh failed', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Token refresh failed. Please log in again.',
+        HttpStatus.UNAUTHORIZED
       );
     }
   }

@@ -98,7 +98,7 @@ export class FirebaseServerClient {
         throw new Error('Tenant ID is required for email verification link generation');
       }
       const authInstance = this.auth.tenantManager().authForTenant(tenantId);
-      return await authInstance.generateEmailVerificationLink(email, actionCodeSettings as any);
+      return await authInstance.generateEmailVerificationLink(email, actionCodeSettings as unknown as any);
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
     }
@@ -113,16 +113,12 @@ export class FirebaseServerClient {
         throw new Error('Tenant ID is required for user authentication');
       }
 
-      // For GIP multi-tenancy, we need to use the Admin SDK with the specific tenant
-      // The Firebase REST API doesn't support multi-tenancy
+      // First, verify password using Firebase Auth REST API with tenant support
+      const authResponse = await this.verifyPasswordWithREST(email, password, tenantId);
+      
+      // Then get full user data from Admin SDK
       const authInstance = this.auth.tenantManager().authForTenant(tenantId);
-
-      // Get user by email from the specific tenant
-      const user = await authInstance.getUserByEmail(email);
-
-      // For now, we'll assume the password is correct since we're in a trusted server context
-      // In a production environment, you might want to implement additional verification
-      // or use Firebase Auth REST API with tenant-specific endpoints if available
+      const user = await authInstance.getUser(authResponse.localId);
 
       return {
         uid: user.uid,
@@ -137,6 +133,45 @@ export class FirebaseServerClient {
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
     }
+  }
+
+  /**
+   * Verify password using Firebase Auth REST API with multi-tenant support
+   */
+  private async verifyPasswordWithREST(email: string, password: string, tenantId: string) {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (!apiKey) {
+      throw new Error('Firebase API key not configured');
+    }
+
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        tenantId, // This enables multi-tenant authentication
+        returnSecureToken: true
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      const errorCode = error.error?.message || 'Authentication failed';
+      
+      // Map Firebase error codes to user-friendly messages
+      if (errorCode.includes('INVALID_LOGIN_CREDENTIALS') || 
+          errorCode.includes('EMAIL_NOT_FOUND') || 
+          errorCode.includes('INVALID_PASSWORD')) {
+        throw new Error('Invalid email or password');
+      }
+      
+      throw new Error(errorCode);
+    }
+
+    return await response.json();
   }
 
   /**
@@ -340,7 +375,7 @@ export class FirebaseServerClient {
       }
 
       const authInstance = this.auth.tenantManager().authForTenant(tenantId);
-      return await authInstance.generatePasswordResetLink(email, actionCodeSettings as any);
+      return await authInstance.generatePasswordResetLink(email, actionCodeSettings as unknown as any);
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
     }
@@ -417,6 +452,31 @@ export class FirebaseServerClient {
       const authInstance = this.auth.tenantManager().authForTenant(tenantId);
       const users = await authInstance.listUsers(maxResults);
       return users;
+    } catch (error: unknown) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  /**
+   * Find user by email across all tenants (optimized for login)
+   * This method searches all tenants to find a user by email
+   */
+  async findUserByEmailAcrossTenants(email: string, tenantIds: string[]): Promise<{ user: FirebaseUser; tenantId: string } | null> {
+    try {
+      // Search tenants in parallel for better performance
+      const searchPromises = tenantIds.map(async (tenantId) => {
+        try {
+          const user = await this.getUserByEmail(email, tenantId);
+          return { user, tenantId };
+        } catch {
+          return null; // User not found in this tenant
+        }
+      });
+
+      const results = await Promise.all(searchPromises);
+      const found = results.find(result => result !== null);
+      
+      return found || null;
     } catch (error: unknown) {
       throw this.handleFirebaseError(error);
     }
