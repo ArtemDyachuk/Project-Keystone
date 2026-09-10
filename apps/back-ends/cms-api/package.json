@@ -6,7 +6,7 @@
     "prebuild": "cd ../../../packages/database && npm run build && cd ../auth && npm run build && cd ../rbac && npm run build",
     "build": "tsc",
     "start": "node dist/main.js",
-    "dev": "docker-compose up -d redis && ts-node src/main.ts",
+    "dev": "docker-compose up -d redis || echo '[cms-api] Docker/Redis unavailable — starting API without Redis' && ts-node src/main.ts",
     "redis:logs": "docker-compose logs -f redis",
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
